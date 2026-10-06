@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <script src="/theme-init.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 会议秘书 · 实时看板</title>
+
+  <link rel="stylesheet" href="/src/workbench.css" />
+  <link rel="stylesheet" href="/src/master-theme.css" />
+  <link rel="stylesheet" href="/src/night-theme.css" />
+  <link rel="stylesheet" href="/src/workspace-design.css" />
+  <link rel="stylesheet" href="/src/theme.css" />
+  <link rel="stylesheet" href="/src/issues.css" />
+  <script type="module" src="/src/theme.ts"></script>
+</head>
+<body class="decision-workspace">
+  <div id="app">
+    <header id="app-header" class="master-topnav">
+      <a class="master-brand" href="/">AI 会议秘书</a>
+      <nav class="app-tabs" aria-label="项目导航">
+        <a href="/home.html">主页</a>
+        <a href="/workspace.html" aria-current="page">看板</a>
+        <a href="/history.html">历史</a>
+        <a href="/issues.html">议题结构</a>
+      </nav>
+    </header>
+    <div id="master-toolbar" role="toolbar" aria-label="看板工具栏">
+      <div class="master-tool-group" id="meeting-controls" aria-label="会议管理">
+        <button id="new-meeting" class="primary" type="button">新建会议</button>
+        <button id="save-meeting" type="button">保存</button>
+        <span id="meeting-message" role="status" aria-live="polite"></span>
+      </div>
+      <span class="master-separator" aria-hidden="true"></span>
+      <div class="master-tool-group"><label for="lens-select">语义透镜</label><select id="lens-select">
+        <option value="all">全部关系</option><option value="support">支撑 support</option><option value="oppose">反驳 oppose</option>
+        <option value="subordinate">从属 subordinate</option><option value="duplicate">重复 duplicate</option><option value="replace">替换 replace</option>
+      </select></div>
+      <span class="master-separator" aria-hidden="true"></span>
+      <div class="master-tool-group"><label for="expert-select">会议专家</label><select id="expert-select">
+        <option value="general">全能会议专家</option>
+        <option value="debate">辩论赛助手</option>
+        <option value="proposal">方案讨论助手</option>
+        <option value="task">任务安排助手</option>
+      </select><span id="change-summary" role="status"></span></div>
+      <span class="master-separator" aria-hidden="true"></span>
+      <div class="master-tool-group"><button id="export-png" type="button">导出 PNG</button><button id="export-svg" type="button">导出 SVG</button></div>
+      <span class="master-separator" aria-hidden="true"></span>
+      <div class="master-tool-group"><button id="share-snapshot" class="primary" type="button">分享快照</button><button id="copy-link" type="button">复制深链</button><span id="share-status" role="status"></span></div>
+    </div>
+    <div id="main">
+      <div id="work-area">
+        <div id="board-shell">
+          <div id="board-stage">
+          <div id="board-view-switch" role="tablist" aria-label="看板视图">
+            <button id="view-graph" type="button" role="tab" aria-selected="true">关系图</button>
+            <button id="view-issues" type="button" role="tab" aria-selected="false">议题结构</button>
+          </div>
+          <section id="utterance-rail" aria-label="相关原始发言" hidden><div class="rail-caption">原始发言 <span id="utterance-count">0</span></div><div id="utterance-list"></div></section>
+          <div id="board" tabindex="0" role="group"
+            aria-label="会议结构看板：议题、要点、论据、结论、行动项与分歧的关系图">
+            <div id="board-empty">
+              <p class="board-empty-title">开始一次讨论</p>
+              <p class="board-empty-hint">输入文字或开始录音，让观点在这里逐渐连接。</p>
+            </div>
+            <div id="board-toolbar" role="toolbar" aria-label="画板缩放">
+              <button id="tb-zoom-out" type="button" title="缩小" aria-label="缩小">−</button>
+              <span id="board-zoom-value" aria-label="当前缩放比例">100%</span>
+              <button id="tb-zoom-in" type="button" title="放大" aria-label="放大">+</button>
+              <button id="tb-relayout" type="button" title="重新排版（解除手动位置，按层级自动重排）" aria-label="重新排版">重排</button>
+              <span class="tb-divider" aria-hidden="true"></span>
+              <button id="delete-cell" type="button" title="删除选中的节点或连线">删除选中</button>
+            </div>
+          </div>
+          <div id="issue-view" class="issue-structure" role="tabpanel" aria-label="议题结构" hidden></div>
+          </div>
+        </div>
+        <section id="asr-panel" aria-label="本地语音输入">
+          <h2>本地语音输入<span>实时识别，让讨论自然流入看板</span></h2>
+          <div class="asr-controls">
+            <button id="asr-record" type="button">开始录音</button>
+            <button id="asr-pause" type="button" disabled>暂停</button>
+            <button id="asr-resume" type="button" disabled>继续</button>
+            <button id="asr-stop" type="button" disabled>停止</button>
+            <output id="asr-timer" aria-label="录音时长">00:00</output>
+            <label class="asr-upload">上传音频 <input id="asr-file" type="file" accept="audio/*" /></label>
+          </div>
+          <div class="asr-meta">
+            <output id="asr-model-status" aria-live="polite">正在检查本地 ASR…</output>
+            <output id="llm-mode" aria-label="看板分析模式">正在检查看板模式…</output>
+          </div>
+          <p id="asr-transcript" aria-label="最新转写文本"></p>
+          <div id="asr-message-row">
+            <p id="asr-message" role="status" aria-live="polite"></p>
+            <button id="asr-retry" type="button" hidden>重试发送</button>
+          </div>
+        </section>
+      </div>
+      <aside id="mascot" aria-label="会议助手">
+        <div class="assistant-head">
+        <div class="assistant-heading"><div class="assistant-label">会脉 AI <small>会议助手</small></div><div class="bubble" id="mascot-bubble" role="status" aria-live="polite">等待讨论 …</div></div>
+        <div id="mascot-model" aria-label="Live2D 会议看板娘" data-fallback-src="/workspace-reference.png">
+          <img id="mascot-fallback" class="mascot-fallback" src="/mascot/fallback.svg"
+            alt="看板娘静态替代图" />
+        </div>
+        </div>
+        <div id="assistant-insights" aria-label="会议实时摘要">
+          <section class="insight-section focus-section"><h2><span class="insight-icon">◎</span>当前焦点 <b id="focus-count">0</b></h2><div id="focus-list"></div></section>
+          <section class="insight-section conflict-section"><h2><span class="insight-icon">!</span>尚未解决 <b id="conflict-count">0</b></h2><div id="conflict-list"></div></section>
+          <section class="insight-section action-section"><h2><span class="insight-icon">✓</span>下一步 <b id="action-count">0</b></h2><div id="action-list"></div></section>
+        </div>
+        <div id="composer">
+          <input id="composer-input" type="text" autocomplete="off" aria-label="输入会议发言"
+            placeholder="在这里补充会议发言或问题，回车发送…" />
+          <button id="composer-send" type="button">发送 <span aria-hidden="true">↗</span></button>
+          <span id="composer-status" role="status" aria-live="polite"></span>
+        </div>
+      </aside>
+    </div>
+  </div>
+  <div id="meeting-modal" hidden>
+    <form id="meeting-form" role="dialog" aria-modal="true" aria-labelledby="meeting-modal-title">
+      <h2 id="meeting-modal-title">新建会议</h2>
+      <label for="meeting-name">会议名称</label>
+      <input id="meeting-name" maxlength="60" autocomplete="off" placeholder="如：需求评审会" required />
+      <p id="meeting-form-error" role="alert"></p>
+      <div class="meeting-modal-actions">
+        <button id="meeting-cancel" type="button">取消</button>
+        <button id="meeting-create" type="submit">创建</button>
+      </div>
+    </form>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

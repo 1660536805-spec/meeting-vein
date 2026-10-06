@@ -1,0 +1,66 @@
+/* Reference design applies only to the middle workspace. Header, toolbar and input skins stay intact. */
+.decision-workspace #main { grid-template-columns:minmax(0,1fr) clamp(300px,27vw,390px); gap:0; padding:0; }
+.decision-workspace #board-shell, .decision-workspace #mascot { border:1px solid #233a55; border-radius:18px 18px 0 0; }
+.decision-workspace #board-shell { position:relative; background:radial-gradient(ellipse at 45% 68%,#092b3c66,transparent 45%),radial-gradient(ellipse at 76% 55%,#152d7566,transparent 34%),linear-gradient(135deg,#081523,#061321); }
+#board-stage { display:flex; flex:1; min-height:0; position:relative; }
+.decision-workspace #board { background:transparent; min-width:0; }
+.decision-workspace #board .x6-graph-background { background:transparent !important; }
+.decision-workspace #board .x6-node [selector="body"] { filter:drop-shadow(0 0 10px #147cba25); }
+.decision-workspace #board .x6-node:hover [selector="body"] { filter:brightness(1.2) drop-shadow(0 0 14px #147cba55); }
+.decision-workspace #board-empty { padding:24px 20px 70px; align-items:center; justify-content:center; gap:10px; }
+.board-empty-title { margin:0; font-size:18px; color:#a5bddb; font-weight:500; }
+.board-empty-hint { margin:0; font-size:12px; color:#6d89ad; line-height:1.7; text-align:center; }
+#utterance-rail { width:190px; flex:0 0 190px; padding:14px 12px 65px 22px; overflow:auto; scrollbar-width:thin; scrollbar-color:#274261 transparent; }
+#utterance-rail[hidden] { display:none; }
+.rail-caption { color:#82a7d5; font-size:11px; display:flex; justify-content:space-between; margin-bottom:15px; }
+.rail-caption span { color:#466587; }
+.utterance-card { display:block; width:100%; padding:13px 12px; margin-bottom:15px; text-align:left; border:1px solid #2d70a5; border-radius:14px; background:linear-gradient(125deg,#123050,#0b1d32); color:#dbe9ff; cursor:pointer; }
+.utterance-card:hover { border-color:#65bcff; background:#163657; }
+.utterance-head { display:flex; gap:8px; align-items:center; font-size:11px; }
+.speaker-avatar { width:27px; height:27px; display:grid; place-items:center; flex:none; color:#d7eaff; background:linear-gradient(140deg,#496e9b,#24415f); border:1px solid #7a9ab8; border-radius:50%; }
+.utterance-head small { color:#6c93c2; font-variant-numeric:tabular-nums; margin-left:auto; }
+.utterance-card p { margin:8px 0 0 34px; line-height:1.65; font-size:12px; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
+.rail-empty { color:#6380a4; font-size:12px; line-height:1.8; }
+.utterance-more { color:#8badcf; font-size:11px; }
+.decision-workspace #mascot { min-width:0; padding:12px 16px 0; align-items:stretch; background:radial-gradient(ellipse at 85% 5%,#10294777,transparent 42%),linear-gradient(150deg,#081522,#08121f); overflow:hidden; }
+.assistant-head { display:flex; flex:0 0 auto; align-items:center; min-height:76px; position:relative; }
+.assistant-heading { flex:1; min-width:0; position:relative; z-index:1; }
+.decision-workspace .assistant-label { font-size:18px; letter-spacing:.015em; color:#f4f6fc; }
+.assistant-label small { display:inline-block; font-size:10px; letter-spacing:.04em; color:#7087a6; margin-left:7px; }
+.decision-workspace #mascot .bubble { padding:0; margin:7px 0 0; border:0; background:transparent; color:#63e2ff; font-size:15px; font-weight:550; line-height:1.3; }
+.decision-workspace #mascot-model { flex:0 0 149.6px; width:149.6px; height:129.2px; min-height:0; margin:0 -4px 0 0; }
+.decision-workspace #mascot-model:has(.mascot-fallback:not([hidden])) { height:115.6px; }
+.decision-workspace #mascot-model img.mascot-fallback { width:704.8%; height:670.6%; max-width:none; left:-604.8%; top:0; object-fit:fill; }
+#assistant-insights { flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; padding-bottom:8px; scrollbar-width:thin; scrollbar-color:#2d4865 transparent; }
+.insight-section { padding:9px 0; border-top:1px solid #243850; --accent:#ffbc3b; }
+.conflict-section { --accent:#ff528e; }
+.action-section { --accent:#18e7bc; }
+.insight-section h2 { display:flex; align-items:center; gap:8px; margin:0 0 7px; color:#f1f3fa; font-size:15px; font-weight:550; line-height:1.4; }
+.insight-icon { display:grid; place-items:center; width:22px; height:22px; border:1.5px solid var(--accent); border-radius:50%; color:var(--accent); font-size:16px; line-height:1; }
+.focus-section .insight-icon { border:0; font-size:28px; }
+.insight-section h2 b { margin-left:2px; padding:2px 7px; border-radius:6px; background:color-mix(in srgb,var(--accent) 9%,transparent); color:var(--accent); font-size:11px; font-weight:550; }
+.insight-card { width:100%; display:block; padding:8px 10px; margin-bottom:6px; color:#f0f4fe; border:1px solid #253b51; border-left-color:var(--accent); border-radius:9px; background:linear-gradient(115deg,#112035,#0c1829); text-align:left; cursor:pointer; transition:background .18s,border-color .18s; }
+.insight-card:hover { background:#162941; border-color:var(--accent); }
+.insight-card strong { display:flex; align-items:start; justify-content:space-between; gap:8px; font-size:13px; font-weight:550; line-height:1.45; }
+.insight-card strong:after { content:"›"; font-size:18px; font-weight:300; line-height:1; color:#b7c9e9; }
+.insight-card p { color:#a4b9dc; font-size:12px; line-height:1.5; margin:4px 0 0; }
+.conflict-section .insight-card strong { color:#f490bc; }
+.insight-empty { color:#6f88a7; font-size:11px; margin:4px 0 2px; line-height:1.5; }
+.decision-workspace #mascot #composer { flex:0 0 96px; min-height:96px; margin:0 -16px; }
+@media(max-width:1150px) and (min-width:851px) {
+  .decision-workspace #main { grid-template-columns:minmax(0,1fr) 300px; }
+  #utterance-rail { width:155px; flex-basis:155px; padding-left:14px; }
+}
+@media(max-width:850px) {
+  .decision-workspace #main { display:grid; grid-template-columns:minmax(0,1fr); overflow-y:auto; }
+  .decision-workspace #work-area { height:650px; min-height:650px; }
+  .decision-workspace #mascot { display:flex; min-height:580px; overflow:visible; }
+  #assistant-insights { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; overflow:visible; }
+  .decision-workspace #mascot-model { margin-left:0; }
+  .decision-workspace #mascot #composer { flex:0 0 96px; }
+}
+@media(max-width:600px) {
+  #utterance-rail { display:none; }
+  .decision-workspace #board-empty { padding-inline:8px; }
+  #assistant-insights { display:block; }
+}

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 280" role="img" aria-label="鲸鱼看板娘静态替代图">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#bdeaff"/>
+      <stop offset="1" stop-color="#568dcb"/>
+    </linearGradient>
+  </defs>
+  <path d="M75 66Q120 27 165 66L176 102Q199 116 202 157Q205 206 165 226L153 249L128 230L109 254L91 228Q47 215 39 177Q27 124 67 101Z" fill="url(#body)" stroke="#315884" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M69 106Q120 77 171 106L180 160Q171 194 120 197Q69 194 60 160Z" fill="#fff"/>
+  <path d="M79 145Q91 133 103 145M137 145Q149 133 161 145" fill="none" stroke="#315884" stroke-width="7" stroke-linecap="round"/>
+  <path d="M102 169Q120 183 138 169" fill="none" stroke="#315884" stroke-width="5" stroke-linecap="round"/>
+  <path d="M88 66Q100 37 120 40Q140 37 152 66" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="120" cy="40" r="10" fill="#ffd86b" stroke="#315884" stroke-width="4"/>
+  <path d="M30 196Q12 203 18 222Q39 225 53 209M188 205Q209 219 224 207Q222 187 204 184" fill="#77acd9" stroke="#315884" stroke-width="5" stroke-linejoin="round"/>
+</svg>

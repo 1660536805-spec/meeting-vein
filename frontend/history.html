@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <script src="/theme-init.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>历史会议 · 会见</title>
+  <link rel="stylesheet" href="/src/workbench.css" />
+  <link rel="stylesheet" href="/src/history.css" />
+  <link rel="stylesheet" href="/src/master-theme.css" />
+  <link rel="stylesheet" href="/src/night-theme.css" />
+  <link rel="stylesheet" href="/src/theme.css" />
+  <script type="module" src="/src/theme.ts"></script>
+</head>
+<body>
+  <div id="app">
+    <header id="app-header" class="master-topnav">
+      <a class="master-brand" href="/">AI 会议秘书</a>
+      <nav class="app-tabs" aria-label="项目导航">
+        <a href="/home.html">主页</a><a href="/workspace.html">看板</a><a href="/history.html" aria-current="page">历史</a><a href="/issues.html">议题结构</a>
+      </nav>
+    </header>
+    <main id="history-layout">
+      <aside id="history-sidebar" aria-label="历史会议列表">
+        <div class="history-sidebar-head"><span>历史会议</span><button id="history-refresh" type="button">刷新</button></div>
+        <div id="history-list" role="list"></div>
+        <p id="history-list-empty" hidden>还没有保存过会议。进入看板后创建会议，讨论内容会出现在这里。</p>
+      </aside>
+      <section id="history-detail" aria-label="会议详情">
+        <div id="history-placeholder">选择左侧会议，查看看板和保存记录。</div>
+        <div id="history-content" hidden>
+          <div id="history-heading">
+            <div><h1 id="history-title"></h1><p id="history-meta"></p></div>
+            <div class="history-heading-actions"><button id="history-rename" type="button">重命名</button><a id="history-open" href="/workspace.html">打开看板</a></div>
+          </div>
+          <form id="rename-form" hidden>
+            <label for="rename-input">会议名称</label><input id="rename-input" maxlength="60" required />
+            <button type="submit">确定</button><button id="rename-cancel" type="button">取消</button>
+          </form>
+          <div id="history-body">
+            <div id="history-board" aria-label="只读会议关系图">
+              <div id="board-toolbar" role="toolbar" aria-label="看板缩放控制">
+                <button id="tb-zoom-out" type="button" title="缩小" aria-label="缩小">−</button>
+                <span id="board-zoom-value">100%</span>
+                <button id="tb-zoom-in" type="button" title="放大" aria-label="放大">＋</button>
+              </div>
+            </div>
+            <aside id="history-records">
+              <h2>逐句对话</h2>
+              <div id="history-utterance-list"></div>
+              <h2>保存版本</h2>
+              <div id="history-record-list"></div>
+            </aside>
+          </div>
+        </div>
+        <p id="history-error" role="alert" hidden></p>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="/src/history.ts"></script>
+</body>
+</html>

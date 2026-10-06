@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <script src="/theme-init.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>会议快照 · 会见</title>
+  <link rel="stylesheet" href="/src/view.css" />
+  <link rel="stylesheet" href="/src/theme.css" />
+  <script type="module" src="/src/theme.ts"></script>
+</head>
+<body>
+  <header class="snapshot-header">
+    <a class="snapshot-brand" href="/">会见</a>
+    <span class="snapshot-badge">只读快照</span>
+    <a href="/history.html">历史会议 ↗</a>
+  </header>
+  <main class="snapshot-main">
+    <div class="snapshot-heading">
+      <div><span>MEETING SNAPSHOT</span><h1 id="snapshot-title">正在加载会议快照…</h1><p id="snapshot-meta"></p></div>
+      <p>此链接固定展示分享时的看板版本。</p>
+    </div>
+    <div id="snapshot-board" aria-label="只读会议结构图"></div>
+    <p id="snapshot-error" role="alert" hidden></p>
+  </main>
+  <script type="module" src="/src/view.ts"></script>
+</body>
+</html>

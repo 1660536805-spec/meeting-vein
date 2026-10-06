@@ -1,0 +1,32 @@
+# AI_Meeting_Organizer · 后端生产依赖
+# 安装：.venv\Scripts\pip install -r requirements.txt
+#
+# 说明：MVP 验证版（dev 分支初期）后端可用纯标准库跑通（见 app/orchestrator 轻量编排器），
+# 无需先装这些包。环境就绪（可访问 PyPI）后再安装以下生产依赖。
+
+# —— Web 框架 ——
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+websockets==14.1
+
+# —— LLM 接入（OpenAI 兼容统一接口，模型可插拔）——
+openai==1.59.6
+# LangGraph 原生编排（app/orchestrator.py 已硬依赖）
+langgraph==1.2.11
+langchain-core==1.6.3
+
+# —— 数据模型 ——
+pydantic==2.10.4
+
+# —— 配置（backend/.env 加载，app/config.py）——
+python-dotenv==1.2.3
+
+# —— 存储（Store A 真相源建议 jsonb；本地先 json 文件）——
+# 生产用 Postgres 时取消下一行注释：
+# asyncpg==0.30.0
+
+# —— 工具 ——
+httpx==0.28.1
+
+# master 提示词契约外置
+pyyaml==6.0.3

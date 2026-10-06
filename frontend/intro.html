@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <script src="/theme-init.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b1424" />
+  <meta name="description" content="AI 会议秘书实时聆听、提炼要点，并把论据、结论与待办串成可追溯的会议结构图。" />
+  <title>会见 · AI 会议秘书</title>
+  <link rel="stylesheet" href="/src/intro.css" />
+  <script type="module" src="/src/intro.ts"></script>
+  <link rel="stylesheet" href="/src/theme.css" />
+  <script type="module" src="/src/theme.ts"></script>
+</head>
+<body>
+  <main>
+    <section class="home-hero" id="story" aria-label="AI 会议秘书项目介绍">
+      <div class="desktop-copy sr-only">
+        <h1>会见：让每场讨论，都留下清晰脉络</h1>
+        <p>AI 会议秘书实时聆听、提炼要点，并把论据、结论与待办串成可追溯的会议结构图。</p>
+      </div>
+      <div class="reference-frame">
+        <img class="reference-image" src="/meeting-home-reference.png" width="1586" height="992"
+          alt="星空下的协作场景，展示视频会议、会议纪要、今日待办、实时转写和关系图谱。" />
+        <nav class="image-nav" aria-label="主导航">
+          <a class="hotspot nav-story" href="#story" aria-label="产品介绍"><span class="sr-only">产品介绍</span></a>
+          <a class="hotspot nav-capabilities" href="#capabilities" aria-label="核心能力"><span class="sr-only">核心能力</span></a>
+          <a class="hotspot nav-workspace" href="/workspace.html" aria-label="进入工作台"><span class="sr-only">进入工作台</span></a>
+        </nav>
+        <a class="hotspot hero-enter" href="/workspace.html" aria-label="进入会议看板"><span class="sr-only">进入会议看板</span></a>
+      </div>
+      <div class="mobile-home">
+        <nav aria-label="移动端导航"><a href="#story">产品介绍</a><a href="#capabilities">核心能力</a><a href="/workspace.html">进入工作台</a></nav>
+        <h1>会见</h1>
+        <h2>让每场讨论，都留下清晰脉络</h2>
+        <p>AI 会议秘书实时聆听、提炼要点，并把论据、结论与待办串成可追溯的会议结构图。</p>
+        <a class="mobile-enter" href="/workspace.html">进入会议看板 <span aria-hidden="true">→</span></a>
+      </div>
+    </section>
+    <section class="capabilities" id="capabilities" aria-labelledby="capabilities-title">
+      <div class="night-glow" aria-hidden="true"></div>
+      <div class="capabilities-inner">
+        <div class="section-heading">
+          <div class="heading-copy">
+            <span class="eyebrow"><i></i> CORE CAPABILITIES · 核心能力</span>
+            <h2 id="capabilities-title">让讨论留下<br><em>清晰脉络</em></h2>
+            <p>从实时语音到结构化议题看板。双 Agent 提炼发言中的观点与论据，让每个结论都有出处，每项待办都有去向。</p>
+            <a class="section-enter" href="/workspace.html">进入会议看板 <span aria-hidden="true">↗</span></a>
+          </div>
+          <div class="hero-diagram" aria-hidden="true">
+            <div class="diagram-top"><span><i></i> 讨论结构 · 实时生成</span><span>LIVE</span></div>
+            <svg viewBox="0 0 430 270" role="presentation"><defs><linearGradient id="graph-line"><stop stop-color="#8eb7ee"/><stop offset="1" stop-color="#e9bd83"/></linearGradient></defs><g fill="none" stroke="url(#graph-line)" stroke-opacity=".57" stroke-width="1.4"><path d="M215 132 98 60M215 132 334 63M215 132 78 202M215 132 335 209M98 60 78 202M334 63 335 209"/></g><g fill="#132843" stroke="#8bb4ec" stroke-width="2"><circle cx="98" cy="60" r="11"/><circle cx="334" cy="63" r="11"/><circle cx="78" cy="202" r="11"/><circle cx="335" cy="209" r="11"/></g><circle cx="215" cy="132" r="33" fill="#243a5a" stroke="#d9e8ff" stroke-width="1.5"/><circle cx="215" cy="132" r="39" fill="none" stroke="#8eb7ee" stroke-opacity=".35"/><g fill="#dce8fa" font-size="12" font-family="sans-serif"><text x="184" y="137">会议主题</text><text x="78" y="38">观点</text><text x="314" y="40">结论</text><text x="58" y="237">论据</text><text x="315" y="241">待办</text></g></svg>
+            <div class="diagram-bottom"><span class="diagram-wave"><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></span><span>发言正在变成脉络</span></div>
+          </div>
+        </div>
+        <div class="capability-list" aria-label="功能介绍">
+          <article class="feature-card feature-wide"><div class="feature-meta"><span>01 / 实时协作</span><span class="feature-signal">● LIVE</span></div><h3>实时结构化看板</h3><p>语音与文本输入实时驱动双 Agent，把发言整理成议题、观点和论据关系图。</p><div class="feature-visual visual-board" aria-hidden="true"><span>议题</span><i></i><span>观点 A</span><i></i><span>论据</span></div></article>
+          <article class="feature-card"><div class="feature-meta"><span>02 / 关系阅读</span><span>↗</span></div><h3>语义透镜与聚焦</h3><p>按支持、反对、从属等关系筛选连线，快速看清讨论脉络。</p><div class="feature-visual visual-tags" aria-hidden="true"><span>支持</span><span>反对</span><span>从属</span></div></article>
+          <article class="feature-card"><div class="feature-meta"><span>03 / 依据回看</span><span>↗</span></div><h3>每个结论都有出处</h3><p>节点关联原始发言与说话人，重要判断随时可以回看、核对。</p><div class="feature-visual visual-quote" aria-hidden="true"><span>“我们先完成方案评估…”</span><small>原始发言 · 14:32</small></div></article>
+          <article class="feature-card"><div class="feature-meta"><span>04 / 协同共创</span><span>↗</span></div><h3>人机协同编辑</h3><p>直接调整 AI 整理的节点与关系，让人工判断留在最终结构里。</p><div class="feature-visual visual-edit" aria-hidden="true"><span>观点整理</span><b>✓ 已确认</b></div></article>
+          <article class="feature-card"><div class="feature-meta"><span>05 / 会议档案</span><span>↗</span></div><h3>历史会议管理</h3><p>保存看板快照，回看会议结构与历史记录，延续上次讨论。</p><div class="feature-visual visual-history" aria-hidden="true"><span><i></i> 保存</span><span><i></i> 回看</span></div></article>
+          <article class="feature-card feature-wide"><div class="feature-meta"><span>06 / 智能陪伴</span><span>↗</span></div><h3>让整理过程更自然</h3><p>看板娘实时反馈会议状态；拖拽与悬停手势让观点和关系的调整更顺手。</p><div class="feature-visual visual-companion" aria-hidden="true"><span class="companion-face">✦</span><span>捕捉意图</span><i></i><span>整理看板</span><i></i><span>形成结论</span></div></article>
+        </div>
+        <div class="section-footer"><div><small>FROM CONVERSATION TO CLARITY</small><strong>每一次发言，都能成为下一步的起点。</strong></div><a href="/history.html">查看历史会议 <span aria-hidden="true">↗</span></a></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

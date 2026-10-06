@@ -1,0 +1,16 @@
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; color: #f3f0e7; background: radial-gradient(ellipse at 75% 4%, #1b3152, transparent 48%), #0a1423; font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+a { color: inherit; text-decoration: none; }
+.snapshot-header { display: flex; align-items: center; gap: 24px; padding: 20px max(5vw, 22px); border-bottom: 1px solid rgba(170,198,233,.17); }
+.snapshot-brand { font-size: 25px; font-weight: 700; letter-spacing: -.05em; }
+.snapshot-badge { padding: 6px 10px; border: 1px solid rgba(188,212,242,.3); border-radius: 999px; color: #b7cbea; font-size: 11px; letter-spacing: .12em; }
+.snapshot-header a:last-child { margin-left: auto; color: #e5d2b7; font-size: 13px; }
+.snapshot-main { width: min(1440px, 100%); margin: 0 auto; padding: 45px max(5vw, 22px) 60px; }
+.snapshot-heading { display: flex; justify-content: space-between; align-items: end; gap: 25px; margin-bottom: 26px; }
+.snapshot-heading span { color: #94afd2; font-size: 11px; letter-spacing: .2em; }
+.snapshot-heading h1 { margin: 12px 0 6px; font-size: clamp(28px, 4vw, 50px); }
+.snapshot-heading p { margin: 0; color: #a9bbd2; font-size: 13px; }
+#snapshot-board { position: relative; width: 100%; height: min(72vh, 850px); min-height: 450px; overflow: hidden; border: 1px solid rgba(170,198,233,.24); border-radius: 18px; background: radial-gradient(circle at 50% 35%, #1a2a41, #101c2d 74%); }
+#snapshot-error { padding: 20px; color: #ffb5bd; }
+@media (max-width: 650px) { .snapshot-heading { display: block; } .snapshot-heading > p { margin-top: 12px; } #snapshot-board { min-height: 550px; } }

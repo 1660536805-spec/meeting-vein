@@ -1,0 +1,144 @@
+/* 介绍页的深夜蓝与暖白，保持 master 的三页布局与交互位置。 */
+:root {
+  --master-blue: #b7cdf4;
+  --master-blue-hover: #d3e0fa;
+  --master-blue-tint: #1c3454;
+  --master-line: #3a526e;
+  --master-soft: #263b56;
+  --master-bg: #0b1424;
+  --master-text: #f2efe4;
+  --master-muted: #aebdd0;
+  --night-panel: #12243b;
+  --night-panel-raised: #1b304b;
+  --night-cream: #f2efe4;
+  color-scheme: dark;
+}
+html, body, #app, .master-app { background: var(--master-bg); color: var(--master-text); }
+#app-header.master-topnav {
+  border-color: #243b59;
+  background-color: #080f1b;
+  background-image:
+    radial-gradient(1px 1px at 9% 28%, #8ca4d2 99%, transparent),
+    radial-gradient(1px 1px at 29% 70%, #7a92bf 99%, transparent),
+    radial-gradient(1px 1px at 58% 24%, #b2c3e9 99%, transparent),
+    radial-gradient(1px 1px at 84% 48%, #7c91b8 99%, transparent);
+}
+.master-brand { color: var(--night-cream); letter-spacing: .015em; }
+.app-tabs a { color: #c6cfdd; }
+.app-tabs a:hover, .app-tabs a[aria-current="page"] { color: var(--night-cream); }
+.app-tabs a[aria-current="page"]::after { background: var(--night-cream); }
+#master-home {
+  background-color: #0b1424;
+  background-image:
+    radial-gradient(1px 1px at 11% 11%, #728bb9 99%, transparent),
+    radial-gradient(1px 1px at 78% 8%, #acbee0 99%, transparent),
+    radial-gradient(1px 1px at 63% 32%, #617cae 99%, transparent),
+    radial-gradient(1px 1px at 25% 45%, #6b82ac 99%, transparent),
+    radial-gradient(ellipse 70% 42% at 50% 0%, #1b3153 0%, transparent 100%),
+    linear-gradient(#0b1424, #101d31);
+}
+.master-home-hero h1 { color: var(--night-cream); font-size: 32px; }
+.master-home-hero p { color: #c5cdd9; }
+.master-home-hero a, #master-toolbar button.primary, #master-toolbar #new-meeting,
+#master-toolbar #share-snapshot, #master-toolbar #meeting-controls #new-meeting,
+#composer-send, #asr-record:not(:disabled), .history-heading-actions a,
+#rename-form button[type="submit"], .meeting-modal-actions #meeting-create {
+  border-color: var(--night-cream); background: var(--night-cream); color: #121a27;
+  font-weight: 650;
+}
+.master-home-hero a:hover, #master-toolbar button.primary:hover,
+#master-toolbar #new-meeting:hover, #master-toolbar #share-snapshot:hover,
+#master-toolbar #meeting-controls #new-meeting:hover, #composer-send:hover,
+#asr-record:not(:disabled):hover, .history-heading-actions a:hover,
+#rename-form button[type="submit"]:hover, .meeting-modal-actions #meeting-create:hover {
+  border-color: #fffbed; background: #fffbed; color: #111927;
+}
+.master-home-card {
+  border-color: #3a506c; border-radius: 10px;
+  background: linear-gradient(145deg, rgba(29,49,76,.94), rgba(17,31,52,.96));
+  box-shadow: 0 12px 24px rgba(0,0,0,.12);
+}
+.master-home-card:hover { border-color: #8da9d3; box-shadow: 0 0 0 2px rgba(168,194,234,.12); }
+.master-home-card h2 { color: #d9e5f9; }
+.master-home-card p { color: #b5c2d4; }
+#master-toolbar, #board-topbar, #asr-panel, #composer,
+#history-sidebar, #history-heading, #rename-form, #history-records {
+  background: #102036;
+}
+#master-toolbar { border-bottom-color: var(--master-line); }
+#master-toolbar button, #master-toolbar select,
+#master-toolbar #meeting-controls button, .history-sidebar-head button,
+.history-heading-actions button, #rename-form button,
+.meeting-modal-actions button {
+  border-color: #47617f; background: var(--night-panel-raised); color: #e9edf5;
+}
+#master-toolbar button:hover, #master-toolbar select:hover,
+#master-toolbar #meeting-controls #save-meeting:hover,
+.history-sidebar-head button:hover, .history-heading-actions button:hover {
+  border-color: #9cb8e3; background: #294563; color: #fff;
+}
+#master-toolbar #meeting-controls #save-meeting {
+  border-color: #47617f; background: var(--night-panel-raised); color: #e9edf5;
+}
+#master-toolbar label, #change-summary, #share-status, #meeting-message,
+#board-status, #board-legend { color: #b7c5d8; }
+#main, #board-shell, #board, #history-layout, #history-detail,
+#history-board { background: #0b1b2e; }
+#board-topbar { border-color: #304965; }
+.board-heading h1, #board-empty strong, #history-title { color: var(--night-cream); }
+#board-empty, #history-placeholder { color: var(--master-muted); }
+#board-toolbar {
+  border-color: #4a6180; background: rgba(18,34,55,.96);
+  box-shadow: 0 8px 20px rgba(0,0,0,.3);
+}
+#board-toolbar button, #board-zoom-value { color: #e9edf5; }
+#board-toolbar button:hover { background: #294563; color: #fff; }
+#mascot {
+  border-left-color: var(--master-line);
+  background: radial-gradient(circle at 50% 39%, #20385d 0%, #142641 38%, #0d1c30 76%);
+}
+.assistant-label, #mascot .name { color: var(--night-cream); }
+#mascot .bubble { border-color: #46617f; background: #1d3452; color: #d4dfef; }
+.assistant-help, #asr-panel h2 span, .asr-meta, #asr-message,
+#composer-status, #history-meta { color: #afc0d5; }
+#asr-panel h2 { color: var(--night-cream); }
+.asr-controls button, #asr-retry, .asr-upload {
+  border-color: #47617f; background: #1b304b; color: #e9edf5;
+}
+.asr-controls button:not(:disabled):hover, #asr-retry:not(:disabled):hover,
+.asr-upload:hover { border-color: #9cb8e3; background: #294563; color: #fff; }
+#asr-timer { color: #dbe5f3; }
+#asr-transcript { border-left-color: #9bb6e9; background: #1b304b; color: #dae5f4; }
+#composer-input, #meeting-name, #rename-input {
+  border-color: #47617f; background: #0d1b2d; color: #f0f3f8;
+}
+#composer-input:hover, #composer-input:focus, #meeting-name:focus,
+#rename-input:focus { border-color: #a7c1ed; background: #11233b; box-shadow: 0 0 0 2px rgba(167,193,237,.15); }
+#composer-input::placeholder { color: #9caec5; }
+#meeting-form {
+  border: 1px solid #46617d; background: #14243b; color: var(--night-cream);
+  box-shadow: 0 22px 70px rgba(0,0,0,.55);
+}
+#meeting-form h2 { border-bottom-color: #304965; }
+#meeting-form label { color: #c2d0e1; }
+#meeting-form-error { color: #f1a7b3; }
+#history-sidebar { border-right-color: var(--master-line); }
+.history-sidebar-head, #history-heading, #history-records h2,
+#rename-form { border-bottom-color: var(--master-line); }
+.history-item, .history-record {
+  border-color: #38516f; background: #162a43; color: var(--night-cream);
+}
+.history-item:hover, .history-item[aria-current="true"] {
+  border-color: #a2bce5; background: #223c5b;
+}
+.history-item[aria-current="true"] { box-shadow: 0 0 0 2px rgba(162,188,229,.12); }
+.history-item small, #history-list-empty, .history-record small,
+#history-record-list p { color: #aebfd4; }
+.history-record strong { color: var(--night-cream); }
+#history-records { border-left-color: var(--master-line); }
+#history-error { color: #f1a7b3; }
+#rename-form button[type="submit"] { color: #111927; }
+@media (max-width:650px) {
+  #history-sidebar { border-bottom-color: var(--master-line); }
+  #history-records { border-top-color: var(--master-line); }
+}

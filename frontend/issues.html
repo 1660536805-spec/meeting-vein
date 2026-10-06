@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <script src="/theme-init.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>议题结构 · AI 会议秘书</title>
+  <link rel="stylesheet" href="/src/workbench.css" />
+  <link rel="stylesheet" href="/src/history.css" />
+  <link rel="stylesheet" href="/src/master-theme.css" />
+  <link rel="stylesheet" href="/src/night-theme.css" />
+  <link rel="stylesheet" href="/src/theme.css" />
+  <link rel="stylesheet" href="/src/issues.css" />
+  <script type="module" src="/src/theme.ts"></script>
+</head>
+<body>
+  <div id="app">
+    <header id="app-header" class="master-topnav">
+      <a class="master-brand" href="/">AI 会议秘书</a>
+      <nav class="app-tabs" aria-label="项目导航">
+        <a href="/home.html">主页</a><a href="/workspace.html">看板</a><a href="/history.html">历史</a><a href="/issues.html" aria-current="page">议题结构</a>
+      </nav>
+    </header>
+    <main id="history-layout">
+      <aside id="history-sidebar" aria-label="历史会议列表">
+        <div class="history-sidebar-head"><span>历史会议</span><button id="issues-refresh" type="button">刷新</button></div>
+        <div id="history-list" role="list"></div>
+        <p id="history-list-empty" hidden>还没有保存过会议。进入看板后创建会议，讨论内容会出现在这里。</p>
+      </aside>
+      <section id="history-detail" aria-label="会议议题结构">
+        <div id="history-placeholder">选择左侧会议，查看按「议题 → 观点 → 要点」组织的结构。</div>
+        <div id="history-content" hidden>
+          <div id="history-heading">
+            <div><h1 id="history-title"></h1><p id="history-meta"></p></div>
+            <div class="history-heading-actions"><a id="history-open" href="/workspace.html">打开看板</a></div>
+          </div>
+          <div id="issues-scroll"><div id="issues-body" class="issue-structure"></div></div>
+        </div>
+        <p id="history-error" role="alert" hidden></p>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="/src/issues.ts"></script>
+</body>
+</html>

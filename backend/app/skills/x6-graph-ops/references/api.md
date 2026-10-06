@@ -1,0 +1,560 @@
+# AntV X6 接口 API 参考（@antv/x6@2.19.2）
+
+> 来源：项目本地 `node_modules/@antv/x6/lib` 的 TypeScript 声明文件（权威、与运行时一致）。
+
+> 说明：方法签名已按类整理；返回类型省略了泛型参数细节以节省篇幅。完整的 `Manual` 构造配置见 `options.d.ts`（亦见于 `references/cheatsheet.md`）。
+
+
+## 画布 Graph（`Graph`）
+
+公开方法共 **163** 个：
+
+
+- `get container()` → `HTMLElement`
+- `isNode(cell: Cell)` → `cell is Node`
+- `isEdge(cell: Cell)` → `cell is Edge`
+- `resetCells(cells: Cell[], options?: Collection.SetOptions)` → `this`
+- `clearCells(options?: Cell.SetOptions)` → `this`
+- `toJSON(options?: Model.ToJSONOptions)` → `{`
+- `parseJSON(data: Model.FromJSONData)` → `(Edge<Edge.Properties> | Node<Node.Properties>)[]`
+- `fromJSON(data: Model.FromJSONData, options?: Model.FromJSONOptions)` → `this`
+- `getCellById(id: string)` → `Cell<Cell.Properties>`
+- `addNode(metadata: Node.Metadata, options?: Model.AddOptions)` → `Node`
+- `addNode(node: Node, options?: Model.AddOptions)` → `Node`
+- `addNodes(nodes: (Node | Node.Metadata)[], options?: Model.AddOptions)` → `this`
+- `createNode(metadata: Node.Metadata)` → `Node<Node.Properties>`
+- `removeNode(nodeId: string, options?: Collection.RemoveOptions)` → `Node | null`
+- `removeNode(node: Node, options?: Collection.RemoveOptions)` → `Node | null`
+- `addEdge(metadata: Edge.Metadata, options?: Model.AddOptions)` → `Edge`
+- `addEdge(edge: Edge, options?: Model.AddOptions)` → `Edge`
+- `addEdges(edges: (Edge | Edge.Metadata)[], options?: Model.AddOptions)` → `this`
+- `removeEdge(edgeId: string, options?: Collection.RemoveOptions)` → `Edge | null`
+- `removeEdge(edge: Edge, options?: Collection.RemoveOptions)` → `Edge | null`
+- `createEdge(metadata: Edge.Metadata)` → `Edge<Edge.Properties>`
+- `addCell(cell: Cell | Cell[], options?: Model.AddOptions)` → `this`
+- `removeCell(cellId: string, options?: Collection.RemoveOptions)` → `Cell | null`
+- `removeCell(cell: Cell, options?: Collection.RemoveOptions)` → `Cell | null`
+- `removeCells(cells: (Cell | string)[], options?: Cell.RemoveOptions)` → `(Cell<Cell.Properties> | null)[]`
+- `removeConnectedEdges(cell: Cell | string, options?: Cell.RemoveOptions)` → `Edge<Edge.Properties>[]`
+- `disconnectConnectedEdges(cell: Cell | string, options?: Edge.SetOptions)` → `this`
+- `hasCell(cellId: string)` → `boolean`
+- `hasCell(cell: Cell)` → `boolean`
+- `getCells()` → `Cell<Cell.Properties>[]`
+- `getCellCount()` → `number`
+- `getNodes()` → `Node<Node.Properties>[]`
+- `getEdges()` → `Edge<Edge.Properties>[]`
+- `getOutgoingEdges(cell: Cell | string)` → `Edge<Edge.Properties>[] | null`
+- `getIncomingEdges(cell: Cell | string)` → `Edge<Edge.Properties>[] | null`
+- `getConnectedEdges(cell: Cell | string, options?: Model.GetConnectedEdgesOptions)` → `Edge<Edge.Properties>[]`
+- `getRootNodes()` → `Node<Node.Properties>[]`
+- `getLeafNodes()` → `Node<Node.Properties>[]`
+- `isRootNode(cell: Cell | string)` → `boolean`
+- `isLeafNode(cell: Cell | string)` → `boolean`
+- `getNeighbors(cell: Cell, options?: Model.GetNeighborsOptions)` → `Cell<Cell.Properties>[]`
+- `isNeighbor(cell1: Cell, cell2: Cell, options?: Model.GetNeighborsOptions)` → `boolean`
+- `getSuccessors(cell: Cell, options?: Model.GetPredecessorsOptions)` → `Cell<Cell.Properties>[]`
+- `isSuccessor(cell1: Cell, cell2: Cell, options?: Model.GetPredecessorsOptions)` → `boolean`
+- `getPredecessors(cell: Cell, options?: Model.GetPredecessorsOptions)` → `Cell<Cell.Properties>[]`
+- `isPredecessor(cell1: Cell, cell2: Cell, options?: Model.GetPredecessorsOptions)` → `boolean`
+- `getCommonAncestor(...cells: (Cell | null | undefined)[])` → `Cell<Cell.Properties> | null`
+- `getSubGraph(cells: Cell[], options?: Model.GetSubgraphOptions)` → `Cell<Cell.Properties>[]`
+- `cloneSubGraph(cells: Cell[], options?: Model.GetSubgraphOptions)` → `KeyValue<Cell<Cell.Properties>>`
+- `cloneCells(cells: Cell[])` → `KeyValue<Cell<Cell.Properties>>`
+- `getNodesFromPoint(x: number, y: number)` → `Node[]`
+- `getNodesFromPoint(p: Point.PointLike)` → `Node[]`
+- `getNodesInArea(x: number, y: number, w: number, h: number, options?: Model.GetCellsInAreaOptions)` → `Node[]`
+- `getNodesInArea(rect: Rectangle.RectangleLike, options?: Model.GetCellsInAreaOptions)` → `Node[]`
+- `getNodesUnderNode(node: Node, options?: { by?: 'bbox' | Rectangle.KeyPoint; })` → `Node<Node.Properties>[]`
+- `searchCell(cell: Cell, iterator: Model.SearchIterator, options?: Model.SearchOptions)` → `this`
+- `getShortestPath(source: Cell | string, target: Cell | string, options?: Model.GetShortestPathOptions)` → `string[]`
+- `getAllCellsBBox()` → `Rectangle | null`
+- `getCellsBBox(cells: Cell[], options?: Cell.GetCellsBBoxOptions)` → `Rectangle | null`
+- `startBatch(name: string | Model.BatchName, data?: KeyValue)` → `void`
+- `stopBatch(name: string | Model.BatchName, data?: KeyValue)` → `void`
+- `batchUpdate<T>(execute: () => T, data?: KeyValue)` → `T`
+- `batchUpdate<T>(name: string | Model.BatchName, execute: () => T, data?: KeyValue)` → `T`
+- `updateCellId(cell: Cell, newId: string)` → `Cell<Cell.Properties> | undefined`
+- `findView(ref: Cell | Element)` → `CellView<Cell<Cell.Properties>, CellView.Options> | null`
+- `findViews(ref: Point.PointLike | Rectangle.RectangleLike)` → `CellView<Cell<Cell.Properties>, CellView.Options>[]`
+- `findViewByCell(cellId: string | number)` → `CellView | null`
+- `findViewByCell(cell: Cell | null)` → `CellView | null`
+- `findViewByElem(elem: string | Element | undefined | null)` → `CellView<Cell<Cell.Properties>, CellView.Options> | null`
+- `findViewsFromPoint(x: number, y: number)` → `CellView[]`
+- `findViewsFromPoint(p: Point.PointLike)` → `CellView[]`
+- `findViewsInArea(x: number, y: number, width: number, height: number, options?: ViewRenderer.FindViewsIn...)` → `CellView[]`
+- `findViewsInArea(rect: Rectangle.RectangleLike, options?: ViewRenderer.FindViewsInAreaOptions)` → `CellView[]`
+- `matrix()` → `DOMMatrix`
+- `matrix(mat: DOMMatrix | Dom.MatrixLike | null)` → `this`
+- `resize(width?: number, height?: number)` → `this`
+- `scale()` → `Dom.Scale`
+- `scale(sx: number, sy?: number, cx?: number, cy?: number)` → `this`
+- `zoom()` → `number`
+- `zoom(factor: number, options?: Transform.ZoomOptions)` → `this`
+- `zoomTo(factor: number, options?: Omit<Transform.ZoomOptions, 'absolute'>)` → `this`
+- `zoomToRect(rect: Rectangle.RectangleLike, options?: Transform.ScaleContentToFitOptions & Transform...)` → `this`
+- `zoomToFit(options?: Transform.GetContentAreaOptions & Transform.ScaleContentToFitOptions)` → `this`
+- `rotate()` → `Dom.Rotation`
+- `rotate(angle: number, cx?: number, cy?: number)` → `this`
+- `translate()` → `Dom.Translation`
+- `translate(tx: number, ty: number)` → `this`
+- `translateBy(dx: number, dy: number)` → `this`
+- `getGraphArea()` → `Rectangle`
+- `getContentArea(options?: Transform.GetContentAreaOptions)` → `Rectangle`
+- `getContentBBox(options?: Transform.GetContentAreaOptions)` → `Rectangle`
+- `fitToContent(gridWidth?: number, gridHeight?: number, padding?: NumberExt.SideOptions, options?: Tra...)` → `Rectangle`
+- `fitToContent(options?: Transform.FitToContentFullOptions)` → `Rectangle`
+- `scaleContentToFit(options?: Transform.ScaleContentToFitOptions)` → `this`
+- `center(options?: Transform.CenterOptions)` → `this`
+- `centerPoint(x: number, y: null | number, options?: Transform.CenterOptions)` → `this`
+- `centerPoint(x: null | number, y: number, options?: Transform.CenterOptions)` → `this`
+- `centerPoint(optons?: Transform.CenterOptions)` → `this`
+- `centerContent(options?: Transform.PositionContentOptions)` → `this`
+- `centerCell(cell: Cell, options?: Transform.PositionContentOptions)` → `this`
+- `positionPoint(point: Point.PointLike, x: number | string, y: number | string, options?: Transform.Cen...)` → `this`
+- `positionRect(rect: Rectangle.RectangleLike, direction: Transform.Direction, options?: Transform.Cent...)` → `this`
+- `positionCell(cell: Cell, direction: Transform.Direction, options?: Transform.CenterOptions)` → `this`
+- `positionContent(pos: Transform.Direction, options?: Transform.PositionContentOptions)` → `this`
+- `snapToGrid(p: Point.PointLike)` → `Point`
+- `snapToGrid(x: number, y: number)` → `Point`
+- `pageToLocal(rect: Rectangle.RectangleLike)` → `Rectangle`
+- `pageToLocal(x: number, y: number, width: number, height: number)` → `Rectangle`
+- `pageToLocal(p: Point.PointLike)` → `Point`
+- `pageToLocal(x: number, y: number)` → `Point`
+- `localToPage(rect: Rectangle.RectangleLike)` → `Rectangle`
+- `localToPage(x: number, y: number, width: number, height: number)` → `Rectangle`
+- `localToPage(p: Point.PointLike)` → `Point`
+- `localToPage(x: number, y: number)` → `Point`
+- `clientToLocal(rect: Rectangle.RectangleLike)` → `Rectangle`
+- `clientToLocal(x: number, y: number, width: number, height: number)` → `Rectangle`
+- `clientToLocal(p: Point.PointLike)` → `Point`
+- `clientToLocal(x: number, y: number)` → `Point`
+- `localToClient(rect: Rectangle.RectangleLike)` → `Rectangle`
+- `localToClient(x: number, y: number, width: number, height: number)` → `Rectangle`
+- `localToClient(p: Point.PointLike)` → `Point`
+- `localToClient(x: number, y: number)` → `Point`
+- `localToGraph(rect: Rectangle.RectangleLike)` → `Rectangle`
+- `localToGraph(x: number, y: number, width: number, height: number)` → `Rectangle`
+- `localToGraph(p: Point.PointLike)` → `Point`
+- `localToGraph(x: number, y: number)` → `Point`
+- `graphToLocal(rect: Rectangle.RectangleLike)` → `Rectangle`
+- `graphToLocal(x: number, y: number, width: number, height: number)` → `Rectangle`
+- `graphToLocal(p: Point.PointLike)` → `Point`
+- `graphToLocal(x: number, y: number)` → `Point`
+- `clientToGraph(rect: Rectangle.RectangleLike)` → `Rectangle`
+- `clientToGraph(x: number, y: number, width: number, height: number)` → `Rectangle`
+- `clientToGraph(p: Point.PointLike)` → `Point`
+- `clientToGraph(x: number, y: number)` → `Point`
+- `defineFilter(options: Defs.FilterOptions)` → `string`
+- `defineGradient(options: Defs.GradientOptions)` → `string`
+- `defineMarker(options: Defs.MarkerOptions)` → `string`
+- `getGridSize()` → `number`
+- `setGridSize(gridSize: number)` → `this`
+- `showGrid()` → `this`
+- `hideGrid()` → `this`
+- `clearGrid()` → `this`
+- `drawGrid(options?: Grid.DrawGridOptions)` → `this`
+- `updateBackground()` → `this`
+- `drawBackground(options?: Background.Options, onGraph?: boolean)` → `this`
+- `clearBackground(onGraph?: boolean)` → `this`
+- `enableVirtualRender()` → `this`
+- `disableVirtualRender()` → `this`
+- `isMouseWheelEnabled()` → `boolean`
+- `enableMouseWheel()` → `this`
+- `disableMouseWheel()` → `this`
+- `toggleMouseWheel(enabled?: boolean)` → `this`
+- `isPannable()` → `any`
+- `enablePanning()` → `this`
+- `disablePanning()` → `this`
+- `togglePanning(pannable?: boolean)` → `this`
+- `use(plugin: Graph.Plugin, ...options: any[])` → `this`
+- `getPlugin<T extends Graph.Plugin>(pluginName: string)` → `T | undefined`
+- `enablePlugins(plugins: string[] | string)` → `this`
+- `disablePlugins(plugins: string[] | string)` → `this`
+- `isPluginEnabled(pluginName: string)` → `boolean | undefined`
+- `disposePlugins(plugins: string[] | string)` → `this`
+- `dispose(clean?: boolean)` → `void`
+
+## 数据模型 Model（`Model`）
+
+公开方法共 **81** 个：
+
+
+- `notify<Key extends keyof Model.EventArgs>(name: Key, args: Model.EventArgs[Key])` → `this`
+- `notify(name: Exclude<string, keyof Model.EventArgs>, args: any)` → `this`
+- `protected setup()` → `void`
+- `protected sortOnChangeZ()` → `void`
+- `protected onCellAdded(cell: Cell)` → `void`
+- `protected onCellRemoved(cell: Cell, options: Collection.RemoveOptions)` → `void`
+- `protected onReset(cells: Cell[])` → `void`
+- `protected onEdgeTerminalChanged(edge: Edge, type: Edge.TerminalType)` → `void`
+- `protected prepareCell(cell: Cell, options: Collection.AddOptions)` → `Cell<Cell.Properties>`
+- `resetCells(cells: Cell[], options?: Collection.SetOptions)` → `this`
+- `clear(options?: Cell.SetOptions)` → `this`
+- `addNode(metadata: Node | Node.Metadata, options?: Model.AddOptions)` → `Node<Node.Properties>`
+- `updateNode(metadata: Node.Metadata, options?: Model.SetOptions)` → `boolean`
+- `createNode(metadata: Node.Metadata)` → `Node<Node.Properties>`
+- `addEdge(metadata: Edge.Metadata | Edge, options?: Model.AddOptions)` → `Edge<Edge.Properties>`
+- `createEdge(metadata: Edge.Metadata)` → `Edge<Edge.Properties>`
+- `updateEdge(metadata: Edge.Metadata, options?: Model.SetOptions)` → `boolean`
+- `addCell(cell: Cell | Cell[], options?: Model.AddOptions)` → `this`
+- `addCells(cells: Cell[], options?: Model.AddOptions)` → `this`
+- `updateCell(prop: Cell.Properties, options?: Model.SetOptions)` → `boolean`
+- `removeCell(cellId: string, options?: Collection.RemoveOptions)` → `Cell | null`
+- `removeCell(cell: Cell, options?: Collection.RemoveOptions)` → `Cell | null`
+- `updateCellId(cell: Cell, newId: string)` → `Cell<Cell.Properties> | undefined`
+- `removeCells(cells: (Cell | string)[], options?: Cell.RemoveOptions)` → `(Cell<Cell.Properties> | null)[]`
+- `removeConnectedEdges(cell: Cell | string, options?: Cell.RemoveOptions)` → `Edge<Edge.Properties>[]`
+- `disconnectConnectedEdges(cell: Cell | string, options?: Edge.SetOptions)` → `void`
+- `has(id: string)` → `boolean`
+- `has(cell: Cell)` → `boolean`
+- `total()` → `number`
+- `indexOf(cell: Cell)` → `number`
+- `getCells()` → `Cell<Cell.Properties>[]`
+- `getFirstCell()` → `Cell<Cell.Properties> | null`
+- `getLastCell()` → `Cell<Cell.Properties> | null`
+- `getMinZIndex()` → `number`
+- `getMaxZIndex()` → `number`
+- `getNodes()` → `Node<Node.Properties>[]`
+- `getEdges()` → `Edge<Edge.Properties>[]`
+- `getOutgoingEdges(cell: Cell | string)` → `Edge<Edge.Properties>[] | null`
+- `getIncomingEdges(cell: Cell | string)` → `Edge<Edge.Properties>[] | null`
+- `getConnectedEdges(cell: Cell | string, options?: Model.GetConnectedEdgesOptions)` → `Edge<Edge.Properties>[]`
+- `protected isBoundary(cell: Cell | string, isOrigin: boolean)` → `boolean`
+- `protected getBoundaryNodes(isOrigin: boolean)` → `Node<Node.Properties>[]`
+- `getRoots()` → `Node<Node.Properties>[]`
+- `getLeafs()` → `Node<Node.Properties>[]`
+- `isRoot(cell: Cell | string)` → `boolean`
+- `isLeaf(cell: Cell | string)` → `boolean`
+- `getNeighbors(cell: Cell, options?: Model.GetNeighborsOptions)` → `Cell<Cell.Properties>[]`
+- `isNeighbor(cell1: Cell, cell2: Cell, options?: Model.GetNeighborsOptions)` → `boolean`
+- `getSuccessors(cell: Cell, options?: Model.GetPredecessorsOptions)` → `Cell<Cell.Properties>[]`
+- `isSuccessor(cell1: Cell, cell2: Cell, options?: Model.GetPredecessorsOptions)` → `boolean`
+- `getPredecessors(cell: Cell, options?: Model.GetPredecessorsOptions)` → `Cell<Cell.Properties>[]`
+- `isPredecessor(cell1: Cell, cell2: Cell, options?: Model.GetPredecessorsOptions)` → `boolean`
+- `protected matchDistance(distance: number, preset?: number | number[] | ((d: number) => boolean))` → `boolean`
+- `getCommonAncestor(...cells: (Cell | Cell[] | null | undefined)[])` → `Cell<Cell.Properties> | null`
+- `getSubGraph(cells: Cell[], options?: Model.GetSubgraphOptions)` → `Cell<Cell.Properties>[]`
+- `cloneSubGraph(cells: Cell[], options?: Model.GetSubgraphOptions)` → `KeyValue<Cell<Cell.Properties>>`
+- `cloneCells(cells: Cell[])` → `KeyValue<Cell<Cell.Properties>>`
+- `getNodesFromPoint(x: number, y: number)` → `Node[]`
+- `getNodesFromPoint(p: Point.PointLike)` → `Node[]`
+- `getNodesInArea(x: number, y: number, w: number, h: number, options?: Model.GetCellsInAreaOptions)` → `Node[]`
+- `getNodesInArea(rect: Rectangle.RectangleLike, options?: Model.GetCellsInAreaOptions)` → `Node[]`
+- `getEdgesInArea(x: number, y: number, w: number, h: number, options?: Model.GetCellsInAreaOptions)` → `Edge[]`
+- `getEdgesInArea(rect: Rectangle.RectangleLike, options?: Model.GetCellsInAreaOptions)` → `Edge[]`
+- `getNodesUnderNode(node: Node, options?: { by?: 'bbox' | Rectangle.KeyPoint; })` → `Node<Node.Properties>[]`
+- `getAllCellsBBox()` → `Rectangle | null`
+- `getCellsBBox(cells: Cell[], options?: Cell.GetCellsBBoxOptions)` → `Rectangle | null`
+- `search(cell: Cell, iterator: Model.SearchIterator, options?: Model.SearchOptions)` → `void`
+- `breadthFirstSearch(cell: Cell, iterator: Model.SearchIterator, options?: Model.GetNeighborsOptions)` → `void`
+- `depthFirstSearch(cell: Cell, iterator: Model.SearchIterator, options?: Model.GetNeighborsOptions)` → `void`
+- `getShortestPath(source: Cell | string, target: Cell | string, options?: Model.GetShortestPathOptions)` → `string[]`
+- `translate(tx: number, ty: number, options: Cell.TranslateOptions)` → `this`
+- `resize(width: number, height: number, options: Cell.SetOptions)` → `this`
+- `resizeCells(width: number, height: number, cells: Cell[], options?: Cell.SetOptions)` → `this`
+- `toJSON(options?: Model.ToJSONOptions)` → `{`
+- `parseJSON(data: Model.FromJSONData)` → `(Edge<Edge.Properties> | Node<Node.Properties>)[]`
+- `fromJSON(data: Model.FromJSONData, options?: Model.FromJSONOptions)` → `this`
+- `startBatch(name: Model.BatchName, data?: KeyValue)` → `this`
+- `stopBatch(name: Model.BatchName, data?: KeyValue)` → `this`
+- `batchUpdate<T>(name: Model.BatchName, execute: () => T, data?: KeyValue)` → `T`
+- `hasActiveBatch(name?: Model.BatchName | Model.BatchName[])` → `boolean`
+- `dispose()` → `void`
+
+## 图元基类 Cell（`Cell`）
+
+公开方法共 **133** 个：
+
+
+- `static getMarkup()` → `Markup`
+- `static getAttrHooks()` → `Attr.Definitions`
+- `static applyPropHooks(cell: Cell, metadata: Cell.Metadata)` → `Cell.Metadata`
+- `init()` → `void`
+- `get model()` → `Model | null`
+- `protected preprocess(metadata: Cell.Metadata, ignoreIdCheck?: boolean)` → `Properties`
+- `protected postprocess(metadata: Cell.Metadata)` → `void`
+- `protected setup()` → `void`
+- `notify<Key extends keyof Cell.EventArgs>(name: Key, args: Cell.EventArgs[Key])` → `this`
+- `notify(name: Exclude<string, keyof Cell.EventArgs>, args: any)` → `this`
+- `isNode()` → `this is Node`
+- `isEdge()` → `this is Edge`
+- `isSameStore(cell: Cell)` → `boolean`
+- `get view()` → `string | undefined`
+- `get shape()` → `string`
+- `getProp()` → `Properties`
+- `getProp<K extends keyof Properties>(key: K)` → `Properties[K]`
+- `getProp<K extends keyof Properties>(key: K, defaultValue: Properties[K])` → `NonUndefined<Properties[K]>`
+- `getProp<T>(key: string)` → `T`
+- `getProp<T>(key: string, defaultValue: T)` → `T`
+- `setProp<K extends keyof Properties>(key: K, value: Properties[K] | null | undefined | void, options?: Cell.SetOptions)` → `this`
+- `setProp(key: string, value: any, options?: Cell.SetOptions)` → `this`
+- `setProp(props: Partial<Properties>, options?: Cell.SetOptions)` → `this`
+- `removeProp<K extends keyof Properties>(key: K | K[], options?: Cell.SetOptions)` → `this`
+- `removeProp(key: string | string[], options?: Cell.SetOptions)` → `this`
+- `removeProp(options?: Cell.SetOptions)` → `this`
+- `hasChanged()` → `boolean`
+- `hasChanged<K extends keyof Properties>(key: K | null)` → `boolean`
+- `hasChanged(key: string | null)` → `boolean`
+- `getPropByPath<T>(path: string | string[])` → `T`
+- `setPropByPath(path: string | string[], value: any, options?: Cell.SetByPathOptions)` → `this`
+- `removePropByPath(path: string | string[], options?: Cell.SetOptions)` → `this`
+- `prop()` → `Properties`
+- `prop<K extends keyof Properties>(key: K)` → `Properties[K]`
+- `prop<T>(key: string)` → `T`
+- `prop<T>(path: string[])` → `T`
+- `prop<K extends keyof Properties>(key: K, value: Properties[K] | null | undefined | void, options?: Cell.SetOptions)` → `this`
+- `prop(key: string, value: any, options?: Cell.SetOptions)` → `this`
+- `prop(path: string[], value: any, options?: Cell.SetOptions)` → `this`
+- `prop(props: Partial<Properties>, options?: Cell.SetOptions)` → `this`
+- `previous<K extends keyof Properties>(name: K)` → `Properties[K] | undefined`
+- `previous<T>(name: string)` → `T | undefined`
+- `get zIndex()` → `number | undefined | null`
+- `getZIndex()` → `number | undefined`
+- `setZIndex(z: number, options?: Cell.SetOptions)` → `this`
+- `removeZIndex(options?: Cell.SetOptions)` → `this`
+- `toFront(options?: Cell.ToFrontOptions)` → `this`
+- `toBack(options?: Cell.ToBackOptions)` → `this`
+- `get markup()` → `Markup | undefined | null`
+- `getMarkup()` → `Markup`
+- `setMarkup(markup: Markup, options?: Cell.SetOptions)` → `this`
+- `removeMarkup(options?: Cell.SetOptions)` → `this`
+- `get attrs()` → `Attr.CellAttrs | null | undefined`
+- `getAttrs()` → `{`
+- `setAttrs(attrs: Attr.CellAttrs | null | undefined, options?: Cell.SetAttrOptions)` → `this`
+- `replaceAttrs(attrs: Attr.CellAttrs, options?: Cell.SetOptions)` → `this`
+- `updateAttrs(attrs: Attr.CellAttrs, options?: Cell.SetOptions)` → `this`
+- `removeAttrs(options?: Cell.SetOptions)` → `this`
+- `getAttrDefinition(attrName: string)` → `string | Attr.Qualify | null`
+- `getAttrByPath()` → `Attr.CellAttrs`
+- `getAttrByPath<T>(path: string | string[])` → `T`
+- `setAttrByPath(path: string | string[], value: Attr.ComplexAttrValue, options?: Cell.SetOptions)` → `this`
+- `removeAttrByPath(path: string | string[], options?: Cell.SetOptions)` → `this`
+- `protected prefixAttrPath(path: string | string[])` → `string | string[]`
+- `attr()` → `Attr.CellAttrs`
+- `attr<T>(path: string | string[])` → `T`
+- `attr(path: string | string[], value: Attr.ComplexAttrValue | null, options?: Cell.SetOptions)` → `this`
+- `attr(attrs: Attr.CellAttrs, options?: Cell.SetAttrOptions)` → `this`
+- `get visible()` → `boolean`
+- `setVisible(visible: boolean, options?: Cell.SetOptions)` → `this`
+- `isVisible()` → `boolean`
+- `show(options?: Cell.SetOptions)` → `this`
+- `hide(options?: Cell.SetOptions)` → `this`
+- `toggleVisible(visible: boolean, options?: Cell.SetOptions)` → `this`
+- `toggleVisible(options?: Cell.SetOptions)` → `this`
+- `get data()` → `Properties['data']`
+- `removeData(options?: Cell.SetOptions)` → `this`
+- `get parent()` → `Cell | null`
+- `get children()` → `Cell<Cell.Properties>[] | null`
+- `getParentId()` → `string | undefined`
+- `getChildren()` → `Cell<Cell.Properties>[] | null`
+- `hasParent()` → `boolean`
+- `isParentOf(child: Cell | null)` → `boolean`
+- `isChildOf(parent: Cell | null)` → `boolean`
+- `eachChild(iterator: (child: Cell, index: number, children: Cell[]) => void, context?: any)` → `this`
+- `filterChild(filter: (cell: Cell, index: number, arr: Cell[]) => boolean, context?: any)` → `Cell[]`
+- `getChildCount()` → `number`
+- `getChildIndex(child: Cell)` → `number`
+- `getChildAt(index: number)` → `Cell<Cell.Properties> | null`
+- `getAncestors(options?: { deep?: boolean; })` → `Cell[]`
+- `getDescendants(options?: Cell.GetDescendantsOptions)` → `Cell[]`
+- `isDescendantOf(ancestor: Cell | null, options?: { deep?: boolean; })` → `boolean`
+- `isAncestorOf(descendant: Cell | null, options?: { deep?: boolean; })` → `boolean`
+- `contains(cell: Cell | null)` → `boolean`
+- `getCommonAncestor(...cells: (Cell | null | undefined)[])` → `Cell | null`
+- `setParent(parent: Cell | null, options?: Cell.SetOptions)` → `this`
+- `setChildren(children: Cell[] | null, options?: Cell.SetOptions)` → `this`
+- `unembed(child: Cell, options?: Cell.SetOptions)` → `this`
+- `embed(child: Cell, options?: Cell.SetOptions)` → `this`
+- `addTo(model: Model, options?: Cell.SetOptions)` → `this`
+- `addTo(graph: Graph, options?: Cell.SetOptions)` → `this`
+- `addTo(parent: Cell, options?: Cell.SetOptions)` → `this`
+- `insertTo(parent: Cell, index?: number, options?: Cell.SetOptions)` → `this`
+- `addChild(child: Cell | null, options?: Cell.SetOptions)` → `this`
+- `insertChild(child: Cell | null, index?: number, options?: Cell.SetOptions)` → `this`
+- `removeFromParent(options?: Cell.RemoveOptions)` → `this`
+- `removeChild(child: Cell, options?: Cell.RemoveOptions)` → `Cell<Cell.Properties> | null`
+- `removeChildAt(index: number, options?: Cell.RemoveOptions)` → `Cell<Cell.Properties> | null`
+- `remove(options?: Cell.RemoveOptions)` → `this`
+- `transition<K extends keyof Properties>(path: K, target: Properties[K], options?: Animation.StartOptions<Properties[K]>, delim?...)` → `() => void`
+- `transition<T extends Animation.TargetValue>(path: string | string[], target: T, options?: Animation.StartOptions<T>, delim?: string)` → `() => void`
+- `stopTransition<T extends Animation.TargetValue>(path: string | string[], options?: Animation.StopOptions<T>, delim?: string)` → `this`
+- `getTransitions()` → `string[]`
+- `translate(tx: number, ty: number, options?: Cell.TranslateOptions)` → `this`
+- `scale(sx: number, // eslint-disable-line sy: number, // eslint-disable-line origin?: Point | ...)` → `this`
+- `addTools(items: Cell.ToolItem | Cell.ToolItem[], options?: Cell.AddToolOptions)` → `void`
+- `addTools(items: Cell.ToolItem | Cell.ToolItem[], name: string, options?: Cell.AddToolOptions)` → `void`
+- `setTools(tools?: Cell.ToolsLoose | null, options?: Cell.SetOptions)` → `this`
+- `getTools()` → `Cell.Tools | null`
+- `removeTools(options?: Cell.SetOptions)` → `this`
+- `hasTools(name?: string)` → `boolean`
+- `hasTool(name: string)` → `boolean`
+- `removeTool(name: string, options?: Cell.SetOptions)` → `this`
+- `removeTool(index: number, options?: Cell.SetOptions)` → `this`
+- `getBBox(options?: { deep?: boolean; })` → `Rectangle`
+- `getConnectionPoint(edge: Edge, type: Edge.TerminalType)` → `Point`
+- `toJSON(options?: Cell.ToJSONOptions)` → `this extends Node ? Node.Properties : this extends Edge ? Edge.Properties : Properties`
+- `clone(options?: Cell.CloneOptions)` → `this extends Node ? Node : this extends Edge ? Edge : Cell`
+- `findView(graph: Graph)` → `CellView | null`
+- `startBatch(name: Model.BatchName, data?: KeyValue, model?: Model | null)` → `this`
+- `stopBatch(name: Model.BatchName, data?: KeyValue, model?: Model | null)` → `this`
+- `batchUpdate<T>(name: Model.BatchName, execute: () => T, data?: KeyValue)` → `T`
+- `dispose()` → `void`
+
+## 节点 Node（`Node`）
+
+公开方法共 **70** 个：
+
+
+- `protected preprocess(metadata: Node.Metadata, ignoreIdCheck?: boolean)` → `Properties`
+- `isNode()` → `this is Node`
+- `size()` → `Size`
+- `size(size: Size, options?: Node.ResizeOptions)` → `this`
+- `size(width: number, height: number, options?: Node.ResizeOptions)` → `this`
+- `getSize()` → `{`
+- `setSize(size: Size, options?: Node.ResizeOptions)` → `this`
+- `setSize(width: number, height: number, options?: Node.ResizeOptions)` → `this`
+- `resize(width: number, height: number, options?: Node.ResizeOptions)` → `this`
+- `scale(sx: number, sy: number, origin?: Point.PointLike | null, options?: Node.SetOptions)` → `this`
+- `position(x: number, y: number, options?: Node.SetPositionOptions)` → `this`
+- `position(options?: Node.GetPositionOptions)` → `Point.PointLike`
+- `getPosition(options?: Node.GetPositionOptions)` → `Point.PointLike`
+- `setPosition(p: Point | Point.PointLike, options?: Node.SetPositionOptions)` → `this`
+- `setPosition(x: number, y: number, options?: Node.SetPositionOptions)` → `this`
+- `translate(tx?: number, ty?: number, options?: Node.TranslateOptions)` → `this`
+- `angle()` → `number`
+- `angle(val: number, options?: Node.RotateOptions)` → `this`
+- `getAngle()` → `number`
+- `rotate(angle: number, options?: Node.RotateOptions)` → `this`
+- `getBBox(options?: { deep?: boolean; })` → `Rectangle`
+- `getConnectionPoint(edge: Edge, type: Edge.TerminalType)` → `Point`
+- `fit(options?: Node.FitEmbedsOptions)` → `this`
+- `get portContainerMarkup()` → `Markup`
+- `getDefaultPortContainerMarkup()` → `Markup`
+- `getPortContainerMarkup()` → `Markup`
+- `setPortContainerMarkup(markup?: Markup, options?: Node.SetOptions)` → `this`
+- `get portMarkup()` → `Markup`
+- `getDefaultPortMarkup()` → `Markup`
+- `getPortMarkup()` → `Markup`
+- `setPortMarkup(markup?: Markup, options?: Node.SetOptions)` → `this`
+- `get portLabelMarkup()` → `Markup`
+- `getDefaultPortLabelMarkup()` → `Markup`
+- `getPortLabelMarkup()` → `Markup`
+- `setPortLabelMarkup(markup?: Markup, options?: Node.SetOptions)` → `this`
+- `get ports()` → `PortManager.Metadata`
+- `getPorts()` → `PortManager.PortMetadata[]`
+- `getPortsByGroup(groupName: string)` → `PortManager.PortMetadata[]`
+- `getPort(portId: string)` → `PortManager.PortMetadata | undefined`
+- `getPortAt(index: number)` → `PortManager.PortMetadata`
+- `hasPorts()` → `boolean`
+- `hasPort(portId: string)` → `boolean`
+- `getPortIndex(port: PortManager.PortMetadata | string)` → `number`
+- `getPortsPosition(groupName: string)` → `KeyValue<{`
+- `getPortProp(portId: string)` → `PortManager.PortMetadata`
+- `getPortProp<T>(portId: string, path: string | string[])` → `T`
+- `setPortProp(portId: string, path: string | string[], value: any, options?: Node.SetOptions)` → `this`
+- `setPortProp(portId: string, value: DeepPartial<PortManager.PortMetadata>, options?: Node.SetOptions)` → `this`
+- `removePortProp(portId: string, options?: Node.SetOptions)` → `this`
+- `removePortProp(portId: string, path: string | string[], options?: Node.SetOptions)` → `this`
+- `portProp(portId: string)` → `PortManager.PortMetadata`
+- `portProp<T>(portId: string, path: string | string[])` → `T`
+- `portProp(portId: string, path: string | string[], value: any, options?: Node.SetOptions)` → `this`
+- `portProp(portId: string, value: DeepPartial<PortManager.PortMetadata>, options?: Node.SetOptions)` → `this`
+- `protected prefixPortPath(portId: string, path?: string | string[])` → `string | string[]`
+- `addPort(port: PortManager.PortMetadata, options?: Node.SetOptions)` → `this`
+- `addPorts(ports: PortManager.PortMetadata[], options?: Node.SetOptions)` → `this`
+- `insertPort(index: number, port: PortManager.PortMetadata, options?: Node.SetOptions)` → `this`
+- `removePort(port: PortManager.PortMetadata | string, options?: Node.SetOptions)` → `this`
+- `removePortAt(index: number, options?: Node.SetOptions)` → `this`
+- `removePorts(options?: Node.SetOptions)` → `this`
+- `removePorts(portsForRemoval: (PortManager.PortMetadata | string)[], options?: Node.SetOptions)` → `this`
+- `getParsedPorts()` → `PortManager.Port[]`
+- `getParsedGroups()` → `{`
+- `getPortsLayoutByGroup(groupName: string | undefined, bbox: Rectangle)` → `PortManager.LayoutResult[]`
+- `protected initPorts()` → `void`
+- `protected processRemovedPort()` → `void`
+- `protected validatePorts()` → `string[]`
+- `protected generatePortId()` → `string`
+- `protected updatePortData()` → `void`
+
+## 边 Edge（`Edge`）
+
+公开方法共 **73** 个：
+
+
+- `protected preprocess(metadata: Edge.Metadata, ignoreIdCheck?: boolean)` → `Properties`
+- `protected setup()` → `void`
+- `isEdge()` → `this is Edge`
+- `disconnect(options?: Edge.SetOptions)` → `this`
+- `get source()` → `Edge.TerminalData`
+- `getSource()` → `Edge.TerminalData`
+- `getSourceCellId()` → `string`
+- `getSourcePortId()` → `string | undefined`
+- `setSource(node: Node, args?: Edge.SetCellTerminalArgs, options?: Edge.SetOptions)` → `this`
+- `setSource(edge: Edge, args?: Edge.SetEdgeTerminalArgs, options?: Edge.SetOptions)` → `this`
+- `setSource(point: Point | Point.PointLike, args?: Edge.SetTerminalCommonArgs, options?: Edge.SetOp...)` → `this`
+- `setSource(args: Edge.TerminalData, options?: Edge.SetOptions)` → `this`
+- `get target()` → `Edge.TerminalData`
+- `getTarget()` → `Edge.TerminalData`
+- `getTargetCellId()` → `string`
+- `getTargetPortId()` → `string | undefined`
+- `setTarget(edge: Node, args?: Edge.SetCellTerminalArgs, options?: Edge.SetOptions)` → `this`
+- `setTarget(edge: Edge, args?: Edge.SetEdgeTerminalArgs, options?: Edge.SetOptions)` → `this`
+- `setTarget(point: Point | Point.PointLike, args?: Edge.SetTerminalCommonArgs, options?: Edge.SetOp...)` → `this`
+- `setTarget(args: Edge.TerminalData, options?: Edge.SetOptions)` → `this`
+- `getTerminal(type: Edge.TerminalType)` → `Edge.TerminalData`
+- `setTerminal(type: Edge.TerminalType, terminal: Node | Edge | Point | Point.PointLike | Edge.Termina...)` → `this`
+- `getSourcePoint()` → `Point`
+- `getTargetPoint()` → `Point`
+- `protected getTerminalPoint(type: Edge.TerminalType)` → `Point`
+- `getSourceCell()` → `Cell<Cell.Properties> | null`
+- `getTargetCell()` → `Cell<Cell.Properties> | null`
+- `protected getTerminalCell(type: Edge.TerminalType)` → `Cell<Cell.Properties> | null`
+- `getSourceNode()` → `Node<Node.Properties> | null`
+- `getTargetNode()` → `Node<Node.Properties> | null`
+- `protected getTerminalNode(type: Edge.TerminalType)` → `Node | null`
+- `get router()` → `Edge.RouterData | undefined`
+- `getRouter()` → `Edge.RouterData`
+- `setRouter(name: string, args?: KeyValue, options?: Edge.SetOptions)` → `this`
+- `setRouter(router: Edge.RouterData, options?: Edge.SetOptions)` → `this`
+- `removeRouter(options?: Edge.SetOptions)` → `this`
+- `get connector()` → `Edge.ConnectorData | undefined`
+- `getConnector()` → `any`
+- `setConnector(name: string, args?: KeyValue, options?: Edge.SetOptions)` → `this`
+- `setConnector(connector: Edge.ConnectorData, options?: Edge.SetOptions)` → `this`
+- `removeConnector(options?: Edge.SetOptions)` → `Store<Edge.Properties>`
+- `getDefaultLabel()` → `Edge.Label`
+- `get labels()` → `Edge.Label[]`
+- `getLabels()` → `Edge.Label[]`
+- `setLabels(labels: Edge.Label | Edge.Label[] | string | string[], options?: Edge.SetOptions)` → `this`
+- `insertLabel(label: Edge.Label | string, index?: number, options?: Edge.SetOptions)` → `this`
+- `appendLabel(label: Edge.Label | string, options?: Edge.SetOptions)` → `this`
+- `getLabelAt(index: number)` → `Edge.Label | null`
+- `setLabelAt(index: number, label: Edge.Label | string, options?: Edge.SetOptions)` → `this`
+- `removeLabelAt(index: number, options?: Edge.SetOptions)` → `Edge.Label | null`
+- `protected parseLabel(label: string | Edge.Label)` → `Edge.Label`
+- `protected onLabelsChanged({ previous, current, }: Cell.ChangeArgs<Edge.Label[]>)` → `void`
+- `get vertices()` → `Point.PointLike | Point.PointLike[]`
+- `getVertices()` → `any[]`
+- `setVertices(vertices: Point.PointLike | Point.PointLike[], options?: Edge.SetOptions)` → `this`
+- `insertVertex(vertice: Point.PointLike, index?: number, options?: Edge.SetOptions)` → `this`
+- `appendVertex(vertex: Point.PointLike, options?: Edge.SetOptions)` → `this`
+- `getVertexAt(index: number)` → `any`
+- `setVertexAt(index: number, vertice: Point.PointLike, options?: Edge.SetOptions)` → `this`
+- `removeVertexAt(index: number, options?: Edge.SetOptions)` → `this`
+- `protected onVertexsChanged({ previous, current, }: Cell.ChangeArgs<Point.PointLike[]>)` → `void`
+- `getDefaultMarkup()` → `any`
+- `getMarkup()` → `any`
+- `translate(tx: number, ty: number, options?: Cell.TranslateOptions)` → `this`
+- `scale(sx: number, sy: number, origin?: Point | Point.PointLike, options?: Edge.SetOptions)` → `this`
+- `protected applyToPoints(worker: (p: Point.PointLike) => Point.PointLike, options?: Edge.SetOptions)` → `this`
+- `getBBox()` → `import("@antv/x6-geometry").Rectangle`
+- `getConnectionPoint()` → `Point`
+- `getPolyline()` → `Polyline`
+- `updateParent(options?: Edge.SetOptions)` → `Cell<Cell.Properties> | null`
+- `hasLoop(options?: { deep?: boolean; })` → `boolean`
+- `getFragmentAncestor()` → `Cell | null`
+- `isFragmentDescendantOf(cell: Cell)` → `boolean`
+
+---
+
+> 合计抽取核心类公开方法 **520** 个。

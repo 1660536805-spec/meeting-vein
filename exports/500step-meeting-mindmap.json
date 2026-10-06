@@ -1,0 +1,4193 @@
+{
+  "source": "backend/tests/500step.txt",
+  "meeting_id": "mtg_824c96d83a11433d",
+  "title": "协同办公平台 V2.0 · 上线推进会议思维导图",
+  "groups": [
+    {
+      "title": "开发进度与协作",
+      "range": [
+        1,
+        50
+      ],
+      "items": [
+        {
+          "label": "前端约85%，后端约80%\n权限与文件服务待收尾",
+          "type": "point",
+          "match": [
+            "85%",
+            "80%"
+          ],
+          "node_id": "n_500step_1_1",
+          "meta_ids": [
+            "utt_cli_42751eb4d789",
+            "utt_cli_692fa57572c4",
+            "utt_cli_4f1ec9998460"
+          ],
+          "source_lines": [
+            34,
+            35,
+            295
+          ]
+        },
+        {
+          "label": "需求冻结：权限不增新角色\n后续变更进入下一期",
+          "type": "conclusion",
+          "match": [
+            "权限模块需求已经冻结",
+            "本期不再增加新角色"
+          ],
+          "node_id": "n_500step_1_2",
+          "meta_ids": [
+            "utt_cli_502d03703999",
+            "utt_cli_66501e7418d5"
+          ],
+          "source_lines": [
+            41,
+            42
+          ]
+        },
+        {
+          "label": "前后端本周五前\n提交部署文档并通过冒烟",
+          "type": "action",
+          "match": [
+            "本周五前提供部署文档",
+            "本周五前完成部署文档"
+          ],
+          "node_id": "n_500step_1_3",
+          "meta_ids": [
+            "utt_cli_1ecbd2ddc48e",
+            "utt_cli_d23bdcf683fb"
+          ],
+          "source_lines": [
+            38,
+            50
+          ]
+        },
+        {
+          "label": "接口字段采用fileId\n变更当天同步文档并通知",
+          "type": "action",
+          "match": [
+            "实际返回的是 fileId",
+            "变更当天更新文档"
+          ],
+          "node_id": "n_500step_1_4",
+          "meta_ids": [
+            "utt_cli_96875f3f56c5",
+            "utt_cli_db40b6add7e1"
+          ],
+          "source_lines": [
+            155,
+            159
+          ]
+        }
+      ]
+    },
+    {
+      "title": "本期需求与边界",
+      "range": [
+        9,
+        123
+      ],
+      "items": [
+        {
+          "label": "基础抄送纳入本期\n抄送人仅查看，不能审批",
+          "type": "conclusion",
+          "match": [
+            "抄送功能纳入本期范围",
+            "抄送人只能看"
+          ],
+          "node_id": "n_500step_2_1",
+          "meta_ids": [
+            "utt_cli_b245bcbd1e7f",
+            "utt_cli_07c54f8afe07"
+          ],
+          "source_lines": [
+            21,
+            56
+          ]
+        },
+        {
+          "label": "产品今天补齐抄送规则\n设计明天中午前交初稿",
+          "type": "action",
+          "match": [
+            "可见范围、操作权限",
+            "明天中午前给到"
+          ],
+          "node_id": "n_500step_2_2",
+          "meta_ids": [
+            "utt_cli_dcf5158df170",
+            "utt_cli_9a13d1f4c3c6"
+          ],
+          "source_lines": [
+            58,
+            65
+          ]
+        },
+        {
+          "label": "消息：系统与审批通知\n历史默认已读，详情自动已读",
+          "type": "conclusion",
+          "match": [
+            "历史消息可以默认",
+            "本期先做系统通知",
+            "进入详情页后自动"
+          ],
+          "node_id": "n_500step_2_3",
+          "meta_ids": [
+            "utt_cli_b0e9cf808eaa",
+            "utt_cli_ab1949ffc8e4",
+            "utt_cli_5c6401ff39f9"
+          ],
+          "source_lines": [
+            25,
+            85,
+            98
+          ]
+        },
+        {
+          "label": "未读数30秒轮询\n页面隐藏时暂停请求",
+          "type": "conclusion",
+          "match": [
+            "三十秒一次",
+            "页面隐藏时我会暂停"
+          ],
+          "node_id": "n_500step_2_4",
+          "meta_ids": [
+            "utt_cli_f8daf8f77f49",
+            "utt_cli_2a62ed4931bf"
+          ],
+          "source_lines": [
+            93,
+            95
+          ]
+        },
+        {
+          "label": "消息携带类型、标题、申请人\n区分待办、抄送与系统通知",
+          "type": "action",
+          "match": [
+            "统一加上审批类型",
+            "分为\"待办\""
+          ],
+          "node_id": "n_500step_2_5",
+          "meta_ids": [
+            "utt_cli_90ee95f7bd8d",
+            "utt_cli_a33b741fdbf2"
+          ],
+          "source_lines": [
+            167,
+            172
+          ]
+        },
+        {
+          "label": "单文件：图片≤5MB，文档≤20MB\n后端校验文件头与大小",
+          "type": "conclusion",
+          "match": [
+            "图片单张不超过 5MB",
+            "后端也要校验文件头",
+            "本期先支持单文件"
+          ],
+          "node_id": "n_500step_2_6",
+          "meta_ids": [
+            "utt_cli_a82fff680c55",
+            "utt_cli_f79f73500314",
+            "utt_cli_862b026b9a9d"
+          ],
+          "source_lines": [
+            104,
+            105,
+            119
+          ]
+        },
+        {
+          "label": "延期：公告、全部已读\n批量上传、视频、病毒扫描",
+          "type": "conclusion",
+          "match": [
+            "公告通知放到下一期",
+            "全部已读放到后面",
+            "视频暂时不上",
+            "本期先不做病毒扫描",
+            "批量上传放到下一期"
+          ],
+          "node_id": "n_500step_2_7",
+          "meta_ids": [
+            "utt_cli_ab1949ffc8e4",
+            "utt_cli_7bb114ae8e05",
+            "utt_cli_580a671bae70",
+            "utt_cli_4a07fd31d467",
+            "utt_cli_862b026b9a9d"
+          ],
+          "source_lines": [
+            85,
+            89,
+            102,
+            115,
+            119
+          ]
+        }
+      ]
+    },
+    {
+      "title": "权限、迁移与数据准备",
+      "range": [
+        66,
+        151
+      ],
+      "items": [
+        {
+          "label": "权限越权风险：缓存未更新\n修复失效机制与菜单过滤",
+          "type": "action",
+          "match": [
+            "角色权限缓存没有及时更新",
+            "这次要加缓存失效机制",
+            "完全按角色过滤"
+          ],
+          "node_id": "n_500step_3_1",
+          "meta_ids": [
+            "utt_cli_369ae8e0fef8",
+            "utt_cli_f7afdffe315b",
+            "utt_cli_1cc0dfa3eea6"
+          ],
+          "source_lines": [
+            127,
+            131,
+            133
+          ]
+        },
+        {
+          "label": "后端周三修复权限\n测试周四开展专项测试",
+          "type": "action",
+          "match": [
+            "后端周三前修复",
+            "周四上午开始权限专项"
+          ],
+          "node_id": "n_500step_3_2",
+          "meta_ids": [
+            "utt_cli_256963d3167b",
+            "utt_cli_26551bef3e63"
+          ],
+          "source_lines": [
+            148,
+            150
+          ]
+        },
+        {
+          "label": "登录刷新权限；角色切换重拉\n超级管理员不可经页面修改",
+          "type": "conclusion",
+          "match": [
+            "每次登录后强制刷新权限",
+            "角色切换后菜单要重新拉取",
+            "不能通过页面修改"
+          ],
+          "node_id": "n_500step_3_3",
+          "meta_ids": [
+            "utt_cli_fa605419b828",
+            "utt_cli_fff324b55368",
+            "utt_cli_64cff3f6dbba"
+          ],
+          "source_lines": [
+            140,
+            142,
+            146
+          ]
+        },
+        {
+          "label": "迁移凌晨1–4点，5000条一批\n断点、重试、回滚与数量校验",
+          "type": "conclusion",
+          "match": [
+            "凌晨一点到四点",
+            "每批处理五千条",
+            "执行进度记录和失败重试",
+            "迁移前后数量要一致"
+          ],
+          "node_id": "n_500step_3_4",
+          "meta_ids": [
+            "utt_cli_73d88865de2a",
+            "utt_cli_beec27ce11ba",
+            "utt_cli_c7bd04391504",
+            "utt_cli_2ef32a963b5a"
+          ],
+          "source_lines": [
+            71,
+            72,
+            74,
+            83
+          ]
+        },
+        {
+          "label": "后端明天下班前交迁移方案\n包含回滚脚本与验证步骤",
+          "type": "action",
+          "match": [
+            "后端什么时候能给出迁移方案",
+            "明天下午下班前",
+            "回滚脚本和回滚验证步骤"
+          ],
+          "node_id": "n_500step_3_5",
+          "meta_ids": [
+            "utt_cli_cc4becaa42a1",
+            "utt_cli_b85575838fb8",
+            "utt_cli_18725835388b"
+          ],
+          "source_lines": [
+            78,
+            79,
+            81
+          ]
+        },
+        {
+          "label": "初始化公告、审批、权限配置\n预发布验证后，上线前夜执行",
+          "type": "action",
+          "match": [
+            "主要有三项",
+            "数据初始化安排在上线前一天",
+            "后端出脚本，产品经理出配置",
+            "初始化脚本和校验工具一起提交"
+          ],
+          "node_id": "n_500step_3_6",
+          "meta_ids": [
+            "utt_cli_e36764117ff7",
+            "utt_cli_857c04b00bb3",
+            "utt_cli_dc168c0cdd11",
+            "utt_cli_fce4f3981230"
+          ],
+          "source_lines": [
+            235,
+            243,
+            247,
+            249
+          ]
+        }
+      ]
+    },
+    {
+      "title": "测试、压测与缺陷管理",
+      "range": [
+        180,
+        234
+      ],
+      "items": [
+        {
+          "label": "下周一启动功能测试\n第一轮5天，回归3天",
+          "type": "action",
+          "match": [
+            "第一轮功能测试预计五天",
+            "测试下周一启动"
+          ],
+          "node_id": "n_500step_4_1",
+          "meta_ids": [
+            "utt_cli_bd03c51f2f2e",
+            "utt_cli_d23bdcf683fb"
+          ],
+          "source_lines": [
+            44,
+            50
+          ]
+        },
+        {
+          "label": "压测分两批：权限修复后核心\n功能测试结束后全量",
+          "type": "conclusion",
+          "match": [
+            "压测分两批进行",
+            "第一批压测我会输出性能基线"
+          ],
+          "node_id": "n_500step_4_2",
+          "meta_ids": [
+            "utt_cli_114f4e6dade6",
+            "utt_cli_d27b807be0fd"
+          ],
+          "source_lines": [
+            191,
+            192
+          ]
+        },
+        {
+          "label": "运维明天建独立压测环境\n后端优化索引并提供慢SQL",
+          "type": "action",
+          "match": [
+            "明天上午搭建",
+            "数据库索引优化",
+            "慢查询的SQL"
+          ],
+          "node_id": "n_500step_4_3",
+          "meta_ids": [
+            "utt_cli_c218a580437f",
+            "utt_cli_1f147e0b6b6b",
+            "utt_cli_346e986e1968"
+          ],
+          "source_lines": [
+            197,
+            198,
+            199
+          ]
+        },
+        {
+          "label": "连接池建议：测试100、生产200\n最终按压测结果确认",
+          "type": "point",
+          "match": [
+            "测试环境调到100"
+          ],
+          "node_id": "n_500step_4_4",
+          "meta_ids": [
+            "utt_cli_20440a83c557"
+          ],
+          "source_lines": [
+            182
+          ]
+        },
+        {
+          "label": "明天下午两点用例评审\n覆盖权限、上传、消息与回滚",
+          "type": "action",
+          "match": [
+            "用例评审明天下午两点",
+            "角色切换、菜单可见性",
+            "测试会模拟改后缀上传",
+            "中断后能不能继续执行"
+          ],
+          "node_id": "n_500step_4_5",
+          "meta_ids": [
+            "utt_cli_6360d5d122e1",
+            "utt_cli_2db5714b0bf9",
+            "utt_cli_6d73459f977a",
+            "utt_cli_6b55eb9199d5"
+          ],
+          "source_lines": [
+            73,
+            106,
+            209,
+            212
+          ]
+        },
+        {
+          "label": "致命4小时响应，当天处理\n严重当天响应，2工作日修复",
+          "type": "conclusion",
+          "match": [
+            "致命缺陷要求四小时"
+          ],
+          "node_id": "n_500step_4_6",
+          "meta_ids": [
+            "utt_cli_7a9be32cfedd"
+          ],
+          "source_lines": [
+            217
+          ]
+        },
+        {
+          "label": "缺陷日报每日17点同步\n延期留档，业务开只读权限",
+          "type": "action",
+          "match": [
+            "每天下午五点",
+            "延后的缺陷要记录",
+            "会后给业务代表开通权限"
+          ],
+          "node_id": "n_500step_4_7",
+          "meta_ids": [
+            "utt_cli_7796de2aed45",
+            "utt_cli_b61a09c7da66",
+            "utt_cli_e83066dcf893"
+          ],
+          "source_lines": [
+            220,
+            226,
+            232
+          ]
+        }
+      ]
+    },
+    {
+      "title": "上线安排、验收与回滚",
+      "range": [
+        251,
+        318
+      ],
+      "items": [
+        {
+          "label": "建议周六凌晨2点上线\n上线前演练，预发布提前3天",
+          "type": "conclusion",
+          "match": [
+            "周六凌晨两点",
+            "上线前三天",
+            "建议做一次，主要验证"
+          ],
+          "node_id": "n_500step_5_1",
+          "meta_ids": [
+            "utt_cli_5b9386b89e14",
+            "utt_cli_fe920990eb07",
+            "utt_cli_49152320bf0c"
+          ],
+          "source_lines": [
+            45,
+            47,
+            267
+          ]
+        },
+        {
+          "label": "阶段：数据库30分→后端40分\n前端15分→线上验证1小时",
+          "type": "point",
+          "match": [
+            "数据库变更预计三十分钟"
+          ],
+          "node_id": "n_500step_5_2",
+          "meta_ids": [
+            "utt_cli_c37322df7d4a"
+          ],
+          "source_lines": [
+            254
+          ]
+        },
+        {
+          "label": "启动：配置中心→数据库\n业务服务→网关，逐步健康检查",
+          "type": "conclusion",
+          "match": [
+            "先启动配置中心",
+            "配置中心我会做健康检查"
+          ],
+          "node_id": "n_500step_5_3",
+          "meta_ids": [
+            "utt_cli_9565fba664ab",
+            "utt_cli_f75875024fec"
+          ],
+          "source_lines": [
+            274,
+            276
+          ]
+        },
+        {
+          "label": "测试先验证4条核心流程\n业务再验收，项目经理确认发布",
+          "type": "action",
+          "match": [
+            "登录、审批提交、消息通知、文件上传",
+            "测试验证通过后，通知业务代表",
+            "项目经理确认后"
+          ],
+          "node_id": "n_500step_5_4",
+          "meta_ids": [
+            "utt_cli_dd0f44be4de1",
+            "utt_cli_484d8059beb4",
+            "utt_cli_cbc813fe3f36"
+          ],
+          "source_lines": [
+            261,
+            263,
+            289
+          ]
+        },
+        {
+          "label": "10分钟内无法恢复，优先回滚\n项目经理与运维共同确认",
+          "type": "conclusion",
+          "match": [
+            "十分钟内无法恢复",
+            "回滚决策由项目经理"
+          ],
+          "node_id": "n_500step_5_5",
+          "meta_ids": [
+            "utt_cli_285b3732a21d",
+            "utt_cli_f930746f152d"
+          ],
+          "source_lines": [
+            278,
+            308
+          ]
+        },
+        {
+          "label": "异常先摘新服务、切回旧版本\n数据异常停新接口并回滚",
+          "type": "conclusion",
+          "match": [
+            "把新版本服务从网关里摘掉",
+            "先停新接口，再执行回滚"
+          ],
+          "node_id": "n_500step_5_6",
+          "meta_ids": [
+            "utt_cli_3c79af1e2068",
+            "utt_cli_87247d18397c"
+          ],
+          "source_lines": [
+            302,
+            304
+          ]
+        },
+        {
+          "label": "产品备成功与回滚公告\n运维发公告，业务代表发群说明",
+          "type": "action",
+          "match": [
+            "准备两版文案",
+            "运维负责通过系统公告",
+            "业务群通知由业务代表发"
+          ],
+          "node_id": "n_500step_5_7",
+          "meta_ids": [
+            "utt_cli_137f6fb6de13",
+            "utt_cli_13655384f692",
+            "utt_cli_04a71227d0e4"
+          ],
+          "source_lines": [
+            284,
+            286,
+            313
+          ]
+        }
+      ]
+    },
+    {
+      "title": "监控告警与上线观察",
+      "range": [
+        286,
+        332
+      ],
+      "items": [
+        {
+          "label": "告警：接口>2秒，错误率>3%\nCPU>80%，稳定后收紧错误率",
+          "type": "conclusion",
+          "match": [
+            "接口响应时间超过两秒",
+            "改成3%，观察一天"
+          ],
+          "node_id": "n_500step_6_1",
+          "meta_ids": [
+            "utt_cli_4f1ec9998460",
+            "utt_cli_a5f87919dbf2"
+          ],
+          "source_lines": [
+            295,
+            297
+          ]
+        },
+        {
+          "label": "运维上线前接入APM\n严重告警同时电话通知",
+          "type": "action",
+          "match": [
+            "APM工具接入，上线前完成",
+            "严重告警同时电话"
+          ],
+          "node_id": "n_500step_6_2",
+          "meta_ids": [
+            "utt_cli_d80bb301fc58",
+            "utt_cli_02420dc31d6a"
+          ],
+          "source_lines": [
+            293,
+            300
+          ]
+        },
+        {
+          "label": "观察48小时，前4小时重点值守\n随后每4小时查看监控",
+          "type": "conclusion",
+          "match": [
+            "建议观察四十八小时"
+          ],
+          "node_id": "n_500step_6_3",
+          "meta_ids": [
+            "utt_cli_1d0c6ed9893a"
+          ],
+          "source_lines": [
+            316
+          ]
+        },
+        {
+          "label": "测试每半小时发巡检结果\n业务问题由测试分类分派",
+          "type": "action",
+          "match": [
+            "每半小时发一次",
+            "测试先判断是不是缺陷"
+          ],
+          "node_id": "n_500step_6_4",
+          "meta_ids": [
+            "utt_cli_1ce3d261c8f9",
+            "utt_cli_d3c6828b47e6"
+          ],
+          "source_lines": [
+            321,
+            324
+          ]
+        },
+        {
+          "label": "生产默认INFO\n临时DEBUG≤2小时，排查后恢复",
+          "type": "conclusion",
+          "match": [
+            "生产环境默认INFO",
+            "原则上不超过两小时"
+          ],
+          "node_id": "n_500step_6_5",
+          "meta_ids": [
+            "utt_cli_b19a76842d43",
+            "utt_cli_f3e63be39093"
+          ],
+          "source_lines": [
+            327,
+            330
+          ]
+        }
+      ]
+    },
+    {
+      "title": "灰度发布与待确认事项",
+      "range": [
+        333,
+        350
+      ],
+      "items": [
+        {
+          "label": "灰度按用户维度保持一致\n拟5%流量，观察半小时",
+          "type": "conclusion",
+          "match": [
+            "先放百分之五",
+            "不能按请求随机切",
+            "前端也要按用户维度判断"
+          ],
+          "node_id": "n_500step_7_1",
+          "meta_ids": [
+            "utt_cli_b1d6ee547fa3",
+            "utt_cli_843637b124cf",
+            "utt_cli_868847922402"
+          ],
+          "source_lines": [
+            334,
+            335,
+            337
+          ]
+        },
+        {
+          "label": "准备命中与未命中两套账号\n运维、测试、业务三方确认全量",
+          "type": "action",
+          "match": [
+            "一套命中灰度，一套不命中",
+            "三方都确认没问题"
+          ],
+          "node_id": "n_500step_7_2",
+          "meta_ids": [
+            "utt_cli_d93eb6cd7765",
+            "utt_cli_f0cc5aa8b088"
+          ],
+          "source_lines": [
+            340,
+            343
+          ]
+        },
+        {
+          "label": "严重缺陷或核心流程异常\n停止灰度并回滚",
+          "type": "conclusion",
+          "match": [
+            "致命或严重问题，立刻停止灰度",
+            "一般问题如果影响核心流程"
+          ],
+          "node_id": "n_500step_7_3",
+          "meta_ids": [
+            "utt_cli_57f5bf345bee",
+            "utt_cli_50c53e7a1b9b"
+          ],
+          "source_lines": [
+            346,
+            347
+          ]
+        },
+        {
+          "label": "待确认：5%灰度与尾号0–4\n按十进制单尾号理解为50%",
+          "type": "conflict",
+          "match": [
+            "先放百分之五",
+            "尾号0到4走新版本"
+          ],
+          "node_id": "n_500step_7_4",
+          "meta_ids": [
+            "utt_cli_b1d6ee547fa3",
+            "utt_cli_fb7179835e75"
+          ],
+          "source_lines": [
+            334,
+            338
+          ]
+        },
+        {
+          "label": "运维今天下班前更新上线手册\n补齐灰度配置和回滚步骤",
+          "type": "action",
+          "match": [
+            "灰度配置和回滚步骤写进",
+            "今天下班前更新上线手册"
+          ],
+          "node_id": "n_500step_7_5",
+          "meta_ids": [
+            "utt_cli_382e76e1667a",
+            "utt_cli_13ab4b447df9"
+          ],
+          "source_lines": [
+            349,
+            350
+          ]
+        }
+      ]
+    }
+  ],
+  "cells": [
+    {
+      "id": "n_issue_root",
+      "shape": "amo-node",
+      "position": {
+        "x": 520,
+        "y": 0
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "issue",
+        "label": "协同办公平台 V2.0\n上线推进会议",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 350,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_6431f16916c2",
+          "utt_cli_463da15398be",
+          "utt_cli_d48e151d677f",
+          "utt_cli_65a3cb6cc2de",
+          "utt_cli_4e223d619cb0",
+          "utt_cli_87cf4e7e2a4e",
+          "utt_cli_f8ed15988025",
+          "utt_cli_578679f1a3db",
+          "utt_cli_041bd2cb4972",
+          "utt_cli_21a7bb7b96cd",
+          "utt_cli_929a704e1db2",
+          "utt_cli_0f3a8c7984bc",
+          "utt_cli_325729e48f4b",
+          "utt_cli_719694f95094",
+          "utt_cli_ec93d2a25253",
+          "utt_cli_fecd90adfc59",
+          "utt_cli_447bcfac7dfd",
+          "utt_cli_ce8c12a28046",
+          "utt_cli_7543dd179329",
+          "utt_cli_cfae6147e88e",
+          "utt_cli_b245bcbd1e7f",
+          "utt_cli_d3629b8c8962",
+          "utt_cli_e01a02abc4f5",
+          "utt_cli_4eedf2948ccc",
+          "utt_cli_b0e9cf808eaa",
+          "utt_cli_4b7e33561d9c",
+          "utt_cli_b10c9727faeb",
+          "utt_cli_0b5e251b2209",
+          "utt_cli_6aac0645dd9a",
+          "utt_cli_dc6a016af3a1",
+          "utt_cli_759536a4fdf0",
+          "utt_cli_39f094669da2",
+          "utt_cli_2021ae1152e9",
+          "utt_cli_42751eb4d789",
+          "utt_cli_692fa57572c4",
+          "utt_cli_6e1a6aa50524",
+          "utt_cli_b18dbb85419e",
+          "utt_cli_1ecbd2ddc48e",
+          "utt_cli_48de84a02bfa",
+          "utt_cli_5f670dba0750",
+          "utt_cli_502d03703999",
+          "utt_cli_66501e7418d5",
+          "utt_cli_317779178fea",
+          "utt_cli_bd03c51f2f2e",
+          "utt_cli_5b9386b89e14",
+          "utt_cli_252105bb4fc5",
+          "utt_cli_fe920990eb07",
+          "utt_cli_57f0bc893afd",
+          "utt_cli_e3d475e6cad4",
+          "utt_cli_d23bdcf683fb",
+          "utt_cli_a1ed7e0d80fa",
+          "utt_cli_c05e0be902e6",
+          "utt_cli_6f2837307cfd",
+          "utt_cli_679cd9993d3c",
+          "utt_cli_27366e2430cd",
+          "utt_cli_07c54f8afe07",
+          "utt_cli_0cdeb7469066",
+          "utt_cli_dcf5158df170",
+          "utt_cli_e5f03f9d34ea",
+          "utt_cli_cc53e19c6ce0",
+          "utt_cli_445b71d3b99f",
+          "utt_cli_cdcf040814f6",
+          "utt_cli_3187243f1582",
+          "utt_cli_918b9ee018c6",
+          "utt_cli_9a13d1f4c3c6",
+          "utt_cli_c69b5ee01c8a",
+          "utt_cli_f91844eb06f0",
+          "utt_cli_95c0138cca0e",
+          "utt_cli_ddf9c7109bfa",
+          "utt_cli_865fd34e813b",
+          "utt_cli_73d88865de2a",
+          "utt_cli_beec27ce11ba",
+          "utt_cli_6360d5d122e1",
+          "utt_cli_c7bd04391504",
+          "utt_cli_443acdad0ecd",
+          "utt_cli_39f703af544d",
+          "utt_cli_1347c757abc4",
+          "utt_cli_cc4becaa42a1",
+          "utt_cli_b85575838fb8",
+          "utt_cli_d740437061ad",
+          "utt_cli_18725835388b",
+          "utt_cli_6e36d6da46ac",
+          "utt_cli_2ef32a963b5a",
+          "utt_cli_282b78cf386e",
+          "utt_cli_ab1949ffc8e4",
+          "utt_cli_3cf81045d8b1",
+          "utt_cli_91cce2e15e90",
+          "utt_cli_9d68641b3d93",
+          "utt_cli_7bb114ae8e05",
+          "utt_cli_eeb90d88738a",
+          "utt_cli_2f465fdb7bdd",
+          "utt_cli_780affb09a84",
+          "utt_cli_f8daf8f77f49",
+          "utt_cli_411e31ac1728",
+          "utt_cli_2a62ed4931bf",
+          "utt_cli_0b9c0d62ed8d",
+          "utt_cli_9d58cd79ce6d",
+          "utt_cli_5c6401ff39f9",
+          "utt_cli_2c8d11ce8e8a",
+          "utt_cli_2523f2e51c33",
+          "utt_cli_3503335ecc4d",
+          "utt_cli_580a671bae70",
+          "utt_cli_a344bfa8cad0",
+          "utt_cli_a82fff680c55",
+          "utt_cli_f79f73500314",
+          "utt_cli_2db5714b0bf9",
+          "utt_cli_cb16cefbd970",
+          "utt_cli_56819916291a",
+          "utt_cli_582165dccd98",
+          "utt_cli_8c0a94d0ca7b",
+          "utt_cli_61b27f39143f",
+          "utt_cli_33224cf48cf8",
+          "utt_cli_4e10894c1f57",
+          "utt_cli_59ce7b75ef92",
+          "utt_cli_4a07fd31d467",
+          "utt_cli_495d0119102d",
+          "utt_cli_945cb8bc60bc",
+          "utt_cli_ea6892e2127b",
+          "utt_cli_862b026b9a9d",
+          "utt_cli_a3da32df3366",
+          "utt_cli_adaeaac35901",
+          "utt_cli_2a44dfd0e988",
+          "utt_cli_2aa081a61e07",
+          "utt_cli_2f7a38de61d5",
+          "utt_cli_06a0f4df323d",
+          "utt_cli_c18f2f74aba3",
+          "utt_cli_369ae8e0fef8",
+          "utt_cli_cb348e22ed45",
+          "utt_cli_212192369ce2",
+          "utt_cli_9ec9c6afe433",
+          "utt_cli_f7afdffe315b",
+          "utt_cli_fe75c82e8b7b",
+          "utt_cli_1cc0dfa3eea6",
+          "utt_cli_04d5056bd4bd",
+          "utt_cli_5ce9f9c50ff5",
+          "utt_cli_bbff46072c76",
+          "utt_cli_75c4cb188fe4",
+          "utt_cli_0370e8029231",
+          "utt_cli_e9ce6d657285",
+          "utt_cli_fa605419b828",
+          "utt_cli_e88ee828d91a",
+          "utt_cli_fff324b55368",
+          "utt_cli_e3cfbe922302",
+          "utt_cli_3fe50b58ec7e",
+          "utt_cli_09473b57d981",
+          "utt_cli_64cff3f6dbba",
+          "utt_cli_5c284cedf6bc",
+          "utt_cli_256963d3167b",
+          "utt_cli_1bf38f7c44ef",
+          "utt_cli_26551bef3e63",
+          "utt_cli_4a792e36ae5e",
+          "utt_cli_3b6a4f478c99",
+          "utt_cli_e2011b37594e",
+          "utt_cli_aa58f3c54d25",
+          "utt_cli_96875f3f56c5",
+          "utt_cli_1c42dc8cd165",
+          "utt_cli_543c8b431c8a",
+          "utt_cli_8e0fdcfc660c",
+          "utt_cli_db40b6add7e1",
+          "utt_cli_76bc99cf7c95",
+          "utt_cli_441c1146721f",
+          "utt_cli_855ed3354f0b",
+          "utt_cli_7483bc03b712",
+          "utt_cli_ce553741e021",
+          "utt_cli_f353752480f0",
+          "utt_cli_d4119563b9b7",
+          "utt_cli_90ee95f7bd8d",
+          "utt_cli_c49f467c578a",
+          "utt_cli_e7cf81537987",
+          "utt_cli_a397e09d645c",
+          "utt_cli_0ad1d9e94f95",
+          "utt_cli_a33b741fdbf2",
+          "utt_cli_fcb317feec78",
+          "utt_cli_9c5156a26e3b",
+          "utt_cli_b78750201406",
+          "utt_cli_de63717d9ab6",
+          "utt_cli_0001efb2cb61",
+          "utt_cli_fd62aaa35423",
+          "utt_cli_2f3ebb4cfadb",
+          "utt_cli_f57e2232b871",
+          "utt_cli_dc98e40fc482",
+          "utt_cli_20440a83c557",
+          "utt_cli_25be50cac380",
+          "utt_cli_073feffa3055",
+          "utt_cli_cc7c2eb5a969",
+          "utt_cli_3c30855e068a",
+          "utt_cli_8b9ce809c22b",
+          "utt_cli_592c4e50cda7",
+          "utt_cli_8be7e1ed701d",
+          "utt_cli_13e0b85dd387",
+          "utt_cli_114f4e6dade6",
+          "utt_cli_d27b807be0fd",
+          "utt_cli_f1935d299cfd",
+          "utt_cli_9c0c858b0a00",
+          "utt_cli_cb70680c02f3",
+          "utt_cli_deb4994aa68d",
+          "utt_cli_c218a580437f",
+          "utt_cli_1f147e0b6b6b",
+          "utt_cli_346e986e1968",
+          "utt_cli_aea2599b4768",
+          "utt_cli_887c7a3a0ebd",
+          "utt_cli_dbbccc598206",
+          "utt_cli_47a027bcbaf7",
+          "utt_cli_739cb305b359",
+          "utt_cli_053395d7e43e",
+          "utt_cli_009cc5b37479",
+          "utt_cli_dce113e1f610",
+          "utt_cli_f2b2c1eaea54",
+          "utt_cli_6d73459f977a",
+          "utt_cli_ca4fad22b9f9",
+          "utt_cli_c79972ec23e3",
+          "utt_cli_6b55eb9199d5",
+          "utt_cli_30ef6212ad1d",
+          "utt_cli_24110b502864",
+          "utt_cli_9c020ff212eb",
+          "utt_cli_a36884e2f92a",
+          "utt_cli_7a9be32cfedd",
+          "utt_cli_29e353374d3b",
+          "utt_cli_b7aa0e3c09c7",
+          "utt_cli_7796de2aed45",
+          "utt_cli_20eb301bbf2b",
+          "utt_cli_7f0f5f4ca020",
+          "utt_cli_c3ed4b943679",
+          "utt_cli_cb2b581d99de",
+          "utt_cli_e67c974a7b5e",
+          "utt_cli_b61a09c7da66",
+          "utt_cli_2fafdb2b186c",
+          "utt_cli_f0f4edb995cd",
+          "utt_cli_55477be575ff",
+          "utt_cli_c37ae188cb64",
+          "utt_cli_83923d663a7f",
+          "utt_cli_e83066dcf893",
+          "utt_cli_4b5cb8f6e856",
+          "utt_cli_e36764117ff7",
+          "utt_cli_733a581a18cd",
+          "utt_cli_c5bf30bb3f5d",
+          "utt_cli_4e159ee8883b",
+          "utt_cli_247ee93a5ae9",
+          "utt_cli_2056bd65aaee",
+          "utt_cli_62a1a18a5cd0",
+          "utt_cli_8f5aff3420fb",
+          "utt_cli_857c04b00bb3",
+          "utt_cli_4385822e13d4",
+          "utt_cli_29c4c9967307",
+          "utt_cli_dafd5ac137cd",
+          "utt_cli_dc168c0cdd11",
+          "utt_cli_f186708e5f54",
+          "utt_cli_fce4f3981230",
+          "utt_cli_be95cc3f1e62",
+          "utt_cli_733b26e2ef37",
+          "utt_cli_479a01821fdc",
+          "utt_cli_25e510979dbd",
+          "utt_cli_c37322df7d4a",
+          "utt_cli_e1843cb29d39",
+          "utt_cli_b3ddc7836ac1",
+          "utt_cli_2bf98c76371b",
+          "utt_cli_f3e6cd49eaa9",
+          "utt_cli_9ec1fad8277b",
+          "utt_cli_360e53843e73",
+          "utt_cli_dd0f44be4de1",
+          "utt_cli_776f6129d4fb",
+          "utt_cli_484d8059beb4",
+          "utt_cli_07269b801731",
+          "utt_cli_be73e881d92a",
+          "utt_cli_ebb22082aa37",
+          "utt_cli_49152320bf0c",
+          "utt_cli_c5aabf97ddcd",
+          "utt_cli_d4f566481722",
+          "utt_cli_0e0929f22fa7",
+          "utt_cli_e7e4f100b317",
+          "utt_cli_125eca7789d0",
+          "utt_cli_a77044242e6a",
+          "utt_cli_9565fba664ab",
+          "utt_cli_dcf5ce4f9ef6",
+          "utt_cli_f75875024fec",
+          "utt_cli_dbdae3008d51",
+          "utt_cli_285b3732a21d",
+          "utt_cli_c551f497fe79",
+          "utt_cli_5dfbc6065fb5",
+          "utt_cli_9cb2d9d06158",
+          "utt_cli_52913022587e",
+          "utt_cli_212eda8a240c",
+          "utt_cli_137f6fb6de13",
+          "utt_cli_21267618a925",
+          "utt_cli_13655384f692",
+          "utt_cli_9de4f0ceca96",
+          "utt_cli_7a06dbe506c5",
+          "utt_cli_cbc813fe3f36",
+          "utt_cli_bc09e7b38bfa",
+          "utt_cli_1cb3c13826f9",
+          "utt_cli_596f0a352880",
+          "utt_cli_d80bb301fc58",
+          "utt_cli_26731c391db4",
+          "utt_cli_4f1ec9998460",
+          "utt_cli_2fb1faaf267b",
+          "utt_cli_a5f87919dbf2",
+          "utt_cli_3a608d146487",
+          "utt_cli_aeaa941ce75c",
+          "utt_cli_02420dc31d6a",
+          "utt_cli_1ae0bb7c25d2",
+          "utt_cli_3c79af1e2068",
+          "utt_cli_0cbf97cd267c",
+          "utt_cli_87247d18397c",
+          "utt_cli_227ee012f4ea",
+          "utt_cli_4546d4f73be8",
+          "utt_cli_cec64cdb79b4",
+          "utt_cli_f930746f152d",
+          "utt_cli_99f3ee896b68",
+          "utt_cli_bd9d693bba2e",
+          "utt_cli_55ae32b21481",
+          "utt_cli_eaf79831045f",
+          "utt_cli_04a71227d0e4",
+          "utt_cli_b8c9125adfe5",
+          "utt_cli_c5adf69b0e10",
+          "utt_cli_1d0c6ed9893a",
+          "utt_cli_f59bbb2c93e8",
+          "utt_cli_4e44774a6e5c",
+          "utt_cli_a3a218f82541",
+          "utt_cli_0e5d5d21b8e3",
+          "utt_cli_1ce3d261c8f9",
+          "utt_cli_b70636d6ea7e",
+          "utt_cli_aaf704653717",
+          "utt_cli_d3c6828b47e6",
+          "utt_cli_915aedb72f93",
+          "utt_cli_434254f5668c",
+          "utt_cli_b19a76842d43",
+          "utt_cli_db2318a54d0d",
+          "utt_cli_98aec950f5cd",
+          "utt_cli_f3e63be39093",
+          "utt_cli_abbcb5a70e70",
+          "utt_cli_405138dbb5f5",
+          "utt_cli_adce0319ed75",
+          "utt_cli_b1d6ee547fa3",
+          "utt_cli_843637b124cf",
+          "utt_cli_8e7eef0ba7c9",
+          "utt_cli_868847922402",
+          "utt_cli_fb7179835e75",
+          "utt_cli_b101b52ba172",
+          "utt_cli_d93eb6cd7765",
+          "utt_cli_9b0d193831e7",
+          "utt_cli_1ddd6cf7127c",
+          "utt_cli_f0cc5aa8b088",
+          "utt_cli_96cb0cbf3d60",
+          "utt_cli_c37a6aecd6d8",
+          "utt_cli_57f5bf345bee",
+          "utt_cli_50c53e7a1b9b",
+          "utt_cli_747083020965",
+          "utt_cli_382e76e1667a",
+          "utt_cli_13ab4b447df9",
+          "utt_cli_1063ca93929a"
+        ],
+        "version": 350
+      }
+    },
+    {
+      "id": "n_500step_topic_1",
+      "shape": "amo-node",
+      "position": {
+        "x": 0,
+        "y": 160
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "issue",
+        "label": "开发进度与协作",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_6431f16916c2",
+          "utt_cli_463da15398be",
+          "utt_cli_d48e151d677f",
+          "utt_cli_65a3cb6cc2de",
+          "utt_cli_4e223d619cb0",
+          "utt_cli_87cf4e7e2a4e",
+          "utt_cli_f8ed15988025",
+          "utt_cli_578679f1a3db",
+          "utt_cli_041bd2cb4972",
+          "utt_cli_21a7bb7b96cd",
+          "utt_cli_929a704e1db2",
+          "utt_cli_0f3a8c7984bc",
+          "utt_cli_325729e48f4b",
+          "utt_cli_719694f95094",
+          "utt_cli_ec93d2a25253",
+          "utt_cli_fecd90adfc59",
+          "utt_cli_447bcfac7dfd",
+          "utt_cli_ce8c12a28046",
+          "utt_cli_7543dd179329",
+          "utt_cli_cfae6147e88e",
+          "utt_cli_b245bcbd1e7f",
+          "utt_cli_d3629b8c8962",
+          "utt_cli_e01a02abc4f5",
+          "utt_cli_4eedf2948ccc",
+          "utt_cli_b0e9cf808eaa",
+          "utt_cli_4b7e33561d9c",
+          "utt_cli_b10c9727faeb",
+          "utt_cli_0b5e251b2209",
+          "utt_cli_6aac0645dd9a",
+          "utt_cli_dc6a016af3a1",
+          "utt_cli_759536a4fdf0",
+          "utt_cli_39f094669da2",
+          "utt_cli_2021ae1152e9",
+          "utt_cli_42751eb4d789",
+          "utt_cli_692fa57572c4",
+          "utt_cli_6e1a6aa50524",
+          "utt_cli_b18dbb85419e",
+          "utt_cli_1ecbd2ddc48e",
+          "utt_cli_48de84a02bfa",
+          "utt_cli_5f670dba0750",
+          "utt_cli_502d03703999",
+          "utt_cli_66501e7418d5",
+          "utt_cli_317779178fea",
+          "utt_cli_bd03c51f2f2e",
+          "utt_cli_5b9386b89e14",
+          "utt_cli_252105bb4fc5",
+          "utt_cli_fe920990eb07",
+          "utt_cli_57f0bc893afd",
+          "utt_cli_e3d475e6cad4",
+          "utt_cli_d23bdcf683fb"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_issue_root__n_500step_topic_1",
+      "shape": "edge",
+      "source": {
+        "cell": "n_issue_root"
+      },
+      "target": {
+        "cell": "n_500step_topic_1"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_1_1",
+      "shape": "amo-node",
+      "position": {
+        "x": 0,
+        "y": 295
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "point",
+        "label": "前端约85%，后端约80%\n权限与文件服务待收尾",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_42751eb4d789",
+          "utt_cli_692fa57572c4",
+          "utt_cli_4f1ec9998460"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_1__n_500step_1_1",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_1"
+      },
+      "target": {
+        "cell": "n_500step_1_1"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_1_2",
+      "shape": "amo-node",
+      "position": {
+        "x": 0,
+        "y": 430
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "conclusion",
+        "label": "需求冻结：权限不增新角色\n后续变更进入下一期",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_502d03703999",
+          "utt_cli_66501e7418d5"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_1__n_500step_1_2",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_1"
+      },
+      "target": {
+        "cell": "n_500step_1_2"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_1_3",
+      "shape": "amo-node",
+      "position": {
+        "x": 0,
+        "y": 565
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "action",
+        "label": "前后端本周五前\n提交部署文档并通过冒烟",
+        "speaker_ref": null,
+        "importance": {
+          "level": "high",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_1ecbd2ddc48e",
+          "utt_cli_d23bdcf683fb"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_1__n_500step_1_3",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_1"
+      },
+      "target": {
+        "cell": "n_500step_1_3"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_1_4",
+      "shape": "amo-node",
+      "position": {
+        "x": 0,
+        "y": 700
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "action",
+        "label": "接口字段采用fileId\n变更当天同步文档并通知",
+        "speaker_ref": null,
+        "importance": {
+          "level": "high",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_96875f3f56c5",
+          "utt_cli_db40b6add7e1"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_1__n_500step_1_4",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_1"
+      },
+      "target": {
+        "cell": "n_500step_1_4"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_topic_2",
+      "shape": "amo-node",
+      "position": {
+        "x": 310,
+        "y": 160
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "issue",
+        "label": "本期需求与边界",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_041bd2cb4972",
+          "utt_cli_21a7bb7b96cd",
+          "utt_cli_929a704e1db2",
+          "utt_cli_0f3a8c7984bc",
+          "utt_cli_325729e48f4b",
+          "utt_cli_719694f95094",
+          "utt_cli_ec93d2a25253",
+          "utt_cli_fecd90adfc59",
+          "utt_cli_447bcfac7dfd",
+          "utt_cli_ce8c12a28046",
+          "utt_cli_7543dd179329",
+          "utt_cli_cfae6147e88e",
+          "utt_cli_b245bcbd1e7f",
+          "utt_cli_d3629b8c8962",
+          "utt_cli_e01a02abc4f5",
+          "utt_cli_4eedf2948ccc",
+          "utt_cli_b0e9cf808eaa",
+          "utt_cli_4b7e33561d9c",
+          "utt_cli_b10c9727faeb",
+          "utt_cli_0b5e251b2209",
+          "utt_cli_6aac0645dd9a",
+          "utt_cli_dc6a016af3a1",
+          "utt_cli_759536a4fdf0",
+          "utt_cli_39f094669da2",
+          "utt_cli_2021ae1152e9",
+          "utt_cli_42751eb4d789",
+          "utt_cli_692fa57572c4",
+          "utt_cli_6e1a6aa50524",
+          "utt_cli_b18dbb85419e",
+          "utt_cli_1ecbd2ddc48e",
+          "utt_cli_48de84a02bfa",
+          "utt_cli_5f670dba0750",
+          "utt_cli_502d03703999",
+          "utt_cli_66501e7418d5",
+          "utt_cli_317779178fea",
+          "utt_cli_bd03c51f2f2e",
+          "utt_cli_5b9386b89e14",
+          "utt_cli_252105bb4fc5",
+          "utt_cli_fe920990eb07",
+          "utt_cli_57f0bc893afd",
+          "utt_cli_e3d475e6cad4",
+          "utt_cli_d23bdcf683fb",
+          "utt_cli_a1ed7e0d80fa",
+          "utt_cli_c05e0be902e6",
+          "utt_cli_6f2837307cfd",
+          "utt_cli_679cd9993d3c",
+          "utt_cli_27366e2430cd",
+          "utt_cli_07c54f8afe07",
+          "utt_cli_0cdeb7469066",
+          "utt_cli_dcf5158df170",
+          "utt_cli_e5f03f9d34ea",
+          "utt_cli_cc53e19c6ce0",
+          "utt_cli_445b71d3b99f",
+          "utt_cli_cdcf040814f6",
+          "utt_cli_3187243f1582",
+          "utt_cli_918b9ee018c6",
+          "utt_cli_9a13d1f4c3c6",
+          "utt_cli_c69b5ee01c8a",
+          "utt_cli_f91844eb06f0",
+          "utt_cli_95c0138cca0e",
+          "utt_cli_ddf9c7109bfa",
+          "utt_cli_865fd34e813b",
+          "utt_cli_73d88865de2a",
+          "utt_cli_beec27ce11ba",
+          "utt_cli_6360d5d122e1",
+          "utt_cli_c7bd04391504",
+          "utt_cli_443acdad0ecd",
+          "utt_cli_39f703af544d",
+          "utt_cli_1347c757abc4",
+          "utt_cli_cc4becaa42a1",
+          "utt_cli_b85575838fb8",
+          "utt_cli_d740437061ad",
+          "utt_cli_18725835388b",
+          "utt_cli_6e36d6da46ac",
+          "utt_cli_2ef32a963b5a",
+          "utt_cli_282b78cf386e",
+          "utt_cli_ab1949ffc8e4",
+          "utt_cli_3cf81045d8b1",
+          "utt_cli_91cce2e15e90",
+          "utt_cli_9d68641b3d93",
+          "utt_cli_7bb114ae8e05",
+          "utt_cli_eeb90d88738a",
+          "utt_cli_2f465fdb7bdd",
+          "utt_cli_780affb09a84",
+          "utt_cli_f8daf8f77f49",
+          "utt_cli_411e31ac1728",
+          "utt_cli_2a62ed4931bf",
+          "utt_cli_0b9c0d62ed8d",
+          "utt_cli_9d58cd79ce6d",
+          "utt_cli_5c6401ff39f9",
+          "utt_cli_2c8d11ce8e8a",
+          "utt_cli_2523f2e51c33",
+          "utt_cli_3503335ecc4d",
+          "utt_cli_580a671bae70",
+          "utt_cli_a344bfa8cad0",
+          "utt_cli_a82fff680c55",
+          "utt_cli_f79f73500314",
+          "utt_cli_2db5714b0bf9",
+          "utt_cli_cb16cefbd970",
+          "utt_cli_56819916291a",
+          "utt_cli_582165dccd98",
+          "utt_cli_8c0a94d0ca7b",
+          "utt_cli_61b27f39143f",
+          "utt_cli_33224cf48cf8",
+          "utt_cli_4e10894c1f57",
+          "utt_cli_59ce7b75ef92",
+          "utt_cli_4a07fd31d467",
+          "utt_cli_495d0119102d",
+          "utt_cli_945cb8bc60bc",
+          "utt_cli_ea6892e2127b",
+          "utt_cli_862b026b9a9d",
+          "utt_cli_a3da32df3366",
+          "utt_cli_adaeaac35901",
+          "utt_cli_2a44dfd0e988",
+          "utt_cli_2aa081a61e07"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_issue_root__n_500step_topic_2",
+      "shape": "edge",
+      "source": {
+        "cell": "n_issue_root"
+      },
+      "target": {
+        "cell": "n_500step_topic_2"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_2_1",
+      "shape": "amo-node",
+      "position": {
+        "x": 310,
+        "y": 295
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "conclusion",
+        "label": "基础抄送纳入本期\n抄送人仅查看，不能审批",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_b245bcbd1e7f",
+          "utt_cli_07c54f8afe07"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_2__n_500step_2_1",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_2"
+      },
+      "target": {
+        "cell": "n_500step_2_1"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_2_2",
+      "shape": "amo-node",
+      "position": {
+        "x": 310,
+        "y": 430
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "action",
+        "label": "产品今天补齐抄送规则\n设计明天中午前交初稿",
+        "speaker_ref": null,
+        "importance": {
+          "level": "high",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_dcf5158df170",
+          "utt_cli_9a13d1f4c3c6"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_2__n_500step_2_2",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_2"
+      },
+      "target": {
+        "cell": "n_500step_2_2"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_2_3",
+      "shape": "amo-node",
+      "position": {
+        "x": 310,
+        "y": 565
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "conclusion",
+        "label": "消息：系统与审批通知\n历史默认已读，详情自动已读",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_b0e9cf808eaa",
+          "utt_cli_ab1949ffc8e4",
+          "utt_cli_5c6401ff39f9"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_2__n_500step_2_3",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_2"
+      },
+      "target": {
+        "cell": "n_500step_2_3"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_2_4",
+      "shape": "amo-node",
+      "position": {
+        "x": 310,
+        "y": 700
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "conclusion",
+        "label": "未读数30秒轮询\n页面隐藏时暂停请求",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_f8daf8f77f49",
+          "utt_cli_2a62ed4931bf"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_2__n_500step_2_4",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_2"
+      },
+      "target": {
+        "cell": "n_500step_2_4"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_2_5",
+      "shape": "amo-node",
+      "position": {
+        "x": 310,
+        "y": 835
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "action",
+        "label": "消息携带类型、标题、申请人\n区分待办、抄送与系统通知",
+        "speaker_ref": null,
+        "importance": {
+          "level": "high",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_90ee95f7bd8d",
+          "utt_cli_a33b741fdbf2"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_2__n_500step_2_5",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_2"
+      },
+      "target": {
+        "cell": "n_500step_2_5"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_2_6",
+      "shape": "amo-node",
+      "position": {
+        "x": 310,
+        "y": 970
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "conclusion",
+        "label": "单文件：图片≤5MB，文档≤20MB\n后端校验文件头与大小",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_a82fff680c55",
+          "utt_cli_f79f73500314",
+          "utt_cli_862b026b9a9d"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_2__n_500step_2_6",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_2"
+      },
+      "target": {
+        "cell": "n_500step_2_6"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_2_7",
+      "shape": "amo-node",
+      "position": {
+        "x": 310,
+        "y": 1105
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "conclusion",
+        "label": "延期：公告、全部已读\n批量上传、视频、病毒扫描",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_ab1949ffc8e4",
+          "utt_cli_7bb114ae8e05",
+          "utt_cli_580a671bae70",
+          "utt_cli_4a07fd31d467",
+          "utt_cli_862b026b9a9d"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_2__n_500step_2_7",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_2"
+      },
+      "target": {
+        "cell": "n_500step_2_7"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_topic_3",
+      "shape": "amo-node",
+      "position": {
+        "x": 620,
+        "y": 160
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "issue",
+        "label": "权限、迁移与数据准备",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_c69b5ee01c8a",
+          "utt_cli_f91844eb06f0",
+          "utt_cli_95c0138cca0e",
+          "utt_cli_ddf9c7109bfa",
+          "utt_cli_865fd34e813b",
+          "utt_cli_73d88865de2a",
+          "utt_cli_beec27ce11ba",
+          "utt_cli_6360d5d122e1",
+          "utt_cli_c7bd04391504",
+          "utt_cli_443acdad0ecd",
+          "utt_cli_39f703af544d",
+          "utt_cli_1347c757abc4",
+          "utt_cli_cc4becaa42a1",
+          "utt_cli_b85575838fb8",
+          "utt_cli_d740437061ad",
+          "utt_cli_18725835388b",
+          "utt_cli_6e36d6da46ac",
+          "utt_cli_2ef32a963b5a",
+          "utt_cli_282b78cf386e",
+          "utt_cli_ab1949ffc8e4",
+          "utt_cli_3cf81045d8b1",
+          "utt_cli_91cce2e15e90",
+          "utt_cli_9d68641b3d93",
+          "utt_cli_7bb114ae8e05",
+          "utt_cli_eeb90d88738a",
+          "utt_cli_2f465fdb7bdd",
+          "utt_cli_780affb09a84",
+          "utt_cli_f8daf8f77f49",
+          "utt_cli_411e31ac1728",
+          "utt_cli_2a62ed4931bf",
+          "utt_cli_0b9c0d62ed8d",
+          "utt_cli_9d58cd79ce6d",
+          "utt_cli_5c6401ff39f9",
+          "utt_cli_2c8d11ce8e8a",
+          "utt_cli_2523f2e51c33",
+          "utt_cli_3503335ecc4d",
+          "utt_cli_580a671bae70",
+          "utt_cli_a344bfa8cad0",
+          "utt_cli_a82fff680c55",
+          "utt_cli_f79f73500314",
+          "utt_cli_2db5714b0bf9",
+          "utt_cli_cb16cefbd970",
+          "utt_cli_56819916291a",
+          "utt_cli_582165dccd98",
+          "utt_cli_8c0a94d0ca7b",
+          "utt_cli_61b27f39143f",
+          "utt_cli_33224cf48cf8",
+          "utt_cli_4e10894c1f57",
+          "utt_cli_59ce7b75ef92",
+          "utt_cli_4a07fd31d467",
+          "utt_cli_495d0119102d",
+          "utt_cli_945cb8bc60bc",
+          "utt_cli_ea6892e2127b",
+          "utt_cli_862b026b9a9d",
+          "utt_cli_a3da32df3366",
+          "utt_cli_adaeaac35901",
+          "utt_cli_2a44dfd0e988",
+          "utt_cli_2aa081a61e07",
+          "utt_cli_2f7a38de61d5",
+          "utt_cli_06a0f4df323d",
+          "utt_cli_c18f2f74aba3",
+          "utt_cli_369ae8e0fef8",
+          "utt_cli_cb348e22ed45",
+          "utt_cli_212192369ce2",
+          "utt_cli_9ec9c6afe433",
+          "utt_cli_f7afdffe315b",
+          "utt_cli_fe75c82e8b7b",
+          "utt_cli_1cc0dfa3eea6",
+          "utt_cli_04d5056bd4bd",
+          "utt_cli_5ce9f9c50ff5",
+          "utt_cli_bbff46072c76",
+          "utt_cli_75c4cb188fe4",
+          "utt_cli_0370e8029231",
+          "utt_cli_e9ce6d657285",
+          "utt_cli_fa605419b828",
+          "utt_cli_e88ee828d91a",
+          "utt_cli_fff324b55368",
+          "utt_cli_e3cfbe922302",
+          "utt_cli_3fe50b58ec7e",
+          "utt_cli_09473b57d981",
+          "utt_cli_64cff3f6dbba",
+          "utt_cli_5c284cedf6bc",
+          "utt_cli_256963d3167b",
+          "utt_cli_1bf38f7c44ef",
+          "utt_cli_26551bef3e63",
+          "utt_cli_4a792e36ae5e"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_issue_root__n_500step_topic_3",
+      "shape": "edge",
+      "source": {
+        "cell": "n_issue_root"
+      },
+      "target": {
+        "cell": "n_500step_topic_3"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_3_1",
+      "shape": "amo-node",
+      "position": {
+        "x": 620,
+        "y": 295
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "action",
+        "label": "权限越权风险：缓存未更新\n修复失效机制与菜单过滤",
+        "speaker_ref": null,
+        "importance": {
+          "level": "high",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_369ae8e0fef8",
+          "utt_cli_f7afdffe315b",
+          "utt_cli_1cc0dfa3eea6"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_3__n_500step_3_1",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_3"
+      },
+      "target": {
+        "cell": "n_500step_3_1"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_3_2",
+      "shape": "amo-node",
+      "position": {
+        "x": 620,
+        "y": 430
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "action",
+        "label": "后端周三修复权限\n测试周四开展专项测试",
+        "speaker_ref": null,
+        "importance": {
+          "level": "high",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_256963d3167b",
+          "utt_cli_26551bef3e63"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_3__n_500step_3_2",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_3"
+      },
+      "target": {
+        "cell": "n_500step_3_2"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_3_3",
+      "shape": "amo-node",
+      "position": {
+        "x": 620,
+        "y": 565
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "conclusion",
+        "label": "登录刷新权限；角色切换重拉\n超级管理员不可经页面修改",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_fa605419b828",
+          "utt_cli_fff324b55368",
+          "utt_cli_64cff3f6dbba"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_3__n_500step_3_3",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_3"
+      },
+      "target": {
+        "cell": "n_500step_3_3"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_3_4",
+      "shape": "amo-node",
+      "position": {
+        "x": 620,
+        "y": 700
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "conclusion",
+        "label": "迁移凌晨1–4点，5000条一批\n断点、重试、回滚与数量校验",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_73d88865de2a",
+          "utt_cli_beec27ce11ba",
+          "utt_cli_c7bd04391504",
+          "utt_cli_2ef32a963b5a"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_3__n_500step_3_4",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_3"
+      },
+      "target": {
+        "cell": "n_500step_3_4"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_3_5",
+      "shape": "amo-node",
+      "position": {
+        "x": 620,
+        "y": 835
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "action",
+        "label": "后端明天下班前交迁移方案\n包含回滚脚本与验证步骤",
+        "speaker_ref": null,
+        "importance": {
+          "level": "high",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_cc4becaa42a1",
+          "utt_cli_b85575838fb8",
+          "utt_cli_18725835388b"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_3__n_500step_3_5",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_3"
+      },
+      "target": {
+        "cell": "n_500step_3_5"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_3_6",
+      "shape": "amo-node",
+      "position": {
+        "x": 620,
+        "y": 970
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "action",
+        "label": "初始化公告、审批、权限配置\n预发布验证后，上线前夜执行",
+        "speaker_ref": null,
+        "importance": {
+          "level": "high",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_e36764117ff7",
+          "utt_cli_857c04b00bb3",
+          "utt_cli_dc168c0cdd11",
+          "utt_cli_fce4f3981230"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_3__n_500step_3_6",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_3"
+      },
+      "target": {
+        "cell": "n_500step_3_6"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_topic_4",
+      "shape": "amo-node",
+      "position": {
+        "x": 930,
+        "y": 160
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "issue",
+        "label": "测试、压测与缺陷管理",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_f57e2232b871",
+          "utt_cli_dc98e40fc482",
+          "utt_cli_20440a83c557",
+          "utt_cli_25be50cac380",
+          "utt_cli_073feffa3055",
+          "utt_cli_cc7c2eb5a969",
+          "utt_cli_3c30855e068a",
+          "utt_cli_8b9ce809c22b",
+          "utt_cli_592c4e50cda7",
+          "utt_cli_8be7e1ed701d",
+          "utt_cli_13e0b85dd387",
+          "utt_cli_114f4e6dade6",
+          "utt_cli_d27b807be0fd",
+          "utt_cli_f1935d299cfd",
+          "utt_cli_9c0c858b0a00",
+          "utt_cli_cb70680c02f3",
+          "utt_cli_deb4994aa68d",
+          "utt_cli_c218a580437f",
+          "utt_cli_1f147e0b6b6b",
+          "utt_cli_346e986e1968",
+          "utt_cli_aea2599b4768",
+          "utt_cli_887c7a3a0ebd",
+          "utt_cli_dbbccc598206",
+          "utt_cli_47a027bcbaf7",
+          "utt_cli_739cb305b359",
+          "utt_cli_053395d7e43e",
+          "utt_cli_009cc5b37479",
+          "utt_cli_dce113e1f610",
+          "utt_cli_f2b2c1eaea54",
+          "utt_cli_6d73459f977a",
+          "utt_cli_ca4fad22b9f9",
+          "utt_cli_c79972ec23e3",
+          "utt_cli_6b55eb9199d5",
+          "utt_cli_30ef6212ad1d",
+          "utt_cli_24110b502864",
+          "utt_cli_9c020ff212eb",
+          "utt_cli_a36884e2f92a",
+          "utt_cli_7a9be32cfedd",
+          "utt_cli_29e353374d3b",
+          "utt_cli_b7aa0e3c09c7",
+          "utt_cli_7796de2aed45",
+          "utt_cli_20eb301bbf2b",
+          "utt_cli_7f0f5f4ca020",
+          "utt_cli_c3ed4b943679",
+          "utt_cli_cb2b581d99de",
+          "utt_cli_e67c974a7b5e",
+          "utt_cli_b61a09c7da66",
+          "utt_cli_2fafdb2b186c",
+          "utt_cli_f0f4edb995cd",
+          "utt_cli_55477be575ff",
+          "utt_cli_c37ae188cb64",
+          "utt_cli_83923d663a7f",
+          "utt_cli_e83066dcf893",
+          "utt_cli_1063ca93929a",
+          "utt_cli_4b5cb8f6e856"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_issue_root__n_500step_topic_4",
+      "shape": "edge",
+      "source": {
+        "cell": "n_issue_root"
+      },
+      "target": {
+        "cell": "n_500step_topic_4"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_4_1",
+      "shape": "amo-node",
+      "position": {
+        "x": 930,
+        "y": 295
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "action",
+        "label": "下周一启动功能测试\n第一轮5天，回归3天",
+        "speaker_ref": null,
+        "importance": {
+          "level": "high",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_bd03c51f2f2e",
+          "utt_cli_d23bdcf683fb"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_4__n_500step_4_1",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_4"
+      },
+      "target": {
+        "cell": "n_500step_4_1"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_4_2",
+      "shape": "amo-node",
+      "position": {
+        "x": 930,
+        "y": 430
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "conclusion",
+        "label": "压测分两批：权限修复后核心\n功能测试结束后全量",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_114f4e6dade6",
+          "utt_cli_d27b807be0fd"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_4__n_500step_4_2",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_4"
+      },
+      "target": {
+        "cell": "n_500step_4_2"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_4_3",
+      "shape": "amo-node",
+      "position": {
+        "x": 930,
+        "y": 565
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "action",
+        "label": "运维明天建独立压测环境\n后端优化索引并提供慢SQL",
+        "speaker_ref": null,
+        "importance": {
+          "level": "high",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_c218a580437f",
+          "utt_cli_1f147e0b6b6b",
+          "utt_cli_346e986e1968"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_4__n_500step_4_3",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_4"
+      },
+      "target": {
+        "cell": "n_500step_4_3"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_4_4",
+      "shape": "amo-node",
+      "position": {
+        "x": 930,
+        "y": 700
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "point",
+        "label": "连接池建议：测试100、生产200\n最终按压测结果确认",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_20440a83c557"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_4__n_500step_4_4",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_4"
+      },
+      "target": {
+        "cell": "n_500step_4_4"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_4_5",
+      "shape": "amo-node",
+      "position": {
+        "x": 930,
+        "y": 835
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "action",
+        "label": "明天下午两点用例评审\n覆盖权限、上传、消息与回滚",
+        "speaker_ref": null,
+        "importance": {
+          "level": "high",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_6360d5d122e1",
+          "utt_cli_2db5714b0bf9",
+          "utt_cli_6d73459f977a",
+          "utt_cli_6b55eb9199d5"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_4__n_500step_4_5",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_4"
+      },
+      "target": {
+        "cell": "n_500step_4_5"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_4_6",
+      "shape": "amo-node",
+      "position": {
+        "x": 930,
+        "y": 970
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "conclusion",
+        "label": "致命4小时响应，当天处理\n严重当天响应，2工作日修复",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_7a9be32cfedd"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_4__n_500step_4_6",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_4"
+      },
+      "target": {
+        "cell": "n_500step_4_6"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_4_7",
+      "shape": "amo-node",
+      "position": {
+        "x": 930,
+        "y": 1105
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "action",
+        "label": "缺陷日报每日17点同步\n延期留档，业务开只读权限",
+        "speaker_ref": null,
+        "importance": {
+          "level": "high",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_7796de2aed45",
+          "utt_cli_b61a09c7da66",
+          "utt_cli_e83066dcf893"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_4__n_500step_4_7",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_4"
+      },
+      "target": {
+        "cell": "n_500step_4_7"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_topic_5",
+      "shape": "amo-node",
+      "position": {
+        "x": 0,
+        "y": 1430
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "issue",
+        "label": "上线安排、验收与回滚",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_733b26e2ef37",
+          "utt_cli_479a01821fdc",
+          "utt_cli_25e510979dbd",
+          "utt_cli_c37322df7d4a",
+          "utt_cli_e1843cb29d39",
+          "utt_cli_b3ddc7836ac1",
+          "utt_cli_2bf98c76371b",
+          "utt_cli_f3e6cd49eaa9",
+          "utt_cli_9ec1fad8277b",
+          "utt_cli_360e53843e73",
+          "utt_cli_dd0f44be4de1",
+          "utt_cli_776f6129d4fb",
+          "utt_cli_484d8059beb4",
+          "utt_cli_07269b801731",
+          "utt_cli_be73e881d92a",
+          "utt_cli_ebb22082aa37",
+          "utt_cli_49152320bf0c",
+          "utt_cli_c5aabf97ddcd",
+          "utt_cli_d4f566481722",
+          "utt_cli_0e0929f22fa7",
+          "utt_cli_e7e4f100b317",
+          "utt_cli_125eca7789d0",
+          "utt_cli_a77044242e6a",
+          "utt_cli_9565fba664ab",
+          "utt_cli_dcf5ce4f9ef6",
+          "utt_cli_f75875024fec",
+          "utt_cli_dbdae3008d51",
+          "utt_cli_285b3732a21d",
+          "utt_cli_c551f497fe79",
+          "utt_cli_5dfbc6065fb5",
+          "utt_cli_9cb2d9d06158",
+          "utt_cli_52913022587e",
+          "utt_cli_212eda8a240c",
+          "utt_cli_137f6fb6de13",
+          "utt_cli_21267618a925",
+          "utt_cli_13655384f692",
+          "utt_cli_9de4f0ceca96",
+          "utt_cli_7a06dbe506c5",
+          "utt_cli_cbc813fe3f36",
+          "utt_cli_bc09e7b38bfa",
+          "utt_cli_1cb3c13826f9",
+          "utt_cli_596f0a352880",
+          "utt_cli_d80bb301fc58",
+          "utt_cli_26731c391db4",
+          "utt_cli_4f1ec9998460",
+          "utt_cli_2fb1faaf267b",
+          "utt_cli_a5f87919dbf2",
+          "utt_cli_3a608d146487",
+          "utt_cli_aeaa941ce75c",
+          "utt_cli_02420dc31d6a",
+          "utt_cli_1ae0bb7c25d2",
+          "utt_cli_3c79af1e2068",
+          "utt_cli_0cbf97cd267c",
+          "utt_cli_87247d18397c",
+          "utt_cli_227ee012f4ea",
+          "utt_cli_4546d4f73be8",
+          "utt_cli_cec64cdb79b4",
+          "utt_cli_f930746f152d",
+          "utt_cli_99f3ee896b68",
+          "utt_cli_bd9d693bba2e",
+          "utt_cli_55ae32b21481",
+          "utt_cli_eaf79831045f",
+          "utt_cli_04a71227d0e4",
+          "utt_cli_b8c9125adfe5",
+          "utt_cli_c5adf69b0e10",
+          "utt_cli_1d0c6ed9893a",
+          "utt_cli_f59bbb2c93e8",
+          "utt_cli_4e44774a6e5c"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_issue_root__n_500step_topic_5",
+      "shape": "edge",
+      "source": {
+        "cell": "n_issue_root"
+      },
+      "target": {
+        "cell": "n_500step_topic_5"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_5_1",
+      "shape": "amo-node",
+      "position": {
+        "x": 0,
+        "y": 1565
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "conclusion",
+        "label": "建议周六凌晨2点上线\n上线前演练，预发布提前3天",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_5b9386b89e14",
+          "utt_cli_fe920990eb07",
+          "utt_cli_49152320bf0c"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_5__n_500step_5_1",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_5"
+      },
+      "target": {
+        "cell": "n_500step_5_1"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_5_2",
+      "shape": "amo-node",
+      "position": {
+        "x": 0,
+        "y": 1700
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "point",
+        "label": "阶段：数据库30分→后端40分\n前端15分→线上验证1小时",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_c37322df7d4a"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_5__n_500step_5_2",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_5"
+      },
+      "target": {
+        "cell": "n_500step_5_2"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_5_3",
+      "shape": "amo-node",
+      "position": {
+        "x": 0,
+        "y": 1835
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "conclusion",
+        "label": "启动：配置中心→数据库\n业务服务→网关，逐步健康检查",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_9565fba664ab",
+          "utt_cli_f75875024fec"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_5__n_500step_5_3",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_5"
+      },
+      "target": {
+        "cell": "n_500step_5_3"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_5_4",
+      "shape": "amo-node",
+      "position": {
+        "x": 0,
+        "y": 1970
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "action",
+        "label": "测试先验证4条核心流程\n业务再验收，项目经理确认发布",
+        "speaker_ref": null,
+        "importance": {
+          "level": "high",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_dd0f44be4de1",
+          "utt_cli_484d8059beb4",
+          "utt_cli_cbc813fe3f36"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_5__n_500step_5_4",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_5"
+      },
+      "target": {
+        "cell": "n_500step_5_4"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_5_5",
+      "shape": "amo-node",
+      "position": {
+        "x": 0,
+        "y": 2105
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "conclusion",
+        "label": "10分钟内无法恢复，优先回滚\n项目经理与运维共同确认",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_285b3732a21d",
+          "utt_cli_f930746f152d"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_5__n_500step_5_5",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_5"
+      },
+      "target": {
+        "cell": "n_500step_5_5"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_5_6",
+      "shape": "amo-node",
+      "position": {
+        "x": 0,
+        "y": 2240
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "conclusion",
+        "label": "异常先摘新服务、切回旧版本\n数据异常停新接口并回滚",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_3c79af1e2068",
+          "utt_cli_87247d18397c"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_5__n_500step_5_6",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_5"
+      },
+      "target": {
+        "cell": "n_500step_5_6"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_5_7",
+      "shape": "amo-node",
+      "position": {
+        "x": 0,
+        "y": 2375
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "action",
+        "label": "产品备成功与回滚公告\n运维发公告，业务代表发群说明",
+        "speaker_ref": null,
+        "importance": {
+          "level": "high",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_137f6fb6de13",
+          "utt_cli_13655384f692",
+          "utt_cli_04a71227d0e4"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_5__n_500step_5_7",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_5"
+      },
+      "target": {
+        "cell": "n_500step_5_7"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_topic_6",
+      "shape": "amo-node",
+      "position": {
+        "x": 310,
+        "y": 1430
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "issue",
+        "label": "监控告警与上线观察",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_13655384f692",
+          "utt_cli_9de4f0ceca96",
+          "utt_cli_7a06dbe506c5",
+          "utt_cli_cbc813fe3f36",
+          "utt_cli_bc09e7b38bfa",
+          "utt_cli_1cb3c13826f9",
+          "utt_cli_596f0a352880",
+          "utt_cli_d80bb301fc58",
+          "utt_cli_26731c391db4",
+          "utt_cli_4f1ec9998460",
+          "utt_cli_2fb1faaf267b",
+          "utt_cli_a5f87919dbf2",
+          "utt_cli_3a608d146487",
+          "utt_cli_aeaa941ce75c",
+          "utt_cli_02420dc31d6a",
+          "utt_cli_1ae0bb7c25d2",
+          "utt_cli_3c79af1e2068",
+          "utt_cli_0cbf97cd267c",
+          "utt_cli_87247d18397c",
+          "utt_cli_227ee012f4ea",
+          "utt_cli_4546d4f73be8",
+          "utt_cli_cec64cdb79b4",
+          "utt_cli_f930746f152d",
+          "utt_cli_99f3ee896b68",
+          "utt_cli_bd9d693bba2e",
+          "utt_cli_55ae32b21481",
+          "utt_cli_eaf79831045f",
+          "utt_cli_04a71227d0e4",
+          "utt_cli_b8c9125adfe5",
+          "utt_cli_c5adf69b0e10",
+          "utt_cli_1d0c6ed9893a",
+          "utt_cli_f59bbb2c93e8",
+          "utt_cli_4e44774a6e5c",
+          "utt_cli_a3a218f82541",
+          "utt_cli_0e5d5d21b8e3",
+          "utt_cli_1ce3d261c8f9",
+          "utt_cli_b70636d6ea7e",
+          "utt_cli_aaf704653717",
+          "utt_cli_d3c6828b47e6",
+          "utt_cli_915aedb72f93",
+          "utt_cli_434254f5668c",
+          "utt_cli_b19a76842d43",
+          "utt_cli_db2318a54d0d",
+          "utt_cli_98aec950f5cd",
+          "utt_cli_f3e63be39093",
+          "utt_cli_abbcb5a70e70",
+          "utt_cli_405138dbb5f5"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_issue_root__n_500step_topic_6",
+      "shape": "edge",
+      "source": {
+        "cell": "n_issue_root"
+      },
+      "target": {
+        "cell": "n_500step_topic_6"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_6_1",
+      "shape": "amo-node",
+      "position": {
+        "x": 310,
+        "y": 1565
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "conclusion",
+        "label": "告警：接口>2秒，错误率>3%\nCPU>80%，稳定后收紧错误率",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_4f1ec9998460",
+          "utt_cli_a5f87919dbf2"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_6__n_500step_6_1",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_6"
+      },
+      "target": {
+        "cell": "n_500step_6_1"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_6_2",
+      "shape": "amo-node",
+      "position": {
+        "x": 310,
+        "y": 1700
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "action",
+        "label": "运维上线前接入APM\n严重告警同时电话通知",
+        "speaker_ref": null,
+        "importance": {
+          "level": "high",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_d80bb301fc58",
+          "utt_cli_02420dc31d6a"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_6__n_500step_6_2",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_6"
+      },
+      "target": {
+        "cell": "n_500step_6_2"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_6_3",
+      "shape": "amo-node",
+      "position": {
+        "x": 310,
+        "y": 1835
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "conclusion",
+        "label": "观察48小时，前4小时重点值守\n随后每4小时查看监控",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_1d0c6ed9893a"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_6__n_500step_6_3",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_6"
+      },
+      "target": {
+        "cell": "n_500step_6_3"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_6_4",
+      "shape": "amo-node",
+      "position": {
+        "x": 310,
+        "y": 1970
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "action",
+        "label": "测试每半小时发巡检结果\n业务问题由测试分类分派",
+        "speaker_ref": null,
+        "importance": {
+          "level": "high",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_1ce3d261c8f9",
+          "utt_cli_d3c6828b47e6"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_6__n_500step_6_4",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_6"
+      },
+      "target": {
+        "cell": "n_500step_6_4"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_6_5",
+      "shape": "amo-node",
+      "position": {
+        "x": 310,
+        "y": 2105
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "conclusion",
+        "label": "生产默认INFO\n临时DEBUG≤2小时，排查后恢复",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_b19a76842d43",
+          "utt_cli_f3e63be39093"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_6__n_500step_6_5",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_6"
+      },
+      "target": {
+        "cell": "n_500step_6_5"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_topic_7",
+      "shape": "amo-node",
+      "position": {
+        "x": 620,
+        "y": 1430
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "issue",
+        "label": "灰度发布与待确认事项",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_adce0319ed75",
+          "utt_cli_b1d6ee547fa3",
+          "utt_cli_843637b124cf",
+          "utt_cli_8e7eef0ba7c9",
+          "utt_cli_868847922402",
+          "utt_cli_fb7179835e75",
+          "utt_cli_b101b52ba172",
+          "utt_cli_d93eb6cd7765",
+          "utt_cli_9b0d193831e7",
+          "utt_cli_1ddd6cf7127c",
+          "utt_cli_f0cc5aa8b088",
+          "utt_cli_96cb0cbf3d60",
+          "utt_cli_c37a6aecd6d8",
+          "utt_cli_57f5bf345bee",
+          "utt_cli_50c53e7a1b9b",
+          "utt_cli_747083020965",
+          "utt_cli_382e76e1667a",
+          "utt_cli_13ab4b447df9"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_issue_root__n_500step_topic_7",
+      "shape": "edge",
+      "source": {
+        "cell": "n_issue_root"
+      },
+      "target": {
+        "cell": "n_500step_topic_7"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_7_1",
+      "shape": "amo-node",
+      "position": {
+        "x": 620,
+        "y": 1565
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "conclusion",
+        "label": "灰度按用户维度保持一致\n拟5%流量，观察半小时",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_b1d6ee547fa3",
+          "utt_cli_843637b124cf",
+          "utt_cli_868847922402"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_7__n_500step_7_1",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_7"
+      },
+      "target": {
+        "cell": "n_500step_7_1"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_7_2",
+      "shape": "amo-node",
+      "position": {
+        "x": 620,
+        "y": 1700
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "action",
+        "label": "准备命中与未命中两套账号\n运维、测试、业务三方确认全量",
+        "speaker_ref": null,
+        "importance": {
+          "level": "high",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_d93eb6cd7765",
+          "utt_cli_f0cc5aa8b088"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_7__n_500step_7_2",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_7"
+      },
+      "target": {
+        "cell": "n_500step_7_2"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_7_3",
+      "shape": "amo-node",
+      "position": {
+        "x": 620,
+        "y": 1835
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "conclusion",
+        "label": "严重缺陷或核心流程异常\n停止灰度并回滚",
+        "speaker_ref": null,
+        "importance": {
+          "level": "normal",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_57f5bf345bee",
+          "utt_cli_50c53e7a1b9b"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_7__n_500step_7_3",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_7"
+      },
+      "target": {
+        "cell": "n_500step_7_3"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_7_4",
+      "shape": "amo-node",
+      "position": {
+        "x": 620,
+        "y": 1970
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "conflict",
+        "label": "待确认：5%灰度与尾号0–4\n按十进制单尾号理解为50%",
+        "speaker_ref": null,
+        "importance": {
+          "level": "high",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_b1d6ee547fa3",
+          "utt_cli_fb7179835e75"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_7__n_500step_7_4",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_7"
+      },
+      "target": {
+        "cell": "n_500step_7_4"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    },
+    {
+      "id": "n_500step_7_5",
+      "shape": "amo-node",
+      "position": {
+        "x": 620,
+        "y": 2105
+      },
+      "size": {
+        "width": 220,
+        "height": 64
+      },
+      "data": {
+        "type": "action",
+        "label": "运维今天下班前更新上线手册\n补齐灰度配置和回滚步骤",
+        "speaker_ref": null,
+        "importance": {
+          "level": "high",
+          "score": 0.0,
+          "manual_override": false
+        },
+        "mention_count": 1,
+        "edit": {
+          "text_edited": false,
+          "type_edited": false,
+          "position_frozen": true,
+          "importance_override": false
+        },
+        "lock": {
+          "locked": false,
+          "locked_by": null,
+          "locked_at": null
+        },
+        "resolved": false,
+        "metadata_refs": [
+          "utt_cli_382e76e1667a",
+          "utt_cli_13ab4b447df9"
+        ],
+        "version": 1
+      }
+    },
+    {
+      "id": "e_n_500step_topic_7__n_500step_7_5",
+      "shape": "edge",
+      "source": {
+        "cell": "n_500step_topic_7"
+      },
+      "target": {
+        "cell": "n_500step_7_5"
+      },
+      "data": {
+        "relation": "subordinate"
+      }
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+/* 议题结构视图：历史议题结构页（issues.html）与看板内「议题结构」视图共用。
+ * 布局骨架、侧栏/标题/错误提示等复用 history.css 与三套主题（master/night/theme），
+ * 颜色一律走主题变量，自动适配明暗两色。 */
+
+/* ---------- 容器 ---------- */
+#issues-scroll { flex: 1; min-height: 0; overflow: auto; padding: 22px 24px 40px; }
+.issue-structure { max-width: 1180px; margin: 0 auto; color: var(--master-text); }
+
+/* 看板内议题结构视图：覆盖层，铺满画布区域，避免切换时销毁 X6 画布 */
+#issue-view { position: absolute; inset: 0; z-index: 5; overflow: auto; padding: 22px 24px 40px; background: var(--master-bg); }
+#issue-view[hidden] { display: none; }
+
+/* ---------- 视图切换（看板内：关系图 / 议题结构） ---------- */
+#board-view-switch { position: absolute; top: 14px; left: 16px; z-index: 6; display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--master-line); border-radius: 10px; background: var(--night-panel); box-shadow: 0 6px 16px rgba(0, 0, 0, .18); }
+#board-view-switch button { border: 0; border-radius: 7px; padding: 6px 14px; background: transparent; color: var(--master-muted); font: inherit; font-size: 12.5px; cursor: pointer; }
+#board-view-switch button:hover { color: var(--master-text); }
+#board-view-switch button[aria-selected="true"] { background: var(--master-blue); color: var(--night-panel); }
+
+/* ---------- 层级图例 ---------- */
+.issue-structure .legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 0 0 20px; font-size: 12.5px; color: var(--master-muted); }
+.issue-structure .legend > span { display: inline-flex; align-items: center; gap: 7px; }
+.issue-structure .legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+/* ---------- 空状态 ---------- */
+.issue-structure .issues-empty { padding: 48px 12px; color: var(--master-muted); text-align: center; font-size: 13px; line-height: 1.8; }
+
+/* ---------- 议题根（层级 1） ---------- */
+.issue-structure .root { position: relative; border: 1px solid var(--master-line); border-left: 6px solid #f0b429; background: var(--night-panel); border-radius: 14px; padding: 22px 26px; margin-bottom: 22px; }
+.issue-structure .root .tag { display: inline-block; font-size: 11px; letter-spacing: .18em; font-weight: 700; color: #c8901a; border: 1px solid #e0a82c; border-radius: 999px; padding: 2px 12px; margin-bottom: 12px; }
+.issue-structure .root h1 { margin: 0 0 4px; font-size: 24px; font-weight: 800; color: var(--master-text); }
+.issue-structure .root p { margin: 6px 0 0; color: var(--master-muted); font-size: 13.5px; }
+
+/* ---------- 观点分支（层级 2） ---------- */
+.issue-structure .branches { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start; }
+.issue-structure .branch { border: 1px solid var(--master-line); border-radius: 14px; background: var(--night-panel); overflow: hidden; }
+.issue-structure .branch-head { padding: 18px 22px; border-bottom: 1px solid var(--master-line); border-top: 4px solid var(--branch, var(--master-blue)); background: linear-gradient(180deg, var(--branch-soft, transparent), transparent); }
+.issue-structure .branch-head .side { font-size: 11px; letter-spacing: .16em; font-weight: 700; color: var(--branch, var(--master-blue)); }
+.issue-structure .branch-head h2 { margin: 6px 0 4px; font-size: 19px; font-weight: 800; color: var(--master-text); }
+.issue-structure .branch-head .thesis { font-size: 12.5px; color: var(--master-muted); }
+.issue-structure .branch-empty { margin: 0; padding: 16px 10px; color: var(--master-muted); font-size: 12.5px; }
+
+/* ---------- 主题分组（层级 3） ---------- */
+.issue-structure .blocks { padding: 8px 14px 14px; }
+.issue-structure .block { padding: 12px 8px; border-bottom: 1px dashed var(--master-line); }
+.issue-structure .block:last-child { border-bottom: none; }
+.issue-structure .block-title { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 14px; font-weight: 700; color: var(--master-text); }
+.issue-structure .block-title .idx { flex: none; width: 20px; height: 20px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; background: var(--branch-soft, var(--master-blue-tint)); color: var(--branch, var(--master-blue)); }
+.issue-structure .block-title .block-label { flex: 1; min-width: 0; }
+.issue-structure .block-thesis { margin: 0 0 6px; color: var(--master-muted); font-size: 12.5px; }
+
+/* ---------- 要点（层级 4+，可递归嵌套） ---------- */
+.issue-structure ul.points { list-style: none; margin: 0; padding: 0 0 0 26px; }
+.issue-structure ul.points li { position: relative; padding: 5px 0 5px 16px; border-left: 2px solid var(--branch-line, var(--master-line)); font-size: 13.5px; color: var(--master-text); }
+.issue-structure ul.points li::before { content: ""; position: absolute; left: -5px; top: 13px; width: 6px; height: 6px; border-radius: 50%; background: var(--branch, var(--master-blue)); }
+.issue-structure ul.points li .k { font-weight: 650; color: var(--master-text); }
+.issue-structure ul.points li .sub { margin-left: 8px; color: var(--master-muted); font-size: 12.5px; }
+.issue-structure ul.points li ul.points { margin-top: 4px; }
+
+/* ---------- 类型角标（按节点类型着色） ---------- */
+.issue-structure .badge, .issue-structure .src { display: inline-block; margin-left: 8px; padding: 0 6px; border: 1px solid var(--master-line); border-radius: 5px; font-size: 11px; color: var(--master-muted); white-space: nowrap; }
+.issue-structure .badge[data-type="issue"], .issue-structure .src[data-type="issue"] { color: #c8901a; border-color: rgba(200,144,26,.6); }
+.issue-structure .badge[data-type="point"], .issue-structure .src[data-type="point"] { color: #2f9e78; border-color: rgba(47,158,120,.55); }
+.issue-structure .badge[data-type="evidence"], .issue-structure .src[data-type="evidence"] { color: #369bd2; border-color: rgba(54,155,210,.55); }
+.issue-structure .badge[data-type="conclusion"], .issue-structure .src[data-type="conclusion"] { color: #9b7bc8; border-color: rgba(155,123,200,.55); }
+.issue-structure .badge[data-type="action"], .issue-structure .src[data-type="action"] { color: #20be9c; border-color: rgba(32,190,156,.55); }
+.issue-structure .badge[data-type="conflict"], .issue-structure .src[data-type="conflict"] { color: #df5d94; border-color: rgba(223,93,148,.55); }
+
+@media (max-width: 760px) {
+  #issues-scroll, #issue-view { padding: 12px; }
+  .issue-structure .branches { grid-template-columns: 1fr; }
+  .issue-structure .root { padding: 16px; }
+  .issue-structure .root h1 { font-size: 19px; }
+}
