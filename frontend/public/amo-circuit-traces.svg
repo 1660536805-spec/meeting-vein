@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" fill="none">
+  <defs>
+    <linearGradient id="wireA" x1="180" y1="140" x2="740" y2="470" gradientUnits="userSpaceOnUse"><stop stop-color="#aeb0b3" stop-opacity="0"/><stop offset=".48" stop-color="#aeb0b3" stop-opacity=".78"/><stop offset="1" stop-color="#d6d8da" stop-opacity="0"/></linearGradient>
+    <linearGradient id="wireB" x1="850" y1="180" x2="1450" y2="600" gradientUnits="userSpaceOnUse"><stop stop-color="#aeb0b3" stop-opacity="0"/><stop offset=".52" stop-color="#aeb0b3" stop-opacity=".82"/><stop offset="1" stop-color="#d6d8da" stop-opacity="0"/></linearGradient>
+    <linearGradient id="wireC" x1="250" y1="680" x2="1210" y2="850" gradientUnits="userSpaceOnUse"><stop stop-color="#aeb0b3" stop-opacity="0"/><stop offset=".5" stop-color="#aeb0b3" stop-opacity=".62"/><stop offset="1" stop-color="#d6d8da" stop-opacity="0"/></linearGradient>
+  </defs>
+  <g stroke-width="1">
+    <path d="M80 180h210q24 0 24 24v115q0 24 24 24h174q22 0 22 22v74" stroke="url(#wireA)"/>
+    <path d="M1070 70v115q0 24 24 24h155q24 0 24 24v106q0 24 24 24h222" stroke="url(#wireB)"/>
+    <path d="M1320 510h-150q-24 0-24 24v95q0 24-24 24H910q-22 0-22 22v86" stroke="url(#wireB)"/>
+    <path d="M170 610h186q24 0 24 24v66q0 24 24 24h165q24 0 24 24v70" stroke="url(#wireC)"/>
+    <path d="M600 120v82q0 24 24 24h126q24 0 24 24v74" stroke="url(#wireA)"/>
+    <path d="M960 450v82q0 22-22 22H790q-24 0-24 24v84" stroke="url(#wireC)"/>
+  </g>
+  <g fill="#c8cacc" fill-opacity=".3">
+    <circle cx="80" cy="180" r="2"/><circle cx="534" cy="439" r="2"/><circle cx="1070" cy="70" r="2"/><circle cx="1519" cy="363" r="2"/>
+    <circle cx="1320" cy="510" r="2"/><circle cx="888" cy="761" r="2"/><circle cx="170" cy="610" r="2"/><circle cx="593" cy="818" r="2"/>
+    <circle cx="600" cy="120" r="2"/><circle cx="774" cy="300" r="2"/><circle cx="960" cy="450" r="2"/><circle cx="766" cy="662" r="2"/>
+  </g>
+</svg>

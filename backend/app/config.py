@@ -31,7 +31,7 @@ class Config:
     # —— 实时流合批（P1②）——
     # ASR 实时路径把多句在窗口内合并为一批再驱动编排，摊薄每句 2 次串行 LLM 调用；
     # 0 关闭（逐句即时驱动）。CLI/batch 调试口不受影响（脚本需即时确定性反馈）。
-    realtime_debounce_ms: int = 1200
+    realtime_debounce_ms: int = 600
     # CLI 逐句推送的自适应合批上限（块）：推流快于 LLM 消化时，等锁积压的句子
     # 自动合并为一批（≤上限）一次驱动；推得慢时每批 1 句，行为与逐句一致。
     cli_max_block: int = 12
@@ -43,6 +43,8 @@ class Config:
 
     # —— 存储 ——
     storage_root: str = ".amo_data"         # 本地 json 真相源（生产换 jsonb）
+    local_asr_base_url: str = field(
+        default_factory=lambda: os.getenv("AMO_LOCAL_ASR_BASE_URL", "http://127.0.0.1:9000"))
 
     # —— 会议 ——
     default_meeting_id: str = field(

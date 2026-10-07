@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { getModelStatus, getProductStatus, submitUtterance, transcribeAudio } from "./api";
+import { getModelStatus, getProductStatus, getUtteranceStatus, submitUtterance, transcribeAudio } from "./api";
 
 const event = {
   utterance_id: "utt_local_1",
@@ -52,7 +52,11 @@ describe("local ASR transport", () => {
 
   it("reads ASR and product status from same-origin proxies", async () => {
     const modelFetcher = fakeFetch(new Response(JSON.stringify({ ok: true, state: "ready", model: "SenseVoiceSmall" })));
-    const productFetcher = fakeFetch(new Response(JSON.stringify({ llm_mode: "mock" })));
+    const productFetcher = fakeFetch(new Response(JSON.stringify({
+      llm_mode: "mock", llm_instance: { type: "mock", model: null },
+      asr: { streaming: { state: "unavailable" }, final: { state: "unavailable" } },
+      persistence: { store_a: "ready", store_b: "ready", pending_retries: 0 },
+    })));
     expect((await getModelStatus(modelFetcher)).state).toBe("ready");
     expect((await getProductStatus(productFetcher)).llm_mode).toBe("mock");
     expect(vi.mocked(modelFetcher).mock.calls[0][0]).toBe("/asr/models/status");
@@ -60,13 +64,21 @@ describe("local ASR transport", () => {
   });
 
   it("submits the exact normalized event to the board", async () => {
-    const fetcher = fakeFetch(new Response(JSON.stringify({ ok: true, utterance_id: "utt_local_1", duplicate: false })));
-    expect(await submitUtterance(event, fetcher)).toEqual({ ok: true, utterance_id: "utt_local_1", duplicate: false });
+    const payload = { ok: true, utterance_id: "utt_local_1", duplicate: false, state: "committed", meta_id: "meta-1", board_version: 2 };
+    const fetcher = fakeFetch(new Response(JSON.stringify(payload)));
+    expect(await submitUtterance(event, fetcher)).toEqual(payload);
     expect(fetcher).toHaveBeenCalledWith("/api/utterances", expect.objectContaining({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(event),
     }));
+  });
+
+  it("queries the processing state by stable utterance and meeting ids", async () => {
+    const status = { utterance_id: "utt_local_1", meta_id: "meta-1", state: "processing", attempts: 1, board_version: null };
+    const fetcher = fakeFetch(new Response(JSON.stringify(status)));
+    expect(await getUtteranceStatus("utt_local_1", "mtg_demo", fetcher)).toEqual(status);
+    expect(fetcher).toHaveBeenCalledWith("/api/utterances/utt_local_1/status?meeting_id=mtg_demo", undefined);
   });
 
   it("shows ASR's useful error message", async () => {

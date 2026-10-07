@@ -92,7 +92,13 @@ class LocalAsrFlowTests(unittest.TestCase):
         self.assertEqual(asr_response.status_code, 200)
         event = asr_response.json()["event"]
         accepted = self.client.post("/api/utterances", json=event)
-        self.assertEqual(accepted.json(), {"ok": True, "utterance_id": event["utterance_id"], "duplicate": False})
+        accepted_payload = accepted.json()
+        self.assertEqual(accepted_payload["ok"], True)
+        self.assertEqual(accepted_payload["utterance_id"], event["utterance_id"])
+        self.assertEqual(accepted_payload["duplicate"], False)
+        self.assertEqual(accepted_payload["state"], "committed")
+        self.assertTrue(accepted_payload["meta_id"])
+        self.assertGreaterEqual(accepted_payload["board_version"], 1)
         cells = self.client.get("/api/board", params={"meeting_id": "mtg_demo"}).json()["cells"]
         evidence = [cell for cell in cells if cell.get("data", {}).get("metadata_refs")]
         self.assertTrue(evidence)

@@ -1,5 +1,6 @@
 import { Graph } from "@antv/x6";
 import { beginAutoAdjust, composeAutoFit, endAutoAdjust, getUserZoomFactor } from "./view-scale";
+import { projectBoard } from "./projection";
 
 /** X6 看板渲染（Design_StructureGraph_Storage §3 / Research_X6_MindMap）。
  * 后端 Store A 的 cell 采用 X6 v1 风格 + 自定义 shape(amo-node)，本层做 v1→v2 归一化：
@@ -76,6 +77,13 @@ const NODE_TYPE_LABELS: Record<string, string> = {
   action: "待办",
   conflict: "不同意见",
 };
+const IMPORTANCE_RATIONALES: Record<string, string> = {
+  adopted: "已采纳",
+  affects_action: "影响行动",
+  repeated: "多次提及",
+  evidence: "依据充分",
+  unspecified: "依据待补充",
+};
 
 /** 边按 data.relation 差异化着色（5 类）。 */
 const EDGE_COLORS: Record<string, string> = {
@@ -95,8 +103,8 @@ const EDGE_LABELS: Record<string, string> = {
 /** 派系色板（根下一级分支依次取色，子孙继承同色；不含根主蓝，避免与根混淆）。 */
 const FACTION_COLORS = ["#722ed1", "#fa8c16", "#13c2c2", "#eb2f96", "#52c41a", "#faad14"];
 
-/** 树形布局参数：列宽（横向观点间距）/ 行高（列内纵向间距）/ 顶部与左侧留白。 */
-const X_GAP = 250, LEVEL_H = 150, TOP = 40, LEFT = 60;
+/** 横向树：每深入一层向右一列，同级子树从上到下展开。 */
+const X_GAP = 390, LEVEL_H = 164, TOP = 64, LEFT = 80;
 
 /** 节点四向连接桩：新增导线的起止锚点（默认淡显、hover 高亮，见 index.html 的 .x6-port-body）。
  * 不定义 ports 时 connecting 无从起手，用户无法手动连边。 */
@@ -123,16 +131,18 @@ function nodePorts(stroke: string) {
  * vertices 为用户拖弯/拖移产生的顶点（后端持久化后随快照回放）。 */
 function styleEdge(id: string, source: any, target: any, data: any, vertices: any[] = [], colorOverride?: string): any {
   const relation = data?.relation ?? "support";
+  const primary = data?.visual_role === "primary";
+  const secondary = data?.visual_role === "secondary";
   const decision = isDecisionWorkspace();
   const decisionColors: Record<string, string> = isLightTheme() ? { support: "#23B894", subordinate: "#369BD2", oppose: "#DF5D94", duplicate: "#D99A26", replace: "#9B7BC8" } : { support: "#24eac0", subordinate: "#19c6ff", oppose: "#ff619c", duplicate: "#edbc61", replace: "#ac83ff" };
   const color = colorOverride ?? (decision || isLightTheme() ? decisionColors[relation] : EDGE_COLORS[relation]) ?? PRIMARY;
   // 仅对非默认关系（subordinate/oppose/duplicate/replace）标注文字，避免满屏 "support" 干扰阅读。
-  const labels = !decision && relation === "support" ? [] : [{
+  const labels = primary || (!decision && relation === "support" && !secondary) ? [] : [{
     position: 0.5,
     attrs: {
       ...(decision ? { body: { fill: isLightTheme() ? mixColor(color, "#FFFFFF", 0.07) : "#061925", stroke: color, strokeWidth: 0.8, vectorEffect: "non-scaling-stroke", rx: 12, ry: 12, refX: -7, refY: -4, refWidth: "100%", refHeight: "100%", refWidth2: 14, refHeight2: 8 } } : {}),
       label: {
-        text: relation === "support" ? "支持" : relation === "replace" && decision ? "取代" : EDGE_LABELS[relation] ?? relation,
+        text: secondary && ["subordinate", "child"].includes(relation) ? "关联" : relation === "support" ? "支持" : relation === "replace" && decision ? "取代" : EDGE_LABELS[relation] ?? relation,
         fill: isLightTheme() ? mixColor(color, "#182D48", 0.65) : color,
         fontSize: decision ? 14 : 12,
         fontWeight: 600,
@@ -145,16 +155,17 @@ function styleEdge(id: string, source: any, target: any, data: any, vertices: an
     shape: "edge",
     source,
     target,
-    zIndex: 0,
+    zIndex: secondary ? -2 : primary ? -1 : 0,
     labels,
     vertices,
-    ...(decision ? { connector: { name: "smooth" } } : {}),
+    ...(decision ? { connector: { name: "smooth", ...(primary ? { args: { direction: "H" } } : {}) } } : {}),
     attrs: {
       line: {
         stroke: color,
-        strokeWidth: 1.2,
+        strokeWidth: primary ? 2 : secondary ? 1.4 : 1.2,
+        ...(secondary ? { strokeDasharray: "6 5", opacity: 0.8 } : {}),
         vectorEffect: "non-scaling-stroke",
-        targetMarker: { name: "block", width: 9, height: 9 },
+        targetMarker: { name: "block", width: primary ? 7 : 9, height: primary ? 7 : 9 },
       },
     },
     data,
@@ -209,11 +220,7 @@ function assignFactions(rawNodes: any[], rawEdges: { src: string; tgt: string }[
   return faction;
 }
 
-/** 议题结构思维导图布局：议题居顶，其下观点分支横向分列，每列的论点/论据自上而下逐层展开。
- * 下钻规则与 assignFactions/issues-view.resolveBranches 一致：当根仅有唯一「实质分支」（排除「其他」旁支）
- * 且其下仍有 ≥2 个分支时，该容器作为枢纽居中，改按其子分支分列，使对垒双方成为并列大列。
- * 工作台（decision）为呈现层级一律重算坐标，忽略 position_frozen；其余视图保留人工拖拽坐标。
- * 多根会议无法构成单一思维导图，返回 structured=false 交由调用方回退（泳道/平铺）。 */
+/** Each subtree gets a vertical span; its parent is centered beside its children. */
 function treeLayout(
   rawNodes: any[],
   rawEdges: { src: string; tgt: string }[],
@@ -227,73 +234,53 @@ function treeLayout(
     children.get(e.src)!.push(e.tgt);
     hasParent.add(e.tgt);
   }
-  const roots = rawNodes.map((n) => n.id).filter((id) => !hasParent.has(id));
   const pos = new Map<string, { x: number; y: number }>();
-  const placed = new Set<string>();
-  const decision = isDecisionWorkspace();
-  const keepFrozen = !decision;            // 工作台重算层级，其余视图尊重人工拖拽
-  const gap = decision ? 285 : X_GAP;      // 工作台节点宽 245，285 与旧泳道同宽且可被视口 pitch 识别
-
-  /** 列内纵向堆叠：row 为所在行号（0=根行，1=观点行，2+=论据…），返回列内下一个可用行号。 */
-  const layoutColumn = (id: string, row: number, colX: number): number => {
-    if (placed.has(id)) return row;
-    placed.add(id);
-    const c = nodeById.get(id)!;
-    const kids = (children.get(id) ?? []).filter((k) => !placed.has(k));
-    if (keepFrozen && c.data?.edit?.position_frozen) {
-      pos.set(id, rawPos(c));
-      let next = row + 1;
-      for (const k of kids) next = layoutColumn(k, next, colX);
-      return next;
-    }
-    pos.set(id, { x: colX, y: TOP + row * LEVEL_H });
-    let next = row + 1;
-    for (const k of kids) next = layoutColumn(k, next, colX);
-    return next;
+  const gap = LEVEL_H;
+  const branchGap = (id: string): number => {
+    const kind = nodeById.get(id)?.data?.type;
+    return kind === "issue" ? 0.9 : kind === "point" ? 0.42 : 0.3;
   };
-
-  if (roots.length === 1) {
-    const rootId = roots[0];
-    placed.add(rootId);
-    const kids = (children.get(rootId) ?? []).filter((k) => !placed.has(k));
-    const isOther = (id: string) => id.startsWith("n_issue_other");
-    const real = kids.filter((k) => !isOther(k));
-    // 下钻：唯一实质分支且有多个下级 → 该容器居中作枢纽，改按其子分支分列
-    let hubId: string | null = null;
-    let branchIds = kids;
-    if (real.length === 1 && (children.get(real[0]) ?? []).length >= 2) {
-      hubId = real[0];
-      branchIds = [...(children.get(hubId) ?? []), ...kids.filter(isOther)];
+  const width = new Map<string, number>();
+  const measuring = new Set<string>();
+  const measure = (id: string): number => {
+    if (width.has(id)) return width.get(id)!;
+    if (measuring.has(id)) return 1; // malformed legacy cycle
+    measuring.add(id);
+    const kids = children.get(id) ?? [];
+    const span = Math.max(1, kids.reduce((sum, child) => sum + measure(child), 0)
+      + Math.max(0, kids.length - 1) * branchGap(id));
+    measuring.delete(id);
+    width.set(id, span);
+    return span;
+  };
+  const placed = new Set<string>();
+  const place = (id: string, depth: number, start: number): void => {
+    if (placed.has(id)) return;
+    placed.add(id);
+    const span = measure(id);
+    const cell = nodeById.get(id)!;
+    pos.set(id, !isDecisionWorkspace() && cell.data?.edit?.position_frozen
+      ? rawPos(cell)
+      : { x: LEFT + depth * X_GAP, y: TOP + (start + (span - 1) / 2) * gap });
+    let offset = start;
+    const kids = children.get(id) ?? [];
+    for (const child of kids) {
+      if (placed.has(child)) continue;
+      place(child, depth + 1, offset);
+      offset += measure(child) + branchGap(id);
     }
-    const startRow = hubId ? 2 : 1;
-    let firstX = LEFT, lastX = LEFT;
-    branchIds.forEach((b, k) => {
-      const colX = LEFT + k * gap;
-      if (k === 0) firstX = colX;
-      lastX = colX;
-      layoutColumn(b, startRow, colX);
-    });
-    const centerX = branchIds.length ? (firstX + lastX) / 2 : LEFT;
-    if (hubId) {
-      placed.add(hubId);
-      pos.set(hubId, { x: centerX, y: TOP + LEVEL_H });
-    }
-    pos.set(rootId, { x: centerX, y: TOP });
-    // 兜底：游离节点排到末尾新列
-    let k = branchIds.length;
-    for (const n of rawNodes) {
-      if (!placed.has(n.id)) layoutColumn(n.id, startRow, LEFT + (k++) * gap);
-    }
-    return { pos, structured: true };
+  };
+  let offset = 0;
+  const roots = rawNodes.map((n) => n.id).filter((id) => !hasParent.has(id));
+  for (const root of roots) {
+    place(root, 0, offset);
+    offset += measure(root) + 1.2;
   }
-
-  // 多根兜底：每个根视作独立分支横向排（无法构成单一思维导图，交调用方回退）
-  roots.forEach((r, k) => layoutColumn(r, 1, LEFT + k * X_GAP));
-  let k = roots.length;
-  for (const n of rawNodes) {
-    if (!placed.has(n.id)) layoutColumn(n.id, 1, LEFT + (k++) * X_GAP);
+  for (const node of rawNodes) if (!placed.has(node.id)) {
+    place(node.id, 0, offset);
+    offset += measure(node.id) + 1.2;
   }
-  return { pos, structured: false };
+  return { pos, structured: true };
 }
 
 /** 把后端 cells 归一化为 X6 v2 的 {nodes, edges}，套派系着色、树形布局与会议看板主题。 */
@@ -314,19 +301,12 @@ function normalize(cells: any[]): { nodes: any[]; edges: any[] } {
     }
   }
 
-  const faction = assignFactions(rawNodes, rawEdges);
-  const { pos, structured } = treeLayout(rawNodes, rawEdges.map((e) => ({ src: e.src, tgt: e.tgt })));
+  const projection = projectBoard(cells);
+  const hierarchy = projection.structuralEdges;
+  const faction = assignFactions(rawNodes, hierarchy);
+  const { pos, structured } = treeLayout(rawNodes, hierarchy);
   const decision = isDecisionWorkspace();
-  // 单根会议走议题结构思维导图；多根无法构成单一层级树 → 工作台回退类型泳道平铺
-  if (decision && !structured) {
-    const laneRows = [0, 0, 0, 0];
-    const lanes: Record<string, number> = { issue: 0, point: 1, evidence: 1, conflict: 1, conclusion: 2, action: 3 };
-    for (const node of rawNodes) {
-      const lane = lanes[node.data?.type] ?? 1;
-      const row = laneRows[lane]++;
-      pos.set(node.id, node.data?.edit?.position_frozen ? rawPos(node) : { x: 30 + lane * 285, y: 45 + row * 135 });
-    }
-  }
+  void structured;
 
   const nodes: any[] = rawNodes.map((c) => {
     const style = nodeStyle(c.data?.type);
@@ -339,6 +319,14 @@ function normalize(cells: any[]): { nodes: any[]; edges: any[] } {
     const lines = String(c.data?.label ?? "").split("\n");
     const title = lines[0];
     const subtitle = lines.slice(1).join("\n") || NODE_TYPE_LABELS[c.data?.type] || "要点";
+    const needsConfirmation = Boolean(c.data?.needs_confirmation)
+      || (typeof c.data?.confidence === "number" && c.data.confidence < 0.65 && !c.data?.resolved);
+    const rationale = IMPORTANCE_RATIONALES[c.data?.importance?.rationale] ?? "";
+    const stateTitle = [
+      typeof c.data?.confidence === "number" ? `置信度 ${Math.round(c.data.confidence * 100)}%` : "",
+      needsConfirmation ? "待确认" : "",
+      rationale ? `重要性依据：${rationale}` : "",
+    ].filter(Boolean).join(" · ");
     const gradientId = `decision-surface-${String(c.id).replace(/[^\w-]/g, "_")}`;
     return {
       id: c.id,
@@ -371,7 +359,8 @@ function normalize(cells: any[]): { nodes: any[]; edges: any[] } {
           icon: { d: style.icon, transform: "translate(18,33)", fill: "none", stroke: c.data?.type === "action" ? "#fff" : grayed ? stroke : style.stroke, strokeWidth: c.data?.type === "point" ? 5 : c.data?.type === "action" ? 3 : 2, strokeLinecap: c.data?.type === "point" ? "butt" : "round", strokeLinejoin: "round", pointerEvents: "none" },
         } : {}),
         typeLabel: {
-          text: decision ? `${subtitle}${grayed ? "·暂不考虑" : ""}` : grayed ? `${NODE_TYPE_LABELS[c.data?.type] ?? "要点"}·暂不考虑` : (NODE_TYPE_LABELS[c.data?.type] ?? "要点"),
+          text: `${decision ? subtitle : NODE_TYPE_LABELS[c.data?.type] ?? "要点"}${grayed ? "·暂不考虑" : ""}${needsConfirmation ? "·待确认" : ""}`,
+          ...(stateTitle ? { title: stateTitle } : {}),
           fill: grayed ? "#9c9c9c" : style.accent,
           fontSize: decision ? 12 : 11,
           fontWeight: decision ? 400 : 700,
@@ -398,18 +387,50 @@ function normalize(cells: any[]): { nodes: any[]; edges: any[] } {
     };
   });
 
-  const edges: any[] = rawEdges.map((e) => {
+  const primaryPairs = new Set(hierarchy.map((edge) => `${edge.src}\u0000${edge.tgt}`));
+  const representedPrimaryPairs = new Set<string>();
+  const seenPrimaryPairs = new Set<string>();
+  const edges: any[] = rawEdges.filter((e) => {
+    if (!pos.has(e.src) || !pos.has(e.tgt)) return false;
+    const pair = `${e.src}\u0000${e.tgt}`;
+    if (!primaryPairs.has(pair)) return true;
+    if (seenPrimaryPairs.has(pair)) return false;
+    seenPrimaryPairs.add(pair);
+    return true;
+  }).map((e) => {
+    const pair = `${e.src}\u0000${e.tgt}`;
+    const structural = ["subordinate", "child"].includes(e.relation);
+    const primary = primaryPairs.has(pair) && !representedPrimaryPairs.has(pair);
+    if (primary) representedPrimaryPairs.add(pair);
+    const targetNode = projection.nodeById.get(e.tgt);
+    const sourceNode = projection.nodeById.get(e.src);
+    const secondary = (structural && !primary) || (!structural
+      && targetNode?.data.type === "point"
+      && ["issue", "point"].includes(sourceNode?.data.type)
+      && projection.parentById.has(e.tgt)
+      && projection.parentById.get(e.tgt) !== e.src);
+    const edgeData = { ...e.raw.data, visual_role: primary ? "primary" : secondary ? "secondary" : "semantic" };
     const source = rawNodes.find((n) => n.id === e.src);
     const sourceColor = decision && e.relation === "support" ? nodeStyle(source?.data?.type).stroke : undefined;
     const start = pos.get(e.src), end = pos.get(e.tgt);
     const endpoint = (raw: any, id: string, from: boolean) => {
-      if (!decision || !start || !end || raw?.port) return raw;
+      if (!decision || !start || !end) return raw;
+      if (primary) return { cell: id, port: from ? "right" : "left" };
+      if (raw?.port) return raw;
       const horizontal = Math.abs(end.x - start.x) > 100;
       const forward = horizontal ? end.x > start.x : end.y > start.y;
       return { ...(typeof raw === "object" ? raw : {}), cell: id, port: horizontal ? (from === forward ? "right" : "left") : (from === forward ? "bottom" : "top") };
     };
-    return styleEdge(e.id, endpoint(e.raw.source, e.src, true), endpoint(e.raw.target, e.tgt, false), e.raw.data, e.raw.vertices ?? [], sourceColor);
+    return styleEdge(e.id, endpoint(e.raw.source, e.src, true), endpoint(e.raw.target, e.tgt, false), edgeData, primary ? [] : e.raw.vertices ?? [], sourceColor);
   });
+
+  // v2 stores the primary parent on the node, so it may have no edge cell.
+  for (const edge of hierarchy) {
+    const pair = `${edge.src}\u0000${edge.tgt}`;
+    if (representedPrimaryPairs.has(pair) || !pos.has(edge.src) || !pos.has(edge.tgt)) continue;
+    edges.push(styleEdge(`tree:${edge.src}:${edge.tgt}`, { cell: edge.src, port: "right" },
+      { cell: edge.tgt, port: "left" }, { relation: "subordinate", visual_role: "primary", generated_structure: true }));
+  }
 
   return { nodes, edges };
 }
@@ -611,9 +632,13 @@ function applyWorkspaceDefaultZoom(graph: Graph): void {
   const rowWidth = nodeWidth + 3 * pitch;
   const availableWidth = graph.container.clientWidth - 32;
   if (availableWidth <= 0) return;
+  // On phone-width canvases, fitting four columns makes card text too small to read.
+  // Keep a readable baseline and let the user pan across the focused neighborhood.
+  const minimumReadableScale = graph.container.clientWidth <= 650 ? 0.75 : 0.55;
+  const scale = Math.min(1, Math.max(minimumReadableScale, availableWidth / rowWidth));
   beginAutoAdjust();
   try {
-    graph.zoom(availableWidth / rowWidth, { absolute: true });
+    graph.zoom(scale, { absolute: true });
   } finally {
     endAutoAdjust();
   }
@@ -628,7 +653,10 @@ function focusInitialIssue(graph: Graph, cells: any[]): void {
   if (isDecisionWorkspace()) {
     applyWorkspaceDefaultZoom(graph);
     const root = graph.getCellById("n_issue_root") ?? graph.getNodes()[0];
-    if (root) graph.centerCell(root);
+    if (root) {
+      graph.centerCell(root);
+      if (graph.container.clientWidth > 650) graph.translateBy(-graph.container.clientWidth * 0.26, 0);
+    }
     return;
   }
   if (graph.container.clientWidth > 850 && !isDecisionWorkspace()) return;
@@ -691,7 +719,13 @@ export function createGraph(container: HTMLElement, readOnly = false): Graph {
   const updateTheme = () => {
     graph.drawBackground({ color: isDecisionWorkspace() ? "transparent" : graphBackground() });
     graph.drawGrid({ type: "dot", args: { color: isLightTheme() ? "#cfdaea" : "#29415f", thickness: 1 } });
-    const factions = assignFactions(graph.getNodes().map(node => ({ id: node.id })), graph.getEdges().map(edge => ({ src: endId(edge.getSource()), tgt: endId(edge.getTarget()) })));
+    const factions = assignFactions(
+      graph.getNodes().map(node => ({ id: node.id })),
+      projectBoard([
+        ...graph.getNodes().map(node => ({ id: node.id, data: node.getData() ?? {} })),
+        ...graph.getEdges().map(edge => ({ id: edge.id, shape: "edge", source: edge.getSource(), target: edge.getTarget(), data: edge.getData() ?? {} })),
+      ]).structuralEdges,
+    );
     for (const node of graph.getNodes()) {
       const data = node.getData();
       const style = nodeStyle(data?.type);
@@ -724,20 +758,22 @@ export function createGraph(container: HTMLElement, readOnly = false): Graph {
 
 /** 全量渲染（GET /api/board 返回后）。整图重绘视为新的开始。 */
 export function renderBoard(graph: Graph, cells: any[]): void {
+  const safeCells = Array.isArray(cells) ? cells : [];
   initialFocusDone = false;
   resetLocalEdits();
-  applyRemoteSnapshot(graph, cells);
-  toggleEmptyState(!(cells || []).some((c) => c.shape !== "edge"));
-  focusInitialIssue(graph, cells);
+  applyRemoteSnapshot(graph, safeCells);
+  toggleEmptyState(!safeCells.some((c) => c.shape !== "edge"));
+  focusInitialIssue(graph, safeCells);
 }
 
 /** 增量应用（WS board.update）。仅远端快照变化时才重建整图，保留用户的本地编辑与视角；
  * fit=true 时缩放至全图可见（树形布局较宽，首载与历史打开需全貌；WS 增量不打断用户当前视口）。 */
 export function applyBoardUpdate(graph: Graph, cells: any[], fit = false): void {
-  applyRemoteSnapshot(graph, cells);
-  toggleEmptyState(!(cells || []).some((c) => c.shape !== "edge"));
-  focusInitialIssue(graph, cells);
-  if (fit && (cells || []).some((c) => c.shape !== "edge")) {
+  const safeCells = Array.isArray(cells) ? cells : [];
+  applyRemoteSnapshot(graph, safeCells);
+  toggleEmptyState(!safeCells.some((c) => c.shape !== "edge"));
+  focusInitialIssue(graph, safeCells);
+  if (fit && safeCells.some((c) => c.shape !== "edge")) {
     if (isDecisionWorkspace()) applyWorkspaceDefaultZoom(graph);
     else composeAutoFit(graph, { padding: 40, maxScale: 1 });
   }

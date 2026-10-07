@@ -21,24 +21,30 @@ import logging
 import os
 import time
 import uuid
+import json as jsonlib
+from urllib.error import URLError
+from urllib.request import urlopen
 from collections import OrderedDict
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Annotated, Optional
 
 from .ws.bus import EventBus
-from .storage import MEETING_ID_PATTERN, StoreA, StoreB, is_valid_meeting_id
-from .llm import build_llm, llm_metrics
+from .storage import MEETING_ID_PATTERN, StoreA, StoreB, VersionConflict, is_valid_meeting_id
+from .llm import build_llm, llm_metrics, MockLLM, OpenAIClient
 from .orchestrator import BoardAgent
 from . import config, prompts
 from .adapters import from_tencent_asr_push, from_x6_event, from_cli_text, from_stored_record
-from .utterance_ingest import IncomingUtterance, UtteranceIngestor
+from .utterance_ingest import IncomingUtterance, UtteranceIngestor, metadata_id
 from .models import GraphOp, GraphUpdateOp, stable_hash
 from .tools.graph_tools import GraphTools
 from .tools.metadata_tools import MetadataTools
+from .minutes import parse_agenda, render_minutes, review_before_close
+from .errors import safe_error_code
 
 
 logging.basicConfig(level=os.getenv("AMO_LOG_LEVEL", "INFO").upper(),
@@ -110,7 +116,13 @@ async def lifespan(_app: FastAPI):
     try:
         store_a.relayout_all()
     except Exception as e:
-        log.warning("[startup] relayout_all failed: %r", e)
+        log.warning("[startup] relayout_all failed (%s)", safe_error_code(e))
+    try:
+        recovered = await utterance_ingestor.recover_incomplete()
+        if recovered:
+            log.info("[startup] recovered %d incomplete utterances", recovered)
+    except Exception as e:
+        log.warning("[startup] utterance recovery failed (%s)", safe_error_code(e))
 
     async def _flusher():                # 兜底：周期落盘节流中的脏数据，保证最终一致
         while True:
@@ -126,7 +138,7 @@ async def lifespan(_app: FastAPI):
                 if res.get("recovered") or res.get("still_failing"):
                     log.info("[pending] poll retry: %s", res)
             except Exception as e:
-                log.warning("[pending] poll retry failed: %r", e)
+                    log.warning("[pending] poll retry failed (%s)", safe_error_code(e))
 
     task = asyncio.create_task(_flusher())
     poller = asyncio.create_task(_pending_poller())
@@ -138,7 +150,7 @@ async def lifespan(_app: FastAPI):
         try:                             # 关停前冲刷实时合批器中未驱动的语句
             await utterance_ingestor.flush_all()
         except Exception as e:
-            log.warning("[shutdown] batcher flush failed: %r", e)
+            log.warning("[shutdown] batcher flush failed (%s)", safe_error_code(e))
         store_a.flush_all()              # 关停前强制落盘
         store_b.flush(force=True)
 
@@ -153,30 +165,107 @@ app.add_middleware(
 )
 
 
+def _probe_asr_status() -> dict:
+    """Probe the actual local ASR worker; never infer readiness from configuration."""
+    url = config.CONFIG.local_asr_base_url.rstrip("/") + "/models/status"
+    try:
+        with urlopen(url, timeout=0.6) as response:
+            payload = jsonlib.loads(response.read().decode("utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError("invalid ASR status")
+        final_state = payload.get("state") or "unavailable"
+        streaming_state = payload.get("streaming_state") or "unavailable"
+        return {
+            "streaming": {"state": streaming_state, "error": payload.get("streaming_error")},
+            "final": {"state": final_state, "error": payload.get("error"),
+                      "device": payload.get("device")},
+        }
+    except (OSError, URLError, TimeoutError, ValueError, jsonlib.JSONDecodeError):
+        return {"streaming": {"state": "unavailable", "error": None},
+                "final": {"state": "unavailable", "error": None}}
+
+
+def _storage_state(root: str) -> str:
+    return "ready" if os.path.isdir(root) and os.access(root, os.R_OK | os.W_OK) else "unavailable"
+
+
 @app.get("/api/status")
 async def product_status():
-    enabled = config.CONFIG.llm_enabled and bool(config.CONFIG.llm_api_key)
-    return {"llm_mode": "configured" if enabled else "mock",
+    llm_instance = agent.llm
+    llm_type = ("mock" if isinstance(llm_instance, MockLLM)
+                else "openai_compatible" if isinstance(llm_instance, OpenAIClient) else "custom")
+    llm_mode = "mock" if llm_type == "mock" else "real" if llm_type == "openai_compatible" else "unknown"
+    pending_batches = store_b.list_by_kind("pending_batch")
+    pending_retries = len(pending_batches)
+    pending_by_meeting: dict[str, int] = {}
+    for batch in pending_batches:
+        mid = batch.get("meeting_id")
+        if mid:
+            pending_by_meeting[mid] = pending_by_meeting.get(mid, 0) + 1
+    return {"llm_mode": llm_mode,
+            "llm_instance": {"type": llm_type, "model": getattr(llm_instance, "model", None)},
+            "asr": _probe_asr_status(),
+            "persistence": {"store_a": _storage_state(store_a.root),
+                            "store_b": _storage_state(store_b.root),
+                            "pending_retries": pending_retries},
             "uptime_s": round(time.monotonic() - STARTED_AT, 1),
             "live_threads": len(_live_threads),
             "board_sig_cache": len(_LAST_BOARD_SIG),
             "auth_required": bool(config.CONFIG.api_token),
-            "pending_batches": len(store_b.list_by_kind("pending_batch")),
+            "pending_batches": pending_retries,
+            "pending_by_meeting": pending_by_meeting,
             "llm": llm_metrics()}
 
 
 @app.post("/api/utterances", dependencies=[Depends(require_token)])
 async def receive_utterance(event: IncomingUtterance):
+    _require_meeting_open_for_automatic_input(event.meeting_id)
     return await utterance_ingestor.ingest(event)
+
+
+@app.get("/api/utterances/{utterance_id}/status")
+async def utterance_status(
+    utterance_id: str,
+    meeting_id: Annotated[str, Query(pattern=MEETING_ID_PATTERN)],
+):
+    record = store_b.get(metadata_id(meeting_id, utterance_id))
+    if not record or record.get("kind") != "utt":
+        raise HTTPException(status_code=404, detail="utterance not found")
+    processing = record.get("processing_state")
+    state = {"done": "committed", "processing": "processing", "failed": "failed"}.get(processing, "accepted")
+    return {
+        "utterance_id": utterance_id,
+        "meta_id": record.get("meta_id"),
+        "state": state,
+        "attempts": int(record.get("attempts") or 0),
+        "last_error": record.get("last_error"),
+        "board_version": store_a.version(meeting_id) if state == "committed" else None,
+        "board_effect": utterance_ingestor.board_effect(meeting_id, record["meta_id"])
+        if state == "committed" else None,
+        "updated_at_ms": record.get("updated_at_ms"),
+    }
 
 
 @app.get("/api/board")
 async def get_board(meeting_id: Annotated[str, Query(pattern=MEETING_ID_PATTERN)]):
-    return {"graph_id": meeting_id, "cells": store_a.load(meeting_id)}
+    if not store_a.exists(meeting_id):
+        raise HTTPException(status_code=404, detail="meeting not found")
+    summary = next((item for item in store_a.list_meetings()
+                    if item["meeting_id"] == meeting_id), {})
+    details = store_a.meeting_details(meeting_id) or {}
+    return {"graph_id": meeting_id, "schema": summary.get("schema", "amo.board/v1"),
+            "version": store_a.version(meeting_id), "cells": store_a.load(meeting_id),
+            "title": details.get("title"), "status": details.get("status", "draft"),
+            "agenda": details.get("agenda", [])}
 
 
 class CreateMeetingRequest(BaseModel):
     title: str = Field(min_length=1, max_length=60)
+    agenda_text: str = Field(default="", max_length=100000)
+
+
+class MeetingStatusRequest(BaseModel):
+    status: str = Field(pattern="^(live|ended)$")
 
 
 class RenameMeetingRequest(BaseModel):
@@ -187,6 +276,13 @@ def _valid_path_meeting_id(graph_id: str) -> str:
     if not is_valid_meeting_id(graph_id):
         raise HTTPException(status_code=400, detail="invalid meeting_id")
     return graph_id
+
+
+def _require_meeting_open_for_automatic_input(meeting_id: str) -> None:
+    details = store_a.meeting_details(meeting_id)
+    if details and details.get("status") == "ended":
+        raise HTTPException(status_code=409,
+                            detail="meeting has ended; reopen it before sending automatic input")
 
 
 @app.get("/api/meetings")
@@ -217,7 +313,70 @@ async def create_meeting(req: CreateMeetingRequest):
     if not title:
         raise HTTPException(status_code=422, detail="title cannot be empty")
     meeting_id = f"mtg_{uuid.uuid4().hex[:16]}"
-    return {"ok": True, **store_a.create_meeting(meeting_id, title)}
+    agenda = parse_agenda(req.agenda_text)
+    return {"ok": True, **store_a.create_meeting(meeting_id, title, agenda, req.agenda_text)}
+
+
+@app.get("/api/meetings/{graph_id}/close-preview")
+async def meeting_close_preview(graph_id: str):
+    graph_id = _valid_path_meeting_id(graph_id)
+    details = store_a.meeting_details(graph_id)
+    if details is None:
+        raise HTTPException(status_code=404, detail="meeting not found")
+    return {"ok": True, "graph_id": graph_id,
+            "review": review_before_close(store_a.load(graph_id))}
+
+
+@app.post("/api/meetings/{graph_id}/status", dependencies=[Depends(require_token)])
+async def update_meeting_status(graph_id: str, req: MeetingStatusRequest):
+    graph_id = _valid_path_meeting_id(graph_id)
+    try:
+        result = store_a.set_meeting_status(graph_id, req.status)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="meeting not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    await _broadcast_board(graph_id)
+    return {"ok": True, **result,
+            "review": review_before_close(store_a.load(graph_id)) if req.status == "ended" else None}
+
+
+@app.get("/api/meetings/{graph_id}/minutes")
+async def meeting_minutes(graph_id: str, format: str = Query(default="markdown", pattern="^(markdown|html)$")):
+    graph_id = _valid_path_meeting_id(graph_id)
+    details = store_a.meeting_details(graph_id)
+    if details is None:
+        raise HTTPException(status_code=404, detail="meeting not found")
+    content = render_minutes(details["title"] or graph_id, details["agenda"], details["status"],
+                             store_a.load(graph_id), store_b.list_utterances(graph_id),
+                             format=format, history=store_a.history(graph_id))
+    filename = f"{graph_id}-minutes.{ 'html' if format == 'html' else 'md' }"
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+    if format == "html":
+        return HTMLResponse(content, headers=headers)
+    return PlainTextResponse(content, media_type="text/markdown; charset=utf-8", headers=headers)
+
+
+@app.get("/api/meetings/{graph_id}/snapshot-file")
+async def meeting_snapshot_file(graph_id: str):
+    """Download a local archive snapshot; unlike a URL, this file travels with the user."""
+    graph_id = _valid_path_meeting_id(graph_id)
+    details = store_a.meeting_details(graph_id)
+    if details is None:
+        raise HTTPException(status_code=404, detail="meeting not found")
+    document = {
+        "format": "amo.meeting-snapshot/v1", "readonly": True,
+        "exported_at": store_a._now_iso(),
+        "meeting": details,
+        "schema": next((row.get("schema") for row in store_a.list_meetings()
+                        if row.get("meeting_id") == graph_id), "amo.board/v1"),
+        "cells": store_a.load(graph_id),
+        "utterances": store_b.list_utterances(graph_id),
+        "history": store_a.history(graph_id),
+    }
+    return JSONResponse(document, headers={
+        "Content-Disposition": f'attachment; filename="{graph_id}-snapshot.json"',
+    })
 
 
 @app.get("/api/board/{graph_id}")
@@ -228,8 +387,11 @@ async def get_board_by_id(graph_id: str):
     cells = store_a.load(graph_id)
     summary = next((item for item in store_a.list_meetings()
                     if item["meeting_id"] == graph_id), None) or {}
-    return {"graph_id": graph_id, "version": summary.get("version", 0),
+    details = store_a.meeting_details(graph_id) or {}
+    return {"graph_id": graph_id, "schema": summary.get("schema", "amo.board/v1"),
+            "version": summary.get("version", 0),
             "updated_at": summary.get("updated_at"), "title": summary.get("title"),
+            "status": details.get("status", "draft"), "agenda": details.get("agenda", []),
             "cells": cells}
 
 
@@ -237,6 +399,53 @@ async def get_board_by_id(graph_id: str):
 async def get_board_outline(graph_id: str):
     graph_id = _valid_path_meeting_id(graph_id)
     return {"graph_id": graph_id, "outline": prompts.serialize_for_llm(store_a.load(graph_id))}
+
+
+@app.get("/api/board/{graph_id}/migration-preview")
+def get_board_migration_preview(graph_id: str):
+    """Read-only preview for a v1 board; applying migration remains gated until v2 readers ship."""
+    graph_id = _valid_path_meeting_id(graph_id)
+    try:
+        preview = store_a.migration_preview(graph_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if preview is None:
+        raise HTTPException(status_code=404, detail="meeting not found")
+    return {"ok": True, "graph_id": graph_id, "preview": preview}
+
+
+class MigrationRequest(BaseModel):
+    expected_version: int = Field(ge=0)
+
+
+@app.post("/api/board/{graph_id}/migration-accept", dependencies=[Depends(require_token)])
+async def accept_board_migration(graph_id: str, req: MigrationRequest):
+    graph_id = _valid_path_meeting_id(graph_id)
+    try:
+        result = store_a.accept_v1_migration(graph_id, expected_version=req.expected_version)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (RuntimeError, FileExistsError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    await _broadcast_board(graph_id)
+    return {"ok": True, **result}
+
+
+@app.post("/api/board/{graph_id}/migration-rollback", dependencies=[Depends(require_token)])
+async def rollback_board_migration(graph_id: str, req: MigrationRequest):
+    graph_id = _valid_path_meeting_id(graph_id)
+    try:
+        result = store_a.rollback_v1_migration(graph_id, expected_version=req.expected_version)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (RuntimeError, FileExistsError, OSError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    await _broadcast_board(graph_id)
+    return {"ok": True, **result}
 
 
 class UpdateRequest(BaseModel):
@@ -417,7 +626,8 @@ async def _broadcast_board(meeting_id: str, receipt: Optional[dict] = None) -> N
     _LAST_BOARD_SIG.move_to_end(meeting_id)
     while len(_LAST_BOARD_SIG) > _MAX_BOARD_SIG:
         _LAST_BOARD_SIG.popitem(last=False)
-    event = {"type": "board.update", "graph_id": meeting_id, "cells": cells}
+    event = {"type": "board.update", "graph_id": meeting_id,
+             "version": store_a.version(meeting_id), "cells": cells}
     if receipt:
         event["repair_receipt"] = receipt
         event["change_set"] = receipt.get("change_set")
@@ -485,20 +695,31 @@ def _record_pending(meeting_id: str, utts: list, error) -> None:
         "meta_id": pid, "kind": "pending_batch", "meeting_id": meeting_id,
         "utterance_ids": [u.utterance_id for u in utts],
         "attempts": int(prev.get("attempts") or 0),
-        "last_error": str(error)[:200],
+        "last_error": safe_error_code(error),
         "updated_at_ms": int(time.time() * 1000),
     })
-    log.warning("[pending] batch of %d utt recorded for %s: %s",
-                len(utts), meeting_id, str(error)[:120])
+    log.warning("[pending] batch of %d utt recorded for %s (%s)",
+                len(utts), meeting_id, safe_error_code(error))
 
 
-async def _retry_pending_batches(meeting_id: Optional[str] = None) -> dict:
+_PENDING_RETRY_LOCK = asyncio.Lock()
+
+
+async def _retry_pending_batches(meeting_id: Optional[str] = None,
+                                 *, force_exhausted: bool = False) -> dict:
+    """Serialize recovery runs so the poller and manual action cannot replay a batch twice."""
+    async with _PENDING_RETRY_LOCK:
+        return await _retry_pending_batches_locked(meeting_id, force_exhausted=force_exhausted)
+
+
+async def _retry_pending_batches_locked(meeting_id: Optional[str] = None,
+                                         *, force_exhausted: bool = False) -> dict:
     """重驱动失败批次：重建 NormUtterance → 编排 → 成功清除标记 / 失败累计 attempts。"""
     cfg = config.CONFIG
     recovered = still_failing = skipped = 0
     for b in store_b.list_by_kind("pending_batch", meeting_id):
         attempts = int(b.get("attempts") or 0)
-        if attempts >= cfg.pending_retry_max_attempts:
+        if attempts >= cfg.pending_retry_max_attempts and not force_exhausted:
             skipped += 1
             continue
         m = b.get("meeting_id")
@@ -506,13 +727,38 @@ async def _retry_pending_batches(meeting_id: Optional[str] = None) -> dict:
         if not recs:
             store_b.delete(b["meta_id"])      # 原始语句已不存在：无法重放，清除标记
             continue
+        active = []
+        for rec in recs:
+            processing = {**rec, "processing_state": "processing",
+                          "attempts": int(rec.get("attempts") or 0) + 1,
+                          "last_error": None, "updated_at_ms": int(time.time() * 1000)}
+            store_b.put(rec["meta_id"], processing)
+            active.append(processing)
+            await bus.publish({"type": "utterance.status", "meeting_id": m,
+                               "meta_id": rec["meta_id"],
+                               "utterance_id": rec.get("source_utterance_id"),
+                               "state": "processing", "attempts": processing["attempts"],
+                               "last_error": None})
+        store_b.flush(force=True)
         utts = [from_stored_record(m, r) for r in recs]
         result = await _drive(m, raw_utterances=utts,
                               meeting_title=store_a.title(m), _retry=True)
         error = result.get("error") if isinstance(result, dict) else None
+        for rec in active:
+            utterance = {**rec, "processing_state": "failed" if error else "done",
+                         "last_error": safe_error_code(error) if error else None,
+                         "updated_at_ms": int(time.time() * 1000)}
+            store_b.put(rec["meta_id"], utterance)
+            await bus.publish({"type": "utterance.status", "meeting_id": m,
+                               "meta_id": rec["meta_id"],
+                               "utterance_id": rec.get("source_utterance_id"),
+                               "state": "failed" if error else "committed",
+                               "attempts": int(utterance.get("attempts") or 0),
+                               "last_error": utterance["last_error"]})
+        store_b.flush(force=True)
         if error:
             store_b.put(b["meta_id"], {**b, "attempts": attempts + 1,
-                                       "last_error": str(error)[:200],
+                                       "last_error": safe_error_code(error),
                                        "updated_at_ms": int(time.time() * 1000)})
             still_failing += 1
         else:
@@ -523,7 +769,8 @@ async def _retry_pending_batches(meeting_id: Optional[str] = None) -> dict:
 
 
 utterance_ingestor = UtteranceIngestor(
-    store_a, store_b, _drive, debounce_ms=config.CONFIG.realtime_debounce_ms)
+    store_a, store_b, _drive, debounce_ms=config.CONFIG.realtime_debounce_ms,
+    status_changed=bus.publish)
 
 
 def _persist_utterance(meeting_id: str, u) -> bool:
@@ -537,6 +784,7 @@ def _persist_utterance(meeting_id: str, u) -> bool:
     store_b.put(u.utterance_id, {"meta_id": u.utterance_id, "kind": "utt", "text": u.text,
                  "meeting_id": meeting_id,
                  "speaker_ref": u.speaker.speaker_ref,
+                 "display_name": u.speaker.display_name,
                  "start_offset_ms": u.start_offset_ms, "end_offset_ms": u.end_offset_ms,
                  "source": u.source})
     return True
@@ -671,7 +919,7 @@ async def ws_endpoint(ws: WebSocket):
     for t in done:
         if not t.cancelled() and t.exception() \
                 and not isinstance(t.exception(), WebSocketDisconnect):
-            log.warning("[WS] connection task error: %r", t.exception())
+            log.warning("[WS] connection task error (%s)", safe_error_code(t.exception()))
 
 
 async def _ws_downstream(ws: WebSocket, predicate) -> None:
@@ -732,6 +980,7 @@ async def asr_push(meeting_id: Annotated[str, Query(pattern=MEETING_ID_PATTERN)]
     实时合批（P1②）已下沉到生产入口 POST /api/utterances（UtteranceIngestor）；
     本端点供 webhook 单句直驱，不走合批。
     """
+    _require_meeting_open_for_automatic_input(meeting_id)
     u = from_tencent_asr_push(meeting_id, payload)
     if not _persist_utterance(meeting_id, u):
         return {"ok": True, "utterance_id": u.utterance_id, "deduplicated": True}
@@ -770,6 +1019,7 @@ async def cli_push(req: CliPushRequest):
     幂等：带 utterance_id 的重复请求（如客户端超时重发）只入库/编排一次，直接确认返回
     （去重由 _store_utterance 统一兜底）。
     """
+    _require_meeting_open_for_automatic_input(req.meeting_id)
     u = from_cli_text(req.meeting_id, req.text, speaker_ref=req.speaker_ref,
                       display_name=req.display_name, utterance_id=req.utterance_id)
     stored = await _store_utterance(req.meeting_id, u, req.meeting_title,
@@ -800,6 +1050,7 @@ async def cli_push_batch(req: CliPushBatchRequest):
     与逐句口对等流入编排器（raw_utterances 列表），仅合并驱动时机；
     幂等：按行级 utterance_id 去重，已入库的行直接跳过，不重复灌入。
     """
+    _require_meeting_open_for_automatic_input(req.meeting_id)
     utterances = []
     skipped = 0
     for it in req.items:
@@ -823,11 +1074,11 @@ async def cli_push_batch(req: CliPushBatchRequest):
 async def retry_pending(meeting_id: str):
     """手动重驱动该会议的失败批次（P0①；后台每 pending_retry_interval_s 也会自动轮询）。
 
-    成功的批次清除 pending 标记并广播看板更新；仍失败的累计 attempts，
-    达 pending_retry_max_attempts 后保留记录待人工介入（响应中 skipped_max_attempts）。
+    手动调用会重试已达到自动上限的批次；后台轮询仍遵守 attempts 上限，避免失败时持续重放。
+    成功的批次清除 pending 标记并广播看板更新；失败批次保留原文和错误状态供再次处理。
     """
     meeting_id = _valid_path_meeting_id(meeting_id)
-    res = await _retry_pending_batches(meeting_id)
+    res = await _retry_pending_batches(meeting_id, force_exhausted=True)
     return {"ok": True, "meeting_id": meeting_id, **res}
 
 
@@ -882,6 +1133,96 @@ class UserOpRequest(BaseModel):
     op: str
     payload: dict = Field(default_factory=dict)
     actor: str = "human"
+    expected_version: int = Field(ge=0)
+
+
+class NodePatchRequest(BaseModel):
+    graph_id: str = ""
+    expected_version: int
+    fields: dict
+    actor: str = "human"
+    reason: str = ""
+
+
+class NodeMergeRequest(BaseModel):
+    duplicate_id: str
+    survivor_id: str
+    expected_version: int
+    actor: str = "human"
+    reason: str = ""
+
+
+class UndoOperationRequest(BaseModel):
+    operation_version: int = Field(ge=1)
+    expected_version: int = Field(ge=0)
+    actor: str = "human"
+
+
+@app.post("/api/board/{graph_id}/undo", dependencies=[Depends(require_token)])
+async def undo_board_operation(graph_id: str, req: UndoOperationRequest):
+    graph_id = _valid_path_meeting_id(graph_id)
+    try:
+        cells = store_a.undo_operation(graph_id, req.operation_version,
+            expected_version=req.expected_version, actor=req.actor)
+    except VersionConflict as exc:
+        return JSONResponse(status_code=409, content={"detail": "board version changed",
+            "current_version": exc.current_version, "cells": exc.cells})
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    await _broadcast_board(graph_id)
+    return {"ok": True, "version": store_a.version(graph_id), "cells": cells}
+
+
+@app.post("/api/board/{graph_id}/merge-preview", dependencies=[Depends(require_token)])
+async def preview_node_merge(graph_id: str, req: NodeMergeRequest):
+    graph_id = _valid_path_meeting_id(graph_id)
+    try:
+        preview = store_a.preview_node_merge(graph_id, req.duplicate_id, req.survivor_id)
+        if preview["version"] != req.expected_version:
+            return JSONResponse(status_code=409, content={"detail": "board version changed",
+                "current_version": preview["version"], "cells": store_a.load(graph_id)})
+        return preview
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/board/{graph_id}/merge", dependencies=[Depends(require_token)])
+async def merge_nodes(graph_id: str, req: NodeMergeRequest):
+    graph_id = _valid_path_meeting_id(graph_id)
+    try:
+        cells, receipt = store_a.merge_nodes(graph_id, req.duplicate_id, req.survivor_id,
+            expected_version=req.expected_version, actor=req.actor, reason=req.reason)
+    except VersionConflict as exc:
+        return JSONResponse(status_code=409, content={"detail": "board version changed",
+            "current_version": exc.current_version, "cells": exc.cells})
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    await _broadcast_board(graph_id)
+    return {"ok": True, "version": store_a.version(graph_id), "cells": cells, "receipt": receipt}
+
+
+@app.patch("/api/board/{graph_id}/nodes/{node_id}", dependencies=[Depends(require_token)])
+async def patch_node(graph_id: str, node_id: str, req: NodePatchRequest):
+    graph_id = _valid_path_meeting_id(graph_id or req.graph_id or config.CONFIG.default_meeting_id)
+    try:
+        cells = store_a.patch_node(graph_id, node_id, req.fields,
+            expected_version=req.expected_version, actor=req.actor, reason=req.reason)
+    except VersionConflict as exc:
+        return JSONResponse(status_code=409, content={
+            "detail": "board version changed", "current_version": exc.current_version,
+            "cells": exc.cells,
+        })
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    await _broadcast_board(graph_id)
+    return {"ok": True, "graph_id": graph_id, "node_id": node_id,
+            "version": store_a.version(graph_id), "cells": cells}
 
 
 @app.post("/api/node/{node_id}/op", dependencies=[Depends(require_token)])
@@ -889,7 +1230,11 @@ async def node_op(node_id: str, req: UserOpRequest):
     graph_id = _valid_path_meeting_id(req.graph_id or config.CONFIG.default_meeting_id)
     try:
         cells = store_a.apply_user_operation(graph_id, node_id, req.op,
-                                             req.payload, req.actor)
+                                             req.payload, req.actor,
+                                             expected_version=req.expected_version)
+    except VersionConflict as exc:
+        return JSONResponse(status_code=409, content={"detail": "board version changed",
+            "current_version": exc.current_version, "cells": exc.cells})
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except (TypeError, ValueError) as exc:
@@ -903,39 +1248,49 @@ class LockRequest(BaseModel):
     graph_id: str = ""
     locked: bool = True
     locked_by: str = "human"
+    expected_version: int = Field(ge=0)
 
 
 @app.post("/api/node/{node_id}/lock", dependencies=[Depends(require_token)])
 async def node_lock(node_id: str, req: LockRequest):
     return await node_op(node_id, UserOpRequest(graph_id=req.graph_id, op="lock",
-        payload={"locked": req.locked}, actor=req.locked_by))
+        payload={"locked": req.locked}, actor=req.locked_by,
+        expected_version=req.expected_version))
 
 
 class ImportanceRequest(BaseModel):
     graph_id: str = ""
     level: str = "normal"
+    expected_version: int = Field(ge=0)
 
 
 @app.post("/api/node/{node_id}/importance", dependencies=[Depends(require_token)])
 async def node_importance(node_id: str, req: ImportanceRequest):
     return await node_op(node_id, UserOpRequest(graph_id=req.graph_id,
-        op="set_importance", payload={"level": req.level}))
+        op="set_importance", payload={"level": req.level},
+        expected_version=req.expected_version))
 
 
 class RollbackRequest(BaseModel):
     cell_id: str
     version: int
+    expected_version: int = Field(ge=0)
+    actor: str = "human"
 
 
 @app.post("/api/board/{graph_id}/rollback", dependencies=[Depends(require_token)])
 async def board_rollback(graph_id: str, req: RollbackRequest):
     graph_id = _valid_path_meeting_id(graph_id)
     try:
-        cells = store_a.rollback_cell(graph_id, req.cell_id, req.version)
+        cells = store_a.rollback_cell(graph_id, req.cell_id, req.version, actor=req.actor,
+                                      expected_version=req.expected_version)
+    except VersionConflict as exc:
+        return JSONResponse(status_code=409, content={"detail": "board version changed",
+            "current_version": exc.current_version, "cells": exc.cells})
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     await bus.publish({"type": "board.rollback", "graph_id": graph_id,
-                       "cell_id": req.cell_id, "version": req.version, "cells": cells})
+                       "cell_id": req.cell_id, "version": store_a.version(graph_id), "cells": cells})
     await _broadcast_board(graph_id)
     return {"ok": True, "graph_id": graph_id, "cell_id": req.cell_id,
-            "rolled_back_to": req.version, "cells": cells}
+            "rolled_back_to": req.version, "version": store_a.version(graph_id), "cells": cells}

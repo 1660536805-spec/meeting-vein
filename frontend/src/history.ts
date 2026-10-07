@@ -67,7 +67,9 @@ function renderRecords(items: MeetingHistoryRecord[]): void {
     const name = document.createElement("strong");
     name.textContent = `第 ${item.version} 版 · ${item.title}`;
     const time = document.createElement("small");
-    time.textContent = date(item.created_at);
+    const status = { draft: "草稿", live: "进行中", ended: "已结束" }[item.meeting_status || "draft"];
+    const topics = item.agenda?.length ? ` · ${item.agenda.join("、")}` : " · 未设置议题";
+    time.textContent = `${date(item.created_at)} · ${status}${topics}`;
     card.append(name, time);
     records.append(card);
   }
@@ -110,7 +112,10 @@ async function selectMeeting(id: string): Promise<void> {
     placeholder.hidden = true;
     content.hidden = false;
     title.textContent = board.title || id;
-    meta.textContent = `${date(meetings.find((item) => item.meeting_id === id)?.updated_at)} · 版本 ${board.version}`;
+    const summary = meetings.find((item) => item.meeting_id === id);
+    const state = { draft: "草稿", live: "进行中", ended: "已结束" }[summary?.status || "draft"];
+    const agenda = summary?.agenda?.length ? ` · 议题：${summary.agenda.join("、")}` : " · 未设置议题";
+    meta.textContent = `${date(summary?.updated_at)} · ${state} · 版本 ${board.version}${agenda}`;
     open.href = `/workspace.html?meeting_id=${encodeURIComponent(id)}`;
     if (!graph) {
       graph = createGraph(document.getElementById("history-board")!, true);

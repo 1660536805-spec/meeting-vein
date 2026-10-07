@@ -102,10 +102,10 @@ html, body, #app, .master-app { background: var(--master-bg); color: var(--maste
 .assistant-help, #asr-panel h2 span, .asr-meta, #asr-message,
 #composer-status, #history-meta { color: #afc0d5; }
 #asr-panel h2 { color: var(--night-cream); }
-.asr-controls button, #asr-retry, .asr-upload {
+.asr-controls button, #asr-retry, #asr-retry-batches, #asr-export, .asr-upload {
   border-color: #47617f; background: #1b304b; color: #e9edf5;
 }
-.asr-controls button:not(:disabled):hover, #asr-retry:not(:disabled):hover,
+.asr-controls button:not(:disabled):hover, #asr-retry:not(:disabled):hover, #asr-retry-batches:not(:disabled):hover, #asr-export:not(:disabled):hover,
 .asr-upload:hover { border-color: #9cb8e3; background: #294563; color: #fff; }
 #asr-timer { color: #dbe5f3; }
 #asr-transcript { border-left-color: #9bb6e9; background: #1b304b; color: #dae5f4; }
@@ -121,6 +121,9 @@ html, body, #app, .master-app { background: var(--master-bg); color: var(--maste
 }
 #meeting-form h2 { border-bottom-color: #304965; }
 #meeting-form label { color: #c2d0e1; }
+#meeting-agenda-text { border-color: #38516f; background: #0d192a; color: #eef4fc; }
+#meeting-agenda-confirm { border-color: #38516f; color: #c2d0e1; }
+.agenda-topic-edit { color: #eef4fc; }
 #meeting-form-error { color: #f1a7b3; }
 #history-sidebar { border-right-color: var(--master-line); }
 .history-sidebar-head, #history-heading, #history-records h2,

@@ -1,3 +1,5 @@
+import { projectBoard } from "./projection";
+
 /** 查看态图遍历（Design_FrontendBoard §1.4）：reach 上下游 / route 最短路径 / lens 语义透镜。
  * 纯前端本地图算法——`fromJSON` 后由 cells 构建邻接表，不触发后端。
  * 深链格式：#focus=<id> / #reach=<id> / #route=<a>~<b> / #lens=<relation> */
@@ -26,11 +28,6 @@ export interface DeepLink {
   lens?: string;
 }
 
-/** 边端点归一化：Store A 用 {cell:id}，X6 v2 亦可能是裸 id 字符串。 */
-function endId(end: any): string {
-  return typeof end === "string" ? end : (end?.cell ?? "");
-}
-
 function push(map: Map<string, EdgeRef[]>, key: string, ref: EdgeRef): void {
   const arr = map.get(key);
   if (arr) arr.push(ref); else map.set(key, [ref]);
@@ -41,22 +38,19 @@ export function buildAdjacency(cells: any[]): Adjacency {
   const out = new Map<string, EdgeRef[]>();
   const inn = new Map<string, EdgeRef[]>();
   const edges: any[] = [];
-  for (const c of cells || []) {
-    if (c.shape !== "edge") continue;
-    const source = endId(c.source);
-    const target = endId(c.target);
-    if (!source || !target) continue;
+  for (const edge of projectBoard(cells).semanticEdges) {
+    const { source, target } = edge;
     const ref: EdgeRef = {
-      edgeId: c.id,
-      relation: c.data?.relation ?? "support",
+      edgeId: edge.id,
+      relation: edge.relation,
       source, target,
-      strength: c.data?.strength ?? 0.5,
-      transitive: c.data?.transitive ?? false,
+      strength: edge.cell.data?.strength ?? 0.5,
+      transitive: edge.cell.data?.transitive ?? false,
     };
     push(out, source, ref);
     push(inn, target, ref);
-    edges.push(c);
   }
+  for (const c of cells || []) if (c.shape === "edge") edges.push(c);
   return { out, in: inn, edges };
 }
 

@@ -1,0 +1,216 @@
+/* Ported from the supplied HTML demo cover-motion.css; coordinates remain 1600 × 900. */
+.demo-cover-canvas { position: absolute; left: 0; top: 0; width: 1600px; height: 900px; transform: scale(var(--cover-scale, 1)); transform-origin: top left; }
+/* The animated layers use the same 1600 × 900 coordinates as the cover image. */
+.cover-motion {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  animation: cover-settle 9s ease both;
+}
+@keyframes cover-settle { from { transform: scale(1.035); } to { transform: scale(1); } }
+
+.cover-tail {
+  position: absolute;
+  left: 443px;
+  top: 593px;
+  width: 168px;
+  height: 166px;
+  transform-origin: 85% 79%;
+  animation: tail-wag 2.7s ease-in-out infinite;
+}
+.cover-tail-cutout {
+  position: absolute;
+  inset: 0;
+  background: url('/huimai-home-hero-dark.png') -443px -593px / 1600px 900px no-repeat;
+  clip-path: polygon(12% 27%, 30% 43%, 46% 8%, 62% 17%, 68% 42%, 81% 54%, 100% 73%, 100% 97%, 75% 89%, 58% 72%, 34% 75%, 5% 64%, 0 48%);
+  filter: brightness(1.06) drop-shadow(0 5px 9px rgba(29, 117, 214, .36));
+}
+.tail-glint {
+  position: absolute;
+  left: 34px;
+  top: 54px;
+  width: 67px;
+  height: 46px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(79, 181, 255, .25), transparent 72%);
+  filter: blur(9px);
+  animation: tail-glow 2.7s ease-in-out infinite;
+}
+
+.cover-blue-ribbon {
+  position: absolute;
+  left: 1007px;
+  top: 191px;
+  width: 360px;
+  height: 145px;
+  overflow: visible;
+  fill: none;
+  pointer-events: none;
+}
+.ribbon-base { stroke: url(#ribbonGradient); stroke-width: 3.6; opacity: .52; filter: drop-shadow(0 0 8px rgba(43, 165, 255, .7)); }
+.ribbon-base.lower { stroke-width: 2; opacity: .34; }
+.ribbon-flow {
+  stroke: #8BDFFF;
+  stroke-width: 4.2;
+  stroke-linecap: round;
+  stroke-dasharray: 54 330;
+  filter: drop-shadow(0 0 7px #3DADFF);
+  animation: ribbon-run 3.4s linear infinite;
+}
+.ribbon-flow.lower { stroke-width: 2.2; opacity: .75; animation-delay: -1.7s; }
+
+.cover-title-symbols {
+  position: absolute;
+  left: 0;
+  top: 102px;
+  width: 865px;
+  height: 305px;
+  overflow: visible;
+  fill: none;
+  pointer-events: none;
+}
+.symbol-line { stroke-width: 1.6; stroke-linecap: round; stroke-dasharray: 13 32; animation: symbol-drift 8s linear infinite; }
+.symbol-line.blue { stroke: #48B7FF; filter: drop-shadow(0 0 4px rgba(55, 169, 255, .5)); }
+.symbol-line.gold { stroke: #FFB76C; stroke-dasharray: 7 41; animation-duration: 10s; animation-direction: reverse; }
+.symbol-dot { stroke: none; animation: symbol-spark 2.8s ease-in-out infinite; }
+.blue-dot { fill: #39B8FF; filter: drop-shadow(0 0 5px #298EFA); }
+.gold-dot { fill: #FFB56F; filter: drop-shadow(0 0 5px #F8A152); animation-delay: -1.3s; }
+.symbol-dot:nth-last-child(2) { animation-delay: -.8s; }
+.symbol-dot:last-child { animation-delay: -2.1s; }
+
+.cover-character {
+  position: absolute;
+  left: 450px;
+  top: 510px;
+  width: 355px;
+  height: 248px;
+  isolation: isolate;
+}
+.cover-character::before {
+  content: "";
+  position: absolute;
+  left: 85px;
+  top: 35px;
+  width: 225px;
+  height: 165px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(61, 172, 255, .26), rgba(40, 116, 216, .08) 47%, transparent 72%);
+  filter: blur(24px);
+  animation: character-aura 3.8s ease-in-out infinite;
+}
+.cover-character-cutout {
+  position: absolute;
+  inset: 0;
+  background: url('/huimai-home-hero-dark.png') -450px -510px / 1600px 900px no-repeat;
+  -webkit-mask-image: radial-gradient(ellipse 59% 75% at 55% 59%, #000 42%, rgba(0,0,0,.80) 54%, transparent 74%);
+  mask-image: radial-gradient(ellipse 59% 75% at 55% 59%, #000 42%, rgba(0,0,0,.80) 54%, transparent 74%);
+  transform-origin: 55% 80%;
+  animation: character-breathe 3.8s ease-in-out infinite;
+}
+.character-spark {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #8BE6FF;
+  box-shadow: 0 0 9px #58BFFF, 0 0 22px rgba(47, 136, 255, .8);
+  animation: character-sparkle 3.2s ease-in-out infinite;
+}
+.spark-one { left: 136px; top: 47px; animation-delay: -.4s; }
+.spark-two { left: 281px; top: 94px; width: 4px; height: 4px; animation-delay: -1.9s; }
+.spark-three { left: 42px; top: 160px; width: 4px; height: 4px; animation-delay: -2.7s; }
+
+.cover-voiceprint {
+  position: absolute;
+  left: 1303px;
+  top: 503px;
+  width: 268px;
+  height: 100px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 88%, transparent);
+}
+.cover-wave-bars {
+  position: absolute;
+  inset: 13px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
+  mix-blend-mode: screen;
+}
+.cover-wave-bars i {
+  flex: 0 0 2px;
+  height: var(--h);
+  border-radius: 5px;
+  background: linear-gradient(180deg, rgba(108, 221, 255, .15), #42BFFF 29%, #168BFF 72%, rgba(38, 143, 255, .15));
+  box-shadow: 0 0 8px rgba(25, 162, 255, .55);
+  transform-origin: center;
+  animation: voice-bars var(--speed) ease-in-out infinite alternate;
+  animation-delay: var(--d);
+}
+.cover-wave-scan {
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: -50px;
+  width: 52px;
+  background: linear-gradient(90deg, transparent, rgba(90, 202, 255, .16), rgba(125, 225, 255, .45), transparent);
+  filter: blur(8px);
+  animation: voice-scan 3.6s linear infinite;
+}
+@keyframes character-breathe {
+  0%, 100% { transform: translateY(0) scale(1); filter: brightness(1); }
+  50% { transform: translateY(-4px) scale(1.012); filter: brightness(1.10) drop-shadow(0 0 12px rgba(57, 166, 250, .16)); }
+}
+@keyframes character-aura {
+  0%, 100% { opacity: .45; transform: scale(.96); }
+  50% { opacity: .88; transform: scale(1.14); }
+}
+@keyframes character-sparkle {
+  0%, 100% { opacity: 0; transform: translateY(9px) scale(.5); }
+  35% { opacity: .88; }
+  65% { opacity: .4; transform: translateY(-12px) scale(1.2); }
+}
+@keyframes voice-bars {
+  0% { transform: scaleY(.36); opacity: .42; }
+  52% { opacity: .95; }
+  100% { transform: scaleY(1.32); opacity: .90; }
+}
+@keyframes voice-scan { to { left: 300px; } }
+@keyframes tail-wag {
+  0%, 100% { transform: rotate(-2deg) translateY(1px); }
+  50% { transform: rotate(5deg) translateY(-4px); }
+}
+@keyframes tail-glow { 50% { opacity: .35; transform: scale(1.2); } }
+@keyframes ribbon-run { from { stroke-dashoffset: 384; } to { stroke-dashoffset: 0; } }
+@keyframes symbol-drift { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -270; } }
+@keyframes symbol-spark { 0%, 100% { opacity: .15; transform: scale(.65); } 45% { opacity: .95; transform: scale(1.35); } }
+
+
+
+@media (prefers-reduced-motion: reduce) {
+  .cover-motion,
+  .cover-motion * { animation: none !important; }
+  .cover-character-cutout { transform: none; filter: none; }
+  .cover-tail { transform: none; }
+  .ribbon-flow { display: none; }
+  .symbol-line { stroke-dasharray: 13 32; }
+  .cover-wave-bars i { transform: scaleY(.7); }
+  .cover-wave-scan,
+  .character-spark { display: none; }
+}
+
+/* Match the same cover animation to the original light illustration. */
+.reference-motion-light .cover-tail-cutout,
+.reference-motion-light .cover-character-cutout { background-image: url('/huimai-home-hero-v2.png'); }
+.reference-motion-light .cover-tail { top: 625px; }
+.reference-motion-light .cover-tail-cutout { background-position: -443px -625px; }
+.reference-motion-light .cover-character { top: 525px; }
+.reference-motion-light .cover-character-cutout { background-position: -450px -525px; }
+.reference-motion-light .ribbon-base { opacity: .38; }
+.reference-motion-light .ribbon-base { stroke: url(#ribbonGradientLight); }
+.reference-motion-light .ribbon-flow { opacity: .72; }
+.reference-motion-light .cover-voiceprint { opacity: .68; mix-blend-mode: multiply; }
+.reference-motion-light .cover-wave-bars { mix-blend-mode: multiply; }

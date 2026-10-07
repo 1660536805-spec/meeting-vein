@@ -4,6 +4,11 @@ set -euo pipefail
 meeting_root="$(cd "$(dirname "$0")/.." && pwd -P)"
 board_python="$meeting_root/.venv/bin/python"
 asr_python="$meeting_root/local_asr/.venv/bin/python"
+frontend_port="${AMO_FRONTEND_PORT:-5173}"
+if [[ ! "$frontend_port" =~ ^[0-9]+$ ]] || (( 10#$frontend_port < 1024 || 10#$frontend_port > 65535 )); then
+  echo "AMO_FRONTEND_PORT 必须是 1024–65535 的端口号。" >&2
+  exit 1
+fi
 
 for requirement in ffmpeg node npm lsof; do
   if ! command -v "$requirement" >/dev/null 2>&1; then
@@ -21,7 +26,7 @@ if [[ ! -x "$meeting_root/frontend/node_modules/.bin/vite" ]]; then
   echo "缺少前端依赖；请先在 frontend 运行 npm ci。" >&2
   exit 1
 fi
-for port in 5173 8000 9000; do
+for port in "$frontend_port" 8000 9000; do
   if lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null; then
     echo "端口 $port 已被占用；请先停止对应服务。" >&2
     exit 1
@@ -29,6 +34,7 @@ for port in 5173 8000 9000; do
 done
 
 children=()
+asr_frontend_origins="[\"http://127.0.0.1:${frontend_port}\",\"http://localhost:${frontend_port}\"]"
 cleanup() {
   for child in "${children[@]}"; do kill "$child" 2>/dev/null || true; done
   for child in "${children[@]}"; do wait "$child" 2>/dev/null || true; done
@@ -39,12 +45,12 @@ trap 'exit 143' TERM
 
 (cd "$meeting_root/backend" && exec env PYTHONPATH=. "$board_python" -m uvicorn app.server:app --host 127.0.0.1 --port 8000) &
 children+=("$!")
-(cd "$meeting_root/local_asr" && exec env PYTHONPATH=backend "$asr_python" -m uvicorn app.main:app --host 127.0.0.1 --port 9000) &
+(cd "$meeting_root/local_asr" && exec env PYTHONPATH=backend LOCAL_ASR_FRONTEND_ORIGINS="$asr_frontend_origins" "$asr_python" -m uvicorn app.main:app --host 127.0.0.1 --port 9000) &
 children+=("$!")
-(cd "$meeting_root/frontend" && exec ./node_modules/.bin/vite --host 127.0.0.1 --strictPort) &
+(cd "$meeting_root/frontend" && exec ./node_modules/.bin/vite --host 127.0.0.1 --port "$frontend_port" --strictPort) &
 children+=("$!")
 
-echo "会议看板：http://127.0.0.1:5173/"
+echo "会议看板：http://127.0.0.1:$frontend_port/"
 echo "看板 API：http://127.0.0.1:8000/api/status"
 echo "本地 ASR：http://127.0.0.1:9000/models/status"
 wait "${children[@]}"

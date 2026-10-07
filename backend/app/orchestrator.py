@@ -12,11 +12,14 @@ from typing import Any, Optional
 from pydantic import BaseModel, Field
 
 from .models import MeetingSummary, GraphUpdateOp, NormUtterance, NormCursorEvent
+from .candidate_validation import (annotate_graph_operations, validate_graph_update,
+                                   validate_insights)
 from .storage import StoreA, StoreB
-from .llm import LLMClient, build_llm
+from .llm import LLMClient, MockLLM, build_llm
 from .tools.metadata_tools import MetadataTools
 from . import prompts
 from . import config
+from .errors import safe_error_code
 from .skill_loader import load_syncer_skill
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
@@ -145,7 +148,10 @@ class BoardAgent:
                 self.llm.analyze, s.filtered_text, s.filtered_meta_ids,
                 s.meeting_title, s.llm_messages_analyze)
         except Exception as exc:
-            return {"error": f"llm.analyze failed: {exc}", "mascot_state": "error"}
+            return {"error": f"llm.analyze failed ({safe_error_code(exc)})", "mascot_state": "error"}
+        validation_errors = validate_insights(summary.insights, s.filtered_meta_ids)
+        if validation_errors:
+            return {"error": "analyzer candidate validation failed", "mascot_state": "error"}
         return {"meeting_summary": summary, "mascot_state": "analyzing"}
 
     async def assemble_sync_node(self, s: AgentState) -> dict:
@@ -164,7 +170,11 @@ class BoardAgent:
             {"role": "system", "content": system + "\n" + prompts.OUTPUT_SCHEMA},
             {"role": "user", "content": f"[当前看板]\n{board_summary}"},
             {"role": "user", "content": f"[会议总结 MeetingSummary]\n{s.meeting_summary.thought}\n"
-             + "\n".join(f"- {i.type}: {i.summary} (refs={i.evidence})" for i in s.meeting_summary.insights)},
+             + "\n".join(f"- {i.type}: {i.summary} (refs={i.evidence}; confidence={i.confidence}; "
+                          f"ownership_index={i.ownership_index}; relation={i.relation_to_related}; "
+                          f"parent_index={i.parent_index}; "
+                          f"importance={i.importance_hint}/{i.importance_rationale})"
+                          for i in s.meeting_summary.insights)},
         ]
         if focus_note:
             msgs.append({"role": "user", "content": focus_note})
@@ -179,7 +189,7 @@ class BoardAgent:
                 self.llm.sync, s.meeting_summary, s.board_graph, s.filtered_focus,
                 s.llm_messages_sync, self._make_tool_executor())
         except Exception as exc:
-            return {"error": f"llm.sync failed: {exc}", "mascot_state": "error"}
+            return {"error": f"llm.sync failed ({safe_error_code(exc)})", "mascot_state": "error"}
         return {"llm_output": op, "parse_ok": True, "mascot_state": "syncing"}
 
     def _make_tool_executor(self):
@@ -198,11 +208,27 @@ class BoardAgent:
         if s.error:
             return {"parse_ok": False, "mascot_state": "error"}
         op = s.llm_output
-        ok = bool(op) and hasattr(op, "operations") and isinstance(op.operations, list) \
-            and all(getattr(o, "op", None) for o in op.operations)
+        ok = bool(op) and hasattr(op, "operations") and isinstance(op.operations, list)
+        if ok:
+            trusted_refs = {ref for insight in (s.meeting_summary.insights or [])
+                            for ref in (insight.evidence or [])}
+            validation_errors = validate_graph_update(
+                op.operations, s.board_graph, trusted_refs,
+                allow_mock_ids=isinstance(self.llm, MockLLM))
+            substantive = {"issue", "point", "evidence", "conclusion", "action", "dispute", "question"}
+            if not op.operations and any(insight.type in substantive
+                                         for insight in (s.meeting_summary.insights or [])):
+                validation_errors.append("substantive analysis produced no board operation")
+            ok = not validation_errors
+        else:
+            validation_errors = ["invalid GraphUpdateOp structure"]
         if ok:
             return {"parse_ok": True, "retry_count": 0, "mascot_state": "syncing"}
-        return {"parse_ok": False, "retry_count": s.retry_count + 1, "mascot_state": "analyzing"}
+        retry = s.retry_count + 1
+        error = None if retry <= config.CONFIG.max_retry else (
+            "sync candidate validation failed: " + "; ".join(validation_errors))
+        return {"parse_ok": False, "retry_count": retry, "mascot_state": "analyzing",
+                "error": error}
 
     def _route_parse(self, s: AgentState) -> str:
         """解析失败且未达重试上限 → 回到 sync 重新规划；否则进 update（失败时 update 跳过写回）。
@@ -217,6 +243,7 @@ class BoardAgent:
         if s.error:
             return {"mascot_state": "error"}
         if s.parse_ok and s.llm_output:
+            annotate_graph_operations(s.llm_output.operations, s.meeting_summary.insights)
             cells, receipt = await asyncio.to_thread(
                 self.store_a.commit_graph_update, s.meeting_id, s.llm_output)
             if not receipt["ok"]:

@@ -37,6 +37,47 @@ describe("reference workspace design", () => {
 });
 
 describe("narrow board layout", () => {
+  afterEach(() => document.body.classList.remove("decision-workspace"));
+
+  it("patches changed cells in place without replacing unchanged nodes", () => {
+    const cells = new Map<string, any>();
+    const removed: string[] = [];
+    const graph = {
+      container: { clientWidth: 1266 },
+      getCells: () => [...cells.values()],
+      getCellById: (id: string) => cells.get(id),
+      getNodes: () => [...cells.values()].filter((cell) => !cell.isEdge()),
+      getEdges: () => [...cells.values()].filter((cell) => cell.isEdge()),
+      addNode: (spec: any) => {
+        const cell = { ...spec, isEdge: () => false, getData: () => spec.data };
+        cells.set(spec.id, cell);
+        return cell;
+      },
+      addEdge: (spec: any) => {
+        const cell = { ...spec, isEdge: () => true, getData: () => spec.data };
+        cells.set(spec.id, cell);
+        return cell;
+      },
+      removeCell: (id: string) => { removed.push(id); cells.delete(id); },
+      centerCell: vi.fn(),
+    } as unknown as Graph;
+    const initial = [
+      { id: "perf_n1", shape: "amo-node", data: { type: "point", label: "旧内容" } },
+      { id: "perf_n2", shape: "amo-node", data: { type: "point", label: "保持不变" } },
+    ];
+    renderBoard(graph, initial);
+    const untouched = graph.getCellById("perf_n2");
+
+    applyBoardUpdate(graph, [
+      { ...initial[0], data: { ...initial[0].data, label: "更新内容" } },
+      initial[1],
+    ]);
+
+    expect(removed).toEqual(["perf_n1"]);
+    expect(graph.getCellById("perf_n2")).toBe(untouched);
+    expect(graph.getCellById("perf_n1").getData().label).toBe("更新内容");
+  });
+
   it("fits nodes when the board is narrow even if the window is not", () => {
     vi.spyOn(window, "innerWidth", "get").mockReturnValue(924);
     const graph = {
@@ -61,19 +102,38 @@ describe("narrow board layout", () => {
     expect(graph.zoomToFit).not.toHaveBeenCalled();
   });
 
+  it("keeps workspace nodes readable instead of fitting four columns on a phone-width canvas", () => {
+    document.body.classList.add("decision-workspace");
+    const root = { getBBox: () => ({ x: 0, y: 0, width: 245, height: 70 }) };
+    const zoom = vi.fn();
+    const graph = {
+      container: { clientWidth: 455 },
+      fromJSON: vi.fn(),
+      getNodes: () => [root],
+      getCellById: () => root,
+      centerCell: vi.fn(),
+      zoom,
+    } as unknown as Graph;
+
+    renderBoard(graph, [{ id: "n_issue_root", shape: "amo-node", data: { type: "issue", label: "会议议题" } }]);
+
+    expect(zoom).toHaveBeenCalled();
+    expect(zoom.mock.calls[0][0]).toBeGreaterThanOrEqual(0.75);
+  });
+
   it("aligns viewpoints horizontally and stacks their evidence vertically", () => {
     const fromJSON = vi.fn();
     const graph = { container: { clientWidth: 1266 }, fromJSON, zoomToFit: vi.fn() } as unknown as Graph;
     renderBoard(graph, [
-      { id: "root", shape: "amo-node", data: { type: "issue", label: "议题" } },
-      { id: "pointA", shape: "amo-node", data: { type: "point", label: "观点A" } },
-      { id: "pointB", shape: "amo-node", data: { type: "point", label: "观点B" } },
-      { id: "evA1", shape: "amo-node", data: { type: "evidence", label: "论据A1" } },
-      { id: "evA2", shape: "amo-node", data: { type: "evidence", label: "论据A2" } },
-      { id: "evB1", shape: "amo-node", data: { type: "evidence", label: "论据B1" } },
+      { id: "root", shape: "amo-node", data: { type: "issue", label: "议题", parent_id: null } },
+      { id: "pointA", shape: "amo-node", data: { type: "point", label: "观点A", parent_id: "root" } },
+      { id: "pointB", shape: "amo-node", data: { type: "point", label: "观点B", parent_id: "root" } },
+      { id: "evA1", shape: "amo-node", data: { type: "evidence", label: "论据A1", parent_id: "pointA" } },
+      { id: "evA2", shape: "amo-node", data: { type: "evidence", label: "论据A2", parent_id: "pointA" } },
+      { id: "evB1", shape: "amo-node", data: { type: "evidence", label: "论据B1", parent_id: "pointB" } },
       { id: "e1", shape: "edge", source: "root", target: "pointA", data: { relation: "subordinate" } },
       { id: "e2", shape: "edge", source: "root", target: "pointB", data: { relation: "subordinate" } },
-      { id: "e3", shape: "edge", source: "pointA", target: "evA1", data: { relation: "support" } },
+      { id: "e3", shape: "edge", source: "pointA", target: "evA1", data: { relation: "oppose" } },
       { id: "e4", shape: "edge", source: "pointA", target: "evA2", data: { relation: "support" } },
       { id: "e5", shape: "edge", source: "pointB", target: "evB1", data: { relation: "support" } },
     ]);
@@ -92,6 +152,7 @@ describe("narrow board layout", () => {
     expect(byId.evA2.y).toBeGreaterThan(byId.evA1.y);
     expect(byId.evB1.x).toBe(byId.pointB.x);
     expect(byId.evB1.y).toBeGreaterThan(byId.pointB.y);
+    expect((fromJSON.mock.calls[0][0] as { edges: Array<{ id: string }> }).edges.map((edge) => edge.id)).toContain("e3");
   });
 
   it("auto-fits only once so later board updates keep the user's zoom", () => {
@@ -182,5 +243,16 @@ describe("user command marks (data.cmd)", () => {
     }).nodes[0];
     expect(node.attrs.label.textDecoration).toBe("line-through");
     expect(node.attrs.body.fill).not.toBe("#ececec");   // strike 只画删除线，不变灰
+  });
+
+  it("marks low-confidence candidates as awaiting confirmation and exposes importance rationale", () => {
+    const { graph, fromJSON } = graphOf();
+    renderBoard(graph, [{ id: "candidate", shape: "amo-node", data: {
+      type: "conclusion", label: "试点方案", confidence: 0.42,
+      needs_confirmation: true, importance: { level: "high", rationale: "affects_action" },
+    } }]);
+    const rendered = fromJSON.mock.calls[0][0] as { nodes: Array<{ attrs: { typeLabel: { text: string; title?: string } } }> };
+    expect(rendered.nodes[0].attrs.typeLabel.text).toContain("待确认");
+    expect(rendered.nodes[0].attrs.typeLabel.title).toContain("影响行动");
   });
 });

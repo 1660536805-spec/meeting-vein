@@ -1,11 +1,12 @@
+import { projectBoard } from "./board/projection";
+
 /** 议题结构视图：把一次会议的看板 cells 组织成「议题 → 观点 → 主题 → 要点」四级框架，
  * 复刻「远程办公与固定坐班-议题结构」参考页的层级化视觉语言。
  *
  * 纯渲染模块（不触碰页面级 DOM）：历史议题结构页（issues.ts）与看板内
  * 「议题结构」视图（main.ts）共用同一份 renderIssueStructure。
  *
- * 数据来源与看板/history 一致：board cells 的节点类型与边方向（父→子）推导层级，
- * 不新增后端字段：
+ * 数据来源与看板/history 一致：通过共享投影读取 v2 parent_id 或 v1 subordinate 父子关系：
  *   - 议题（无父节点）→ 根卡片
  *   - 议题下的一级分支 → 观点分支（按索引取参考页蓝/粉/青/橙/紫/绿色板）
  *   - 观点分支下仍有下级的节点 → 主题块；其叶子按类型聚为「要点 / 论据 / 结论…」块
@@ -55,10 +56,6 @@ function typeLabel(type: string): string {
   return TYPE_LABELS[type] ?? type;
 }
 
-function endId(end: any): string {
-  return typeof end === "string" ? end : (end?.cell ?? "");
-}
-
 /** 节点 label 首行为标题、其余行为副标题（与看板 render.ts 的取法一致）。 */
 function labelParts(cell: any): { title: string; subtitle: string } {
   const lines = String(cell?.data?.label ?? "").split("\n").map((line) => line.trim()).filter(Boolean);
@@ -67,10 +64,11 @@ function labelParts(cell: any): { title: string; subtitle: string } {
 }
 
 function buildIndex(cells: any[]): StructureIndex {
+  const projection = projectBoard(cells);
   const nodes: StructureNode[] = [];
   const nodeById = new Map<string, StructureNode>();
-  for (const cell of cells || []) {
-    if (cell.shape === "edge") continue;
+  for (const projected of projection.nodes) {
+    const cell = projected.cell;
     const { title, subtitle } = labelParts(cell);
     const node: StructureNode = {
       id: cell.id, type: cell.data?.type ?? "point", title, subtitle, data: cell.data ?? {},
@@ -78,19 +76,7 @@ function buildIndex(cells: any[]): StructureIndex {
     nodes.push(node);
     nodeById.set(node.id, node);
   }
-  const children = new Map<string, string[]>();
-  const hasParent = new Set<string>();
-  for (const cell of cells || []) {
-    if (cell.shape !== "edge") continue;
-    const src = endId(cell.source);
-    const tgt = endId(cell.target);
-    if (!nodeById.has(src) || !nodeById.has(tgt) || src === tgt) continue;
-    if (!children.has(src)) children.set(src, []);
-    children.get(src)!.push(tgt);
-    hasParent.add(tgt);
-  }
-  const roots = nodes.map((node) => node.id).filter((id) => !hasParent.has(id));
-  return { nodes, nodeById, children, roots };
+  return { nodes, nodeById, children: projection.children, roots: projection.roots };
 }
 
 const isOther = (id: string) => id.startsWith("n_issue_other");
@@ -224,8 +210,21 @@ function renderLeafGroup(type: string, ids: string[], order: number, index: Stru
   return block;
 }
 
-function renderBranch(node: StructureNode, order: number, index: StructureIndex, visited: Set<string>): HTMLElement {
+function descendantCount(id: string, index: StructureIndex, visited = new Set<string>()): number {
+  if (visited.has(id)) return 0;
+  visited.add(id);
+  return (index.children.get(id) ?? []).reduce((total, child) => total + 1 + descendantCount(child, index, visited), 0);
+}
+
+function renderBranch(
+  node: StructureNode,
+  order: number,
+  index: StructureIndex,
+  visited: Set<string>,
+  onViewInGraph?: (nodeId: string) => void,
+): HTMLElement {
   const branch = el("section", "branch");
+  branch.dataset.nodeId = node.id;
   const color = BRANCH_COLORS[order % BRANCH_COLORS.length];
   branch.style.setProperty("--branch", color.base);
   branch.style.setProperty("--branch-soft", color.soft);
@@ -235,8 +234,27 @@ function renderBranch(node: StructureNode, order: number, index: StructureIndex,
   const side = el("div", "side");
   side.textContent = `观点 ${order + 1} · ${typeLabel(node.type).toUpperCase()}`;
   const heading = el("h2");
-  heading.textContent = node.title;
+  const headingButton = el("button", "branch-path-button");
+  headingButton.type = "button";
+  headingButton.textContent = node.title;
+  headingButton.addEventListener("click", () => {
+    const host = branch.closest(".issue-structure");
+    const breadcrumb = host?.querySelector<HTMLElement>(".issue-breadcrumb");
+    if (breadcrumb) {
+      host?.querySelectorAll<HTMLElement>(".branch").forEach((item) => { item.dataset.current = "false"; });
+      branch.dataset.current = "true";
+      breadcrumb.textContent = `${index.nodeById.get(index.roots[0])?.title ?? "议题"} / ${node.title}`;
+    }
+  });
+  heading.append(headingButton);
   head.append(side, heading);
+  if (onViewInGraph) {
+    const view = el("button", "branch-view-button");
+    view.type = "button";
+    view.textContent = "在图中查看";
+    view.addEventListener("click", () => onViewInGraph(node.id));
+    head.append(view);
+  }
   if (node.subtitle) {
     const thesis = el("div", "thesis");
     thesis.textContent = node.subtitle;
@@ -245,6 +263,17 @@ function renderBranch(node: StructureNode, order: number, index: StructureIndex,
   branch.append(head);
 
   const blocks = el("div", "blocks");
+  const collapse = el("button", "branch-collapse-button");
+  collapse.type = "button";
+  const defaultCollapsed = descendantCount(node.id, index) >= 8;
+  const setExpanded = (expanded: boolean) => {
+    blocks.hidden = !expanded;
+    collapse.setAttribute("aria-expanded", String(expanded));
+    collapse.textContent = expanded ? "收起分支" : "展开分支";
+  };
+  collapse.addEventListener("click", () => setExpanded(blocks.hidden));
+  head.append(collapse);
+  setExpanded(!defaultCollapsed);
   const kids = (index.children.get(node.id) ?? []).filter((id) => !visited.has(id));
   const hasDownstream = (id: string) => (index.children.get(id) ?? []).some((child) => !visited.has(child));
   const topics = kids.filter(hasDownstream);
@@ -270,12 +299,17 @@ function renderBranch(node: StructureNode, order: number, index: StructureIndex,
     blocks.append(note);
   }
   branch.append(blocks);
+  branch.dataset.defaultCollapsed = String(defaultCollapsed);
   return branch;
 }
 
 /** 把 board cells 渲染成议题结构层级到 container（会先清空 container）。
  * 看板内视图与历史议题结构页共用此函数。 */
-export function renderIssueStructure(container: HTMLElement, cells: any[]): void {
+export function renderIssueStructure(
+  container: HTMLElement,
+  cells: any[],
+  options: { onViewInGraph?: (nodeId: string) => void } = {},
+): void {
   container.replaceChildren();
   const index = buildIndex(cells);
   if (!index.nodes.length) {
@@ -287,6 +321,61 @@ export function renderIssueStructure(container: HTMLElement, cells: any[]): void
   container.append(renderLegend(index));
 
   const rootIds = index.roots.length ? index.roots : index.nodes.map((node) => node.id);
+  const primaryRoot = index.nodeById.get(rootIds[0]);
+  const confirmed = index.nodes.filter((node) => node.type === "conclusion" &&
+    (node.data.status === "confirmed" || node.data.resolved === true));
+  const summary = el("section", "meeting-summary");
+  summary.setAttribute("aria-label", "会议摘要");
+  const summaryTitle = el("strong");
+  summaryTitle.textContent = primaryRoot?.title ?? "会议摘要";
+  const summaryText = el("p");
+  summaryText.textContent = `已确认 ${confirmed.length} 项结论 · 尚未解决 ${projectBoard(cells).unresolved.length} 项 · 下一步 ${index.nodes.filter((node) => node.type === "action" && !["done", "completed", "closed"].includes(String(node.data.status ?? "").toLowerCase())).length} 项`;
+  summary.append(summaryTitle, summaryText);
+  container.append(summary);
+
+  const confirmedSection = el("section", "confirmed-conclusions");
+  const confirmedHeading = el("h2");
+  confirmedHeading.textContent = `已确认结论 · ${confirmed.length}`;
+  confirmedSection.append(confirmedHeading);
+  if (confirmed.length) {
+    const list = el("ul", "confirmed-list");
+    for (const node of confirmed) {
+      const item = el("li");
+      const text = el("span");
+      text.textContent = node.title;
+      item.append(text);
+      if (options.onViewInGraph) {
+        const view = el("button");
+        view.type = "button";
+        view.textContent = "在图中查看";
+        view.dataset.viewNode = node.id;
+        view.addEventListener("click", () => options.onViewInGraph?.(node.id));
+        item.append(view);
+      }
+      list.append(item);
+    }
+    confirmedSection.append(list);
+  } else {
+    const empty = el("p");
+    empty.textContent = "确认后的结论会汇总在这里。";
+    confirmedSection.append(empty);
+  }
+  container.append(confirmedSection);
+
+  const controls = el("div", "issue-structure-controls");
+  const search = el("input");
+  search.type = "search";
+  search.setAttribute("aria-label", "搜索议题结构");
+  search.placeholder = "搜索议题、观点、结论或待办";
+  const breadcrumb = el("nav", "issue-breadcrumb");
+  breadcrumb.setAttribute("aria-label", "议题路径");
+  breadcrumb.textContent = primaryRoot?.title ?? "议题";
+  const expandCurrent = el("button");
+  expandCurrent.type = "button";
+  expandCurrent.textContent = "展开当前分支";
+  controls.append(search, breadcrumb, expandCurrent);
+  container.append(controls);
+
   const visited = new Set<string>();
   for (const rootId of rootIds) {
     if (visited.has(rootId)) continue;
@@ -302,9 +391,39 @@ export function renderIssueStructure(container: HTMLElement, cells: any[]): void
       const wrap = el("div", "branches");
       branches.forEach((id, order) => {
         visited.add(id);
-        wrap.append(renderBranch(index.nodeById.get(id)!, order, index, visited));
+        wrap.append(renderBranch(index.nodeById.get(id)!, order, index, visited, options.onViewInGraph));
       });
       container.append(wrap);
     }
   }
+  const branches = [...container.querySelectorAll<HTMLElement>(".branch")];
+  const setExpanded = (branch: HTMLElement, expanded: boolean) => {
+    const blocks = branch.querySelector<HTMLElement>(".blocks");
+    const button = branch.querySelector<HTMLButtonElement>(".branch-collapse-button");
+    if (!blocks || !button) return;
+    blocks.hidden = !expanded;
+    button.setAttribute("aria-expanded", String(expanded));
+    button.textContent = expanded ? "收起分支" : "展开分支";
+  };
+  search.addEventListener("input", () => {
+    const query = search.value.trim().toLocaleLowerCase();
+    let matches = 0;
+    for (const branch of branches) {
+      const match = !query || branch.textContent?.toLocaleLowerCase().includes(query) === true;
+      branch.hidden = !match;
+      if (match) {
+        matches += 1;
+        if (query) setExpanded(branch, true);
+        else setExpanded(branch, branch.dataset.defaultCollapsed !== "true");
+      }
+    }
+    breadcrumb.textContent = query ? `${primaryRoot?.title ?? "议题"} / 搜索：${search.value.trim()}（${matches} 个分支）`
+      : primaryRoot?.title ?? "议题";
+  });
+  expandCurrent.addEventListener("click", () => {
+    const current = branches.find((branch) => branch.dataset.current === "true" && !branch.hidden)
+      ?? branches.find((branch) => !branch.hidden && branch.querySelector<HTMLElement>(".blocks")?.hidden);
+    if (current) setExpanded(current, true);
+    else branches.filter((branch) => !branch.hidden).forEach((branch) => setExpanded(branch, true));
+  });
 }

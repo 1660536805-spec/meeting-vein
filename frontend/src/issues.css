@@ -7,7 +7,7 @@
 .issue-structure { max-width: 1180px; margin: 0 auto; color: var(--master-text); }
 
 /* 看板内议题结构视图：覆盖层，铺满画布区域，避免切换时销毁 X6 画布 */
-#issue-view { position: absolute; inset: 0; z-index: 5; overflow: auto; padding: 22px 24px 40px; background: var(--master-bg); }
+#issue-view { position: absolute; inset: 0; z-index: 5; overflow: auto; padding: 22px 24px 40px; background: transparent; }
 #issue-view[hidden] { display: none; }
 
 /* ---------- 视图切换（看板内：关系图 / 议题结构） ---------- */
@@ -16,6 +16,13 @@
 #board-view-switch button:hover { color: var(--master-text); }
 #board-view-switch button[aria-selected="true"] { background: var(--master-blue); color: var(--night-panel); }
 
+/* 关系图的默认局部视图与显式全图切换。 */
+#board-scope-switch { position: absolute; top: 14px; right: 16px; z-index: 6; display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--master-line); border-radius: 10px; background: var(--night-panel); box-shadow: 0 6px 16px rgba(0,0,0,.18); }
+#board-scope-switch button { border: 0; border-radius: 7px; padding: 6px 12px; background: transparent; color: var(--master-muted); font: inherit; font-size: 12px; cursor: pointer; }
+#board-scope-switch button:hover { color: var(--master-text); }
+#board-scope-switch button[aria-pressed="true"] { background: var(--master-blue); color: var(--night-panel); }
+#board-scope-switch button:focus-visible { outline: 2px solid var(--master-blue); outline-offset: 2px; }
+
 /* ---------- 层级图例 ---------- */
 .issue-structure .legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 0 0 20px; font-size: 12.5px; color: var(--master-muted); }
 .issue-structure .legend > span { display: inline-flex; align-items: center; gap: 7px; }
@@ -23,6 +30,16 @@
 
 /* ---------- 空状态 ---------- */
 .issue-structure .issues-empty { padding: 48px 12px; color: var(--master-muted); text-align: center; font-size: 13px; line-height: 1.8; }
+.issue-structure .meeting-summary { display:flex; flex-wrap:wrap; align-items:center; gap:4px 14px; margin:0 0 16px; padding:12px 16px; border:1px solid var(--master-line); border-radius:12px; background:var(--night-panel); color:var(--master-text); }
+.issue-structure .meeting-summary strong { font-size:14px; }
+.issue-structure .meeting-summary p { margin:0; color:var(--master-muted); font-size:12px; }
+.issue-structure .confirmed-conclusions { margin:0 0 20px; padding:14px 16px; border:1px solid var(--master-line); border-left:4px solid #20be9c; border-radius:12px; background:var(--night-panel); }
+.issue-structure .confirmed-conclusions h2 { margin:0 0 8px; font-size:14px; color:var(--master-text); }
+.issue-structure .confirmed-conclusions p { margin:0; color:var(--master-muted); font-size:12px; }
+.issue-structure .confirmed-list { display:grid; gap:6px; margin:0; padding:0; list-style:none; }
+.issue-structure .confirmed-list li { display:flex; align-items:center; justify-content:space-between; gap:10px; color:var(--master-text); font-size:13px; }
+.issue-structure .confirmed-list button { flex:none; padding:5px 9px; border:1px solid var(--master-line); border-radius:7px; background:transparent; color:var(--master-blue); font:inherit; cursor:pointer; }
+.issue-structure .confirmed-list button:focus-visible { outline:2px solid var(--master-blue); outline-offset:2px; }
 
 /* ---------- 议题根（层级 1） ---------- */
 .issue-structure .root { position: relative; border: 1px solid var(--master-line); border-left: 6px solid #f0b429; background: var(--night-panel); border-radius: 14px; padding: 22px 26px; margin-bottom: 22px; }
@@ -34,8 +51,19 @@
 .issue-structure .branches { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start; }
 .issue-structure .branch { border: 1px solid var(--master-line); border-radius: 14px; background: var(--night-panel); overflow: hidden; }
 .issue-structure .branch-head { padding: 18px 22px; border-bottom: 1px solid var(--master-line); border-top: 4px solid var(--branch, var(--master-blue)); background: linear-gradient(180deg, var(--branch-soft, transparent), transparent); }
-.issue-structure .branch-head .side { font-size: 11px; letter-spacing: .16em; font-weight: 700; color: var(--branch, var(--master-blue)); }
-.issue-structure .branch-head h2 { margin: 6px 0 4px; font-size: 19px; font-weight: 800; color: var(--master-text); }
+.issue-structure .branch-head { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; }
+.issue-structure .branch-head .side { flex:0 0 100%; font-size: 11px; letter-spacing: .16em; font-weight: 700; color: var(--branch, var(--master-blue)); }
+.issue-structure .branch-head h2 { flex:1; min-width:0; margin:0; font-size: 19px; font-weight: 800; color: var(--master-text); }
+.issue-structure .branch-path-button { padding:0; border:0; background:transparent; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+.issue-structure .branch-path-button:focus-visible { outline:2px solid var(--master-blue); outline-offset:3px; }
+.issue-structure .branch-view-button, .issue-structure .branch-collapse-button { min-height:30px; padding:5px 9px; border:1px solid var(--master-line); border-radius:7px; background:var(--night-panel); color:var(--master-blue); font:inherit; font-size:11px; cursor:pointer; }
+.issue-structure .branch-collapse-button { color:var(--master-muted); }
+.issue-structure .branch-view-button:focus-visible, .issue-structure .branch-collapse-button:focus-visible { outline:2px solid var(--master-blue); outline-offset:2px; }
+.issue-structure .issue-structure-controls { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:0 0 16px; }
+.issue-structure .issue-structure-controls input { flex:1 1 220px; min-width:0; height:36px; padding:0 10px; border:1px solid var(--master-line); border-radius:8px; background:var(--night-panel); color:var(--master-text); font:inherit; font-size:12px; }
+.issue-structure .issue-breadcrumb { flex:1 1 180px; min-width:0; color:var(--master-muted); font-size:12px; }
+.issue-structure .issue-structure-controls > button { min-height:36px; padding:0 10px; border:1px solid var(--master-line); border-radius:8px; background:var(--night-panel); color:var(--master-text); font:inherit; font-size:12px; cursor:pointer; }
+.issue-structure .issue-structure-controls input:focus-visible, .issue-structure .issue-structure-controls > button:focus-visible { outline:2px solid var(--master-blue); outline-offset:2px; }
 .issue-structure .branch-head .thesis { font-size: 12.5px; color: var(--master-muted); }
 .issue-structure .branch-empty { margin: 0; padding: 16px 10px; color: var(--master-muted); font-size: 12.5px; }
 
@@ -67,6 +95,9 @@
 
 @media (max-width: 760px) {
   #issues-scroll, #issue-view { padding: 12px; }
+  #board-view-switch { top: 10px; left: 10px; }
+  #board-scope-switch { top: 10px; right: 10px; }
+  #board-view-switch button, #board-scope-switch button { padding: 6px 9px; font-size: 11px; }
   .issue-structure .branches { grid-template-columns: 1fr; }
   .issue-structure .root { padding: 16px; }
   .issue-structure .root h1 { font-size: 19px; }

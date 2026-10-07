@@ -7,10 +7,10 @@ button.className = "theme-toggle";
 
 function updateButton(): void {
   const dark = getTheme() === "dark";
-  button.textContent = dark ? "☀ 浅色" : "☾ 深色";
+  button.textContent = dark ? "☾ 深色" : "☀ 浅色";
   button.setAttribute("aria-label", dark ? "切换到浅色主题" : "切换到深色主题");
   button.setAttribute("aria-pressed", String(dark));
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#0b1424" : "#f5f9ff");
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#090a0b" : "#f5f9ff");
 }
 
 function applyTheme(value: AppTheme): void {

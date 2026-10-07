@@ -70,62 +70,128 @@ def _edge_endpoint(endpoint) -> str:
 
 
 def serialize_for_llm(cells: list) -> str:
-    """把关系图 cells 压成紧凑大纲，供 LLM 提示词（Storage §6.2）。
-
-    P1①（提示词瘦身 + 稳定前缀）：
-    - 节点：先按 importance / mention_count 选出 top-N，再按 id 稳定排序输出——
-      新内容追加时既有节点相对顺序不变，利于上游 KV 缓存命中，降低长会输入成本；
-    - 边：截断到 MAX_LLM_EDGES，并优先保留「两端节点都在入选集内」的关系
-      （否则 287 节点会议会把 287 条边全量灌入，是 sync 变慢/膨胀的主因）；
-    - 每行压缩：去掉恒为 `-` 的 speaker 字段，mentions 仅在 >1 时输出。
-    附 token 估算，便于监控提示词体积。
-    """
+    """Serialize a compact, ancestor-preserving tree so sync can reason about levels."""
     if not cells:
         return "(空图：无预载入节点)"
 
     nodes = [c for c in cells if c.get("shape") != "edge"]
     edges = [c for c in cells if c.get("shape") == "edge"]
+    by_id = {str(c.get("id")): c for c in nodes if c.get("id") is not None}
 
     def rank(c: dict):
         d = c.get("data", {})
         lvl = (d.get("importance") or {}).get("level")
-        return (_IMPORTANCE_RANK.get(lvl, 1), d.get("mention_count", 0))
+        return (_IMPORTANCE_RANK.get(lvl, 1), d.get("mention_count", 0), str(c.get("id")))
 
-    ordered = sorted(nodes, key=rank, reverse=True)
-    kept = ordered[:MAX_LLM_NODES]
-    dropped = max(0, len(ordered) - MAX_LLM_NODES)
-    kept.sort(key=lambda c: str(c.get("id")))          # 稳定前缀：按 id 输出
-    kept_ids = {str(c.get("id")) for c in kept}
+    parent_by_id = {}
+    if any("parent_id" in (c.get("data") or {}) for c in nodes):
+        for node in nodes:
+            parent = (node.get("data") or {}).get("parent_id")
+            if parent in by_id and parent != node.get("id"):
+                parent_by_id[str(node["id"])] = str(parent)
+    else:
+        for edge in edges:
+            if (edge.get("data") or {}).get("relation") != "subordinate":
+                continue
+            source, target = _edge_endpoint(edge.get("source")), _edge_endpoint(edge.get("target"))
+            if source in by_id and target in by_id and target not in parent_by_id:
+                parent_by_id[target] = source
+        # Legacy evidence frequently had only a semantic point→evidence edge.
+        evidence_parents = {}
+        for edge in edges:
+            relation = (edge.get("data") or {}).get("relation")
+            source, target = _edge_endpoint(edge.get("source")), _edge_endpoint(edge.get("target"))
+            if relation in {"support", "oppose"} and source in by_id and target in by_id \
+                    and (by_id[source].get("data") or {}).get("type") == "point" \
+                    and (by_id[target].get("data") or {}).get("type") == "evidence":
+                evidence_parents.setdefault(target, set()).add(source)
+        for target, parents in evidence_parents.items():
+            if target not in parent_by_id and len(parents) == 1:
+                parent_by_id[target] = next(iter(parents))
 
-    lines = []
-    for c in kept:
-        d = c.get("data", {})
-        refs_list = d.get("metadata_refs", []) or []
-        refs = ",".join(str(r) for r in refs_list[:MAX_LLM_REFS])
-        if len(refs_list) > MAX_LLM_REFS:
-            refs += f",+{len(refs_list) - MAX_LLM_REFS}"
-        fields = [f"id={c.get('id')}"]
+    # Select ranked nodes together with their ancestors, so a retained child is
+    # never presented as if it were a root-level claim.
+    kept = set()
+    roots = [str(n["id"]) for n in nodes if str(n["id"]) not in parent_by_id]
+    for root in roots:
+        if len(kept) < MAX_LLM_NODES:
+            kept.add(root)
+    for candidate in sorted(nodes, key=rank, reverse=True):
+        node_id = str(candidate["id"])
+        chain, seen, cursor = [], set(), node_id
+        while cursor in by_id and cursor not in seen:
+            chain.append(cursor)
+            seen.add(cursor)
+            cursor = parent_by_id.get(cursor)
+            if cursor is None:
+                break
+        additions = [item for item in reversed(chain) if item not in kept]
+        if len(kept) + len(additions) <= MAX_LLM_NODES:
+            kept.update(additions)
+
+    children = {}
+    for node_id, parent in parent_by_id.items():
+        if node_id in kept and parent in kept:
+            children.setdefault(parent, []).append(node_id)
+    order = {str(node["id"]): i for i, node in enumerate(nodes)}
+    for child_ids in children.values():
+        child_ids.sort(key=lambda node_id: order.get(node_id, 0))
+
+    def format_node(node_id: str, depth: int, path=frozenset()) -> str:
+        if node_id in path:
+            return f"{'  ' * depth}- [cycle] {node_id}"
+        cell = by_id[node_id]
+        d = cell.get("data", {})
+        fields = [f"id={node_id}"]
         mentions = d.get("mention_count")
         if mentions and mentions > 1:
             fields.append(f"mentions={mentions}")
+        refs_list = d.get("metadata_refs", []) or []
+        refs = ",".join(str(ref) for ref in refs_list[:MAX_LLM_REFS])
+        if len(refs_list) > MAX_LLM_REFS:
+            refs += f",+{len(refs_list) - MAX_LLM_REFS}"
         if refs:
             fields.append(f"refs={refs}")
-        lines.append(f"- [{d.get('type')}] {d.get('label')} ({', '.join(fields)})")
+        line = f"{'  ' * depth}- [{d.get('type')}] {d.get('label')} ({', '.join(fields)})"
+        descendants = [format_node(child, depth + 1, path | {node_id}) for child in children.get(node_id, [])]
+        return "\n".join([line, *descendants])
 
-    body = "\n".join(lines) if lines else "(无节点)"
+    lines = [format_node(root, 0) for root in roots if root in kept]
+    # Preserve any kept cycle member that cannot be reached from a root.
+    reached = set()
+    stack = [root for root in roots if root in kept]
+    while stack:
+        current = stack.pop()
+        if current in reached:
+            continue
+        reached.add(current)
+        stack.extend(children.get(current, []))
+    for node in nodes:
+        node_id = str(node.get("id"))
+        if node_id in kept and node_id not in reached:
+            lines.append(format_node(node_id, 0))
 
-    if edges:
-        triples = [(_edge_endpoint(e.get("source")), _edge_endpoint(e.get("target")),
-                    (e.get("data") or {}).get("relation", "?")) for e in edges]
-        triples.sort(key=lambda x: (x[0] not in kept_ids, x[1] not in kept_ids, x[0], x[1]))
-        dropped_edges = max(0, len(triples) - MAX_LLM_EDGES)
-        triples = triples[:MAX_LLM_EDGES]
-        if triples:
-            body += "\n[关系]\n" + "\n".join(f"- {s} --{rel}--> {t}" for s, t, rel in triples)
-        if dropped_edges:
-            body += f"\n(已省略 {dropped_edges} 条关系)"
+    body = "[父节点在前、缩进表示子节点的树形结构]\n" + "\n".join(lines)
+    semantic = []
+    for edge in edges:
+        relation = (edge.get("data") or {}).get("relation", "?")
+        if relation in {"subordinate", "child"}:
+            continue
+        source, target = _edge_endpoint(edge.get("source")), _edge_endpoint(edge.get("target"))
+        if source in kept and target in kept:
+            # Parent-child meaning is already visible in the outline.
+            if parent_by_id.get(target) == source:
+                continue
+            semantic.append((source, relation, target))
+    semantic.sort()
+    if semantic:
+        body += "\n[跨节点语义关系]\n" + "\n".join(
+            f"- {source} --{relation}--> {target}" for source, relation, target in semantic[:MAX_LLM_EDGES])
+        if len(semantic) > MAX_LLM_EDGES:
+            body += f"\n(已省略 {len(semantic) - MAX_LLM_EDGES} 条关系)"
+    dropped = max(0, len(nodes) - len(kept))
     if dropped:
-        body += f"\n(已省略 {dropped} 个低重要度节点)"
+        body += f"\n(为控制上下文，按重要度保留 {len(kept)}/{len(nodes)} 个节点，始终连同祖先节点展示)"
     return f"{body}\n(token≈{_estimate_tokens(body)})"
 
 

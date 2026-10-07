@@ -13,8 +13,48 @@
   <link rel="stylesheet" href="/src/theme.css" />
   <link rel="stylesheet" href="/src/issues.css" />
   <script type="module" src="/src/theme.ts"></script>
+  <style>
+    #file-open-help[hidden] { display: none; }
+    #file-open-help { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; padding: 24px; background: #101114; color: #f4f1e9; font: 16px/1.6 system-ui, sans-serif; }
+    #file-open-help > div { max-width: 560px; padding: 30px; border: 1px solid #45484f; border-radius: 16px; background: #1a1c20; }
+    #file-open-help h1 { margin: 0 0 12px; font-size: 24px; }
+    #file-open-help a { color: #a9d5ff; }
+  </style>
 </head>
 <body class="decision-workspace">
+  <div id="file-open-help" hidden role="status" aria-live="polite">
+    <div>
+      <h1>正在连接本地会议服务</h1>
+      <p id="file-open-message">检测可用的本地预览地址…</p>
+      <p>若未自动跳转，请先运行 <code>AMO_FRONTEND_PORT=5176 bash scripts/start_local.sh</code>，再打开
+        <a id="file-open-5176" href="http://127.0.0.1:5176/workspace.html">5176 预览</a>或
+        <a id="file-open-5173" href="http://127.0.0.1:5173/workspace.html">5173 预览</a>。</p>
+    </div>
+  </div>
+  <script>
+    if (location.protocol === "file:") {
+      const panel = document.getElementById("file-open-help");
+      const message = document.getElementById("file-open-message");
+      panel.hidden = false;
+      const ports = [5176, 5173];
+      const suffix = location.search + location.hash;
+      for (const port of ports) {
+        document.getElementById(`file-open-${port}`).href = `http://127.0.0.1:${port}/workspace.html${suffix}`;
+      }
+      const probe = (index) => {
+        if (index >= ports.length) {
+          message.textContent = "本地服务尚未启动。启动后点击下方预览地址。";
+          return;
+        }
+        const port = ports[index];
+        const image = new Image();
+        image.onload = () => location.replace(`http://127.0.0.1:${port}/workspace.html${suffix}`);
+        image.onerror = () => probe(index + 1);
+        image.src = `http://127.0.0.1:${port}/amo-circuit-traces.svg`;
+      };
+      probe(0);
+    }
+  </script>
   <div id="app">
     <header id="app-header" class="master-topnav">
       <a class="master-brand" href="/">AI 会议秘书</a>
@@ -29,6 +69,10 @@
       <div class="master-tool-group" id="meeting-controls" aria-label="会议管理">
         <button id="new-meeting" class="primary" type="button">新建会议</button>
         <button id="save-meeting" type="button">保存</button>
+        <span id="meeting-state" role="status">会议状态：草稿</span>
+        <button id="meeting-start" type="button" hidden>开始会议</button>
+        <button id="meeting-end" type="button" hidden>结束会议</button>
+        <button id="meeting-reopen" type="button" hidden>重新打开</button>
         <span id="meeting-message" role="status" aria-live="polite"></span>
       </div>
       <span class="master-separator" aria-hidden="true"></span>
@@ -44,39 +88,112 @@
         <option value="task">任务安排助手</option>
       </select><span id="change-summary" role="status"></span></div>
       <span class="master-separator" aria-hidden="true"></span>
-      <div class="master-tool-group"><button id="export-png" type="button">导出 PNG</button><button id="export-svg" type="button">导出 SVG</button></div>
-      <span class="master-separator" aria-hidden="true"></span>
-      <div class="master-tool-group"><button id="share-snapshot" class="primary" type="button">分享快照</button><button id="copy-link" type="button">复制深链</button><span id="share-status" role="status"></span></div>
+      <details id="export-menu" class="master-tool-group">
+        <summary>导出与分享</summary>
+        <div class="export-menu-items">
+          <button id="export-png" type="button" title="导出当前图谱画面，适合演示和插入文档">导出 PNG</button>
+          <button id="export-svg" type="button" title="导出可缩放图谱，适合继续排版">导出 SVG</button>
+          <button id="export-minutes-md" type="button" title="导出带结论依据和行动缺口的文字纪要">纪要 Markdown</button>
+          <button id="export-minutes-html" type="button" title="导出可直接打开或打印的 HTML 纪要">纪要 HTML</button>
+          <button id="share-snapshot" class="primary" type="button" title="只在可以访问当前本地服务的环境打开">生成本地只读链接</button>
+          <button id="export-snapshot" type="button" title="下载包含看板、原话和历史的本地 JSON 快照">导出本地快照</button>
+          <button id="copy-link" type="button" title="复制同一服务内可用的会议深链">复制会议链接</button>
+          <span id="share-status" role="status"></span>
+        </div>
+      </details>
     </div>
     <div id="main">
-      <div id="work-area">
+      <div id="workspace-content">
+       <div id="work-area">
         <div id="board-shell">
           <div id="board-stage">
           <div id="board-view-switch" role="tablist" aria-label="看板视图">
             <button id="view-graph" type="button" role="tab" aria-selected="true">关系图</button>
             <button id="view-issues" type="button" role="tab" aria-selected="false">议题结构</button>
           </div>
+          <div id="board-scope-switch" role="group" aria-label="关系图范围">
+            <button id="scope-local" type="button" aria-pressed="true">当前关系</button>
+            <button id="scope-full" type="button" aria-pressed="false">全图</button>
+          </div>
           <section id="utterance-rail" aria-label="相关原始发言" hidden><div class="rail-caption">原始发言 <span id="utterance-count">0</span></div><div id="utterance-list"></div></section>
-          <div id="board" tabindex="0" role="group"
+          <div id="board" tabindex="0" role="group" aria-describedby="board-keyboard-hint board-keyboard-status"
             aria-label="会议结构看板：议题、要点、论据、结论、行动项与分歧的关系图">
+            <span id="board-keyboard-hint" class="visually-hidden">聚焦画布后，使用方向键切换节点，回车聚焦，Escape 清除节点焦点。</span>
+            <span id="board-keyboard-status" class="visually-hidden" role="status" aria-live="polite"></span>
             <div id="board-empty">
               <p class="board-empty-title">开始一次讨论</p>
-              <p class="board-empty-hint">输入文字或开始录音，让观点在这里逐渐连接。</p>
+              <p class="board-empty-hint">从一句发言开始，结论、分歧和下一步会在这里整理。</p>
+              <div class="board-empty-actions">
+                <button id="empty-compose" type="button">输入第一句话</button>
+                <button id="empty-record" type="button">开始录音</button>
+              </div>
             </div>
             <div id="board-toolbar" role="toolbar" aria-label="画板缩放">
               <button id="tb-zoom-out" type="button" title="缩小" aria-label="缩小">−</button>
               <span id="board-zoom-value" aria-label="当前缩放比例">100%</span>
               <button id="tb-zoom-in" type="button" title="放大" aria-label="放大">+</button>
               <button id="tb-relayout" type="button" title="重新排版（解除手动位置，按层级自动重排）" aria-label="重新排版">重排</button>
+              <button id="board-fullscreen" type="button" aria-pressed="false">图谱全屏</button>
               <span class="tb-divider" aria-hidden="true"></span>
+              <button id="edit-cell" type="button" title="编辑选中的节点" disabled>编辑节点</button>
               <button id="delete-cell" type="button" title="删除选中的节点或连线">删除选中</button>
+              <button id="undo-last-operation" type="button" hidden>撤销删除或合并</button>
             </div>
+            <aside id="node-editor" class="node-editor" aria-label="编辑节点" hidden>
+              <div class="node-editor-head"><strong>编辑节点</strong><button id="node-editor-close" type="button" aria-label="关闭编辑面板">关闭</button></div>
+              <form id="node-editor-form">
+                <label>内容<input name="label" maxlength="200" required /></label>
+                <label>类型<select name="type"><option value="point">要点</option><option value="evidence">论据</option><option value="issue">议题</option><option value="conclusion">结论</option><option value="action">待办</option><option value="conflict">不同意见</option></select></label>
+                <label>所属议题<select name="parent_id"><option value="">无所属议题</option></select></label>
+                <label>重要性<select name="importance"><option value="high">高</option><option value="normal">普通</option><option value="low">低</option></select></label>
+                <label>状态<select name="status"><option value="open">待处理</option><option value="confirmed">已确认</option><option value="in_progress">进行中</option><option value="resolved">已解决</option><option value="dismissed">已搁置</option></select></label>
+                <label>修改原因<input name="reason" maxlength="500" placeholder="可选，记录修改依据" /></label>
+                <label>重复节点合并到<select name="merge_target"><option value="">选择保留节点…</option></select></label>
+                <button id="node-editor-merge" type="button">预览并合并</button>
+                <p id="node-editor-merge-preview" role="status" aria-live="polite" hidden></p>
+                <section id="node-editor-context" class="node-editor-context" aria-label="原话、关系与编辑历史">选择节点后加载原话、关系和最近修改记录。</section>
+                <p id="node-editor-conflict" role="status" aria-live="polite" hidden></p>
+                <button id="node-editor-undo" type="button">撤销上次修改</button>
+                <button type="submit">保存修改</button>
+              </form>
+            </aside>
           </div>
           <div id="issue-view" class="issue-structure" role="tabpanel" aria-label="议题结构" hidden></div>
           </div>
         </div>
+       </div>
+      <aside id="mascot" aria-label="会议助手">
+        <div class="assistant-head">
+        <div class="assistant-heading"><div class="assistant-label">会脉 AI <small>会议助手</small></div><div class="bubble" id="mascot-bubble" role="status" aria-live="polite">等待讨论 …</div></div>
+        <div id="mascot-model" aria-label="Live2D 会议看板娘" data-fallback-src="/workspace-reference.png">
+          <img id="mascot-fallback" class="mascot-fallback" src="/mascot/fallback.svg"
+            alt="看板娘静态替代图" />
+        </div>
+        </div>
+        <div id="assistant-insights" aria-label="会议实时摘要">
+          <section class="insight-section summary-section"><h2><span class="insight-icon">≋</span>会议摘要</h2><p id="meeting-summary" class="meeting-summary-text">发言后会在这里汇总议题、结论和下一步。</p></section>
+          <details class="insight-group discussion-group">
+            <summary><span class="insight-group-title">讨论进展</span><span class="insight-group-counts"><span>焦点 <b id="focus-count">0</b></span><span>未解决 <b id="conflict-count">0</b></span></span></summary>
+            <section class="insight-section focus-section"><h2><span class="insight-icon">◎</span>当前焦点</h2><div id="focus-list"></div></section>
+            <section class="insight-section conflict-section"><h2><span class="insight-icon">!</span>尚未解决</h2><div id="conflict-list"></div></section>
+          </details>
+          <details class="insight-group decision-group">
+            <summary><span class="insight-group-title">决策与行动</span><span class="insight-group-counts"><span>结论 <b id="confirmed-count">0</b></span><span>下一步 <b id="action-count">0</b></span></span></summary>
+            <section class="insight-section confirmed-section"><h2><span class="insight-icon">✓</span>已确认结论</h2><div id="confirmed-list"></div></section>
+            <section class="insight-section action-section"><h2><span class="insight-icon">✓</span>下一步</h2><div id="action-list"></div></section>
+          </details>
+        </div>
+      </aside>
+      </div>
+      <section id="input-dock" aria-label="会议输入与录音">
+        <div id="composer">
+          <input id="composer-input" type="text" autocomplete="off" aria-label="输入会议发言"
+            placeholder="输入会议发言或问题，回车发送…" />
+          <button id="composer-send" type="button">发送 <span aria-hidden="true">↗</span></button>
+          <span id="composer-status" role="status" aria-live="polite"></span>
+        </div>
         <section id="asr-panel" aria-label="本地语音输入">
-          <h2>本地语音输入<span>实时识别，让讨论自然流入看板</span></h2>
+          <h2>本地语音输入<span>实时识别</span></h2>
           <div class="asr-controls">
             <button id="asr-record" type="button">开始录音</button>
             <button id="asr-pause" type="button" disabled>暂停</button>
@@ -88,41 +205,34 @@
           <div class="asr-meta">
             <output id="asr-model-status" aria-live="polite">正在检查本地 ASR…</output>
             <output id="llm-mode" aria-label="看板分析模式">正在检查看板模式…</output>
+            <output id="product-status" aria-live="polite">正在检查本地存储…</output>
+            <button id="asr-retry-batches" type="button" hidden>重试整理积压批次</button>
           </div>
           <p id="asr-transcript" aria-label="最新转写文本"></p>
           <div id="asr-message-row">
             <p id="asr-message" role="status" aria-live="polite"></p>
             <button id="asr-retry" type="button" hidden>重试发送</button>
+            <button id="asr-export" type="button" hidden>导出未送达文本</button>
           </div>
+          <details class="privacy-disclosure">
+            <summary>隐私说明</summary>
+            <p class="privacy-note composer-privacy">音频不会保存；识别出的原话保存在本机。启用真实模型时，会议文本会发送到所配置的服务。</p>
+          </details>
         </section>
-      </div>
-      <aside id="mascot" aria-label="会议助手">
-        <div class="assistant-head">
-        <div class="assistant-heading"><div class="assistant-label">会脉 AI <small>会议助手</small></div><div class="bubble" id="mascot-bubble" role="status" aria-live="polite">等待讨论 …</div></div>
-        <div id="mascot-model" aria-label="Live2D 会议看板娘" data-fallback-src="/workspace-reference.png">
-          <img id="mascot-fallback" class="mascot-fallback" src="/mascot/fallback.svg"
-            alt="看板娘静态替代图" />
-        </div>
-        </div>
-        <div id="assistant-insights" aria-label="会议实时摘要">
-          <section class="insight-section focus-section"><h2><span class="insight-icon">◎</span>当前焦点 <b id="focus-count">0</b></h2><div id="focus-list"></div></section>
-          <section class="insight-section conflict-section"><h2><span class="insight-icon">!</span>尚未解决 <b id="conflict-count">0</b></h2><div id="conflict-list"></div></section>
-          <section class="insight-section action-section"><h2><span class="insight-icon">✓</span>下一步 <b id="action-count">0</b></h2><div id="action-list"></div></section>
-        </div>
-        <div id="composer">
-          <input id="composer-input" type="text" autocomplete="off" aria-label="输入会议发言"
-            placeholder="在这里补充会议发言或问题，回车发送…" />
-          <button id="composer-send" type="button">发送 <span aria-hidden="true">↗</span></button>
-          <span id="composer-status" role="status" aria-live="polite"></span>
-        </div>
-      </aside>
+      </section>
     </div>
   </div>
   <div id="meeting-modal" hidden>
     <form id="meeting-form" role="dialog" aria-modal="true" aria-labelledby="meeting-modal-title">
       <h2 id="meeting-modal-title">新建会议</h2>
+      <p class="privacy-note">创建后标题和议程会保存在本机。会议原话也会保存在本机 Store B；音频不会保存。若启用了真实外部 LLM，后续会议文本会发送到所配置的模型服务。</p>
       <label for="meeting-name">会议名称</label>
       <input id="meeting-name" maxlength="60" autocomplete="off" placeholder="如：需求评审会" required />
+      <label for="meeting-agenda-file">议程文本文件（可选，TXT / Markdown）</label>
+      <input id="meeting-agenda-file" type="file" accept=".txt,.md,text/plain,text/markdown" />
+      <label for="meeting-agenda-text">粘贴或编辑议程</label>
+      <textarea id="meeting-agenda-text" rows="5" maxlength="100000" placeholder="每行一个议题，例如：\n1. 现状回顾\n2. 风险与决策\n3. 下一步"></textarea>
+      <div id="meeting-agenda-confirm" aria-live="polite"><strong>创建后将确认这些顶层议题</strong><ol id="meeting-agenda-preview"><li>尚未填写议程</li></ol></div>
       <p id="meeting-form-error" role="alert"></p>
       <div class="meeting-modal-actions">
         <button id="meeting-cancel" type="button">取消</button>
@@ -130,6 +240,6 @@
       </div>
     </form>
   </div>
-  <script type="module" src="/src/main.ts"></script>
+  <script type="module" src="/src/workspace-entry.ts"></script>
 </body>
 </html>

@@ -34,19 +34,26 @@ class GraphTools:
         return ToolResult(ok=True, data={"node_ids": hits})
 
     # —— 写入（尊重 lock/edit）——
-    def _locked_or_edited(self, cell: dict, op: GraphOp) -> bool:
+    def _locked_or_edited(self, cell: dict, op: GraphOp, index: dict = None) -> bool:
         # 复用 StoreA 的 lock/edit 仲裁，避免工具层与落库层两套判定漂移
-        return op_blocked_by_lock_or_edit(cell, op)
+        return op_blocked_by_lock_or_edit(cell, op, index)
 
     def update_graph(self, graph_id: str, op: GraphUpdateOp) -> ToolResult:
         cells = self.store_a.load(graph_id)
         index = {c["id"]: c for c in cells}
         applied, skipped = [], []
         for g in op.operations:
-            cell = index.get(g.node) if g.node else None
-            if cell and self._locked_or_edited(cell, g):
+            cell = index.get(g.node) if g.node else (index.get(g.target) if g.op == "link" else None)
+            if cell and self._locked_or_edited(cell, g, index):
                 skipped.append(g.node)
                 continue
+            if g.op == "merge_as_duplicate":
+                target = index.get(g.parent) if g.parent else None
+                duplicate = index.get(g.node) if g.node else None
+                if ((target and self._locked_or_edited(target, g, index)) or
+                        (duplicate and self._locked_or_edited(duplicate, g, index))):
+                    skipped.append(g.node)
+                    continue
             applied.append(g)
         receipt = {"ok": True, "errors": [], "change_set": {"added": [], "removed": [], "updated": []}}
         if applied:
@@ -63,14 +70,11 @@ class GraphTools:
         return self.update_graph(graph_id, op)
 
     def lock_node(self, graph_id: str, node_id: str, locked_by: str, locked: bool = True) -> ToolResult:
-        cells = self.store_a.load(graph_id)
-        for c in cells:
-            if c["id"] == node_id:
-                c["data"]["lock"] = {"locked": locked, "locked_by": locked_by, "locked_at": None}
-                break
-        else:
+        if not any(c.get("id") == node_id and c.get("shape") != "edge"
+                   for c in self.store_a.load(graph_id)):
             return ToolResult(ok=False, data={"error": "node not found"})
-        self.store_a.save(graph_id, cells)
+        self.store_a.apply_user_operation(graph_id, node_id, "lock",
+                                          {"locked": locked}, actor=locked_by)
         return ToolResult(ok=True, data={"locked": locked})
 
     def set_importance(self, graph_id: str, node_id: str, level: str) -> ToolResult:

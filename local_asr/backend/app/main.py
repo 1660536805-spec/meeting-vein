@@ -1,9 +1,11 @@
 import asyncio
 import json
 import logging
+import re
 import threading
 import time
 from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
 from typing import Annotated, Any
 from uuid import uuid4
 
@@ -24,6 +26,24 @@ logger = logging.getLogger("local_asr")
 
 _FRAME_MS = 480
 _FRAME_BYTES = 15_360
+_STREAM_SESSION_TTL_S = 120
+_STREAM_SESSION_LIMIT = 128
+
+
+@dataclass
+class StreamingSession:
+    session_id: str
+    generation: str
+    session_started_ms: int
+    segment_started_ms: int
+    last_active: float
+    cache: dict[str, Any] = field(default_factory=dict)
+    seq: int = 0
+    segment_seq: int = 0
+    parts: list[str] = field(default_factory=list)
+    silent_ms: int = 0
+    pending_segments: list[dict[str, Any]] = field(default_factory=list)
+    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
 
 def _frame_rms(frame: bytes) -> float:
@@ -81,6 +101,7 @@ def create_app(
     resolved_runtime = runtime or AsrRuntime(resolved_settings)
     resolved_gateway = gateway or AudioGateway(resolved_settings)
     resolved_streaming = streaming_runtime or (StreamingRuntime(resolved_settings) if runtime is None else None)
+    stream_sessions: dict[str, StreamingSession] = {}
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -160,98 +181,140 @@ def create_app(
         if websocket.headers.get("origin") not in resolved_settings.frontend_origins:
             await websocket.close(code=1008)
             return
+        session_id = websocket.query_params.get("session_id") or uuid4().hex
+        if not re.fullmatch(r"[A-Za-z0-9_-]{20,80}", session_id):
+            await websocket.close(code=1008)
+            return
         await websocket.accept()
         if resolved_streaming is None or resolved_streaming.status().state != "ready":
             await websocket.send_json({"type": "error", "message": "流式语音模型尚未就绪"})
             await websocket.close(code=1013)
             return
 
-        cache: dict[str, Any] = {}
-        seq = 0
-        segment_seq = 0
-        parts: list[str] = []
-        session_started_ms = int(time.time() * 1000)
-        segment_started_ms = session_started_ms
-        silent_ms = 0
+        now = time.monotonic()
+        for key, value in tuple(stream_sessions.items()):
+            if now - value.last_active > _STREAM_SESSION_TTL_S and not value.lock.locked():
+                stream_sessions.pop(key, None)
+        session = stream_sessions.get(session_id)
+        if session is None:
+            if len(stream_sessions) >= _STREAM_SESSION_LIMIT:
+                idle = sorted(
+                    (item for item in stream_sessions.values() if not item.lock.locked()),
+                    key=lambda item: item.last_active,
+                )
+                while idle and len(stream_sessions) >= _STREAM_SESSION_LIMIT:
+                    stream_sessions.pop(idle.pop(0).session_id, None)
+            if len(stream_sessions) >= _STREAM_SESSION_LIMIT:
+                await websocket.send_json({"type": "error", "message": "实时识别会话已满，请稍后重试"})
+                await websocket.close(code=1013)
+                return
+            started_ms = int(time.time() * 1000)
+            session = StreamingSession(session_id, uuid4().hex, started_ms, started_ms, now)
+            stream_sessions[session_id] = session
 
         def flush_segment(now_ms: int) -> dict[str, Any] | None:
             """把当前累积文本切成一段：重置模型缓存与会话状态，返回 final 消息。"""
-            nonlocal parts, segment_started_ms, silent_ms, segment_seq
-            text = _join_deltas(parts).strip()
-            start_ms = segment_started_ms
-            parts = []
-            silent_ms = 0
-            segment_started_ms = now_ms
-            cache.clear()
+            text = _join_deltas(session.parts).strip()
+            start_ms = session.segment_started_ms
+            session.parts = []
+            session.silent_ms = 0
+            session.segment_started_ms = now_ms
+            session.cache.clear()
             if not text:
                 return None
-            segment_seq += 1
+            session.segment_seq += 1
             return {
                 "type": "final",
-                "seq": segment_seq,
-                "segment_id": f"utt_local_stream_{uuid4().hex}",
+                "seq": session.seq,
+                "segment_seq": session.segment_seq,
+                "segment_id": f"utt_local_stream_{session.session_id}_{session.generation}_{session.segment_seq}",
                 "text": text,
                 "language": resolved_settings.language,
-                "start_offset_ms": max(0, start_ms - session_started_ms),
-                "end_offset_ms": max(0, now_ms - session_started_ms),
+                "start_offset_ms": max(0, start_ms - session.session_started_ms),
+                "end_offset_ms": max(0, now_ms - session.session_started_ms),
             }
 
-        try:
-            await websocket.send_json({"type": "ready"})
-            while True:
-                message = await websocket.receive()
-                if message.get("type") == "websocket.disconnect":
-                    return
-                frame = message.get("bytes")
-                if frame is None:
-                    raw_control = message.get("text")
-                    if raw_control is None:
+        async with session.lock:
+            session.last_active = time.monotonic()
+            try:
+                await websocket.send_json({
+                    "type": "ready", "seq": session.seq,
+                    "generation": session.generation,
+                    "partial_text": _join_deltas(session.parts),
+                })
+                for event in session.pending_segments:
+                    await websocket.send_json(event)
+                while True:
+                    message = await websocket.receive()
+                    if message.get("type") == "websocket.disconnect":
+                        return
+                    frame = message.get("bytes")
+                    if frame is None:
+                        raw_control = message.get("text")
+                        if raw_control is None:
+                            continue
+                        try:
+                            control = json.loads(raw_control)
+                        except (TypeError, ValueError):
+                            control = {}
+                        if not isinstance(control, dict):
+                            continue
+                        if control.get("type") == "ack" and isinstance(control.get("segment_id"), str):
+                            session.pending_segments = [
+                                event for event in session.pending_segments
+                                if event.get("segment_id") != control["segment_id"]
+                            ]
+                            session.last_active = time.monotonic()
+                        elif control.get("type") == "flush":
+                            event = flush_segment(int(time.time() * 1000))
+                            if event is not None:
+                                session.pending_segments.append(event)
+                                await websocket.send_json(event)
+                            await websocket.send_json({"type": "flushed"})
                         continue
+                    if len(frame) != _FRAME_BYTES:
+                        await websocket.send_json({"type": "error", "message": "无效的音频帧"})
+                        await websocket.close(code=1003)
+                        return
+                    session.seq += 1
+                    session.last_active = time.monotonic()
+                    rms = _frame_rms(frame)
                     try:
-                        control = json.loads(raw_control)
-                    except (TypeError, ValueError):
-                        control = {}
-                    if isinstance(control, dict) and control.get("type") == "flush":
-                        event = flush_segment(int(time.time() * 1000))
-                        if event is not None:
-                            await websocket.send_json(event)
-                        await websocket.send_json({"type": "flushed"})
-                    continue
-                if len(frame) != _FRAME_BYTES:
-                    await websocket.send_json({"type": "error", "message": "无效的音频帧"})
-                    await websocket.close(code=1003)
-                    return
-                seq += 1
-                rms = _frame_rms(frame)
-                try:
-                    text = await asyncio.to_thread(resolved_streaming.transcribe, frame, cache)
-                except Exception:
-                    logger.exception("streaming inference failed")
-                    await websocket.send_json({"type": "error", "message": "实时识别失败，停止后仍可识别完整录音"})
-                    await websocket.close(code=1011)
-                    return
-                text = text.strip()
-                now_ms = int(time.time() * 1000)
-                if text:
-                    parts.append(text)
-                    silent_ms = 0
-                elif rms < resolved_settings.stream_silence_rms:
-                    silent_ms += _FRAME_MS
-                else:
-                    silent_ms = 0
+                        text = await asyncio.to_thread(resolved_streaming.transcribe, frame, session.cache)
+                    except Exception:
+                        logger.exception("streaming inference failed")
+                        await websocket.send_json({"type": "error", "message": "实时识别失败，停止后仍可识别完整录音"})
+                        await websocket.close(code=1011)
+                        return
+                    text = text.strip()
+                    now_ms = int(time.time() * 1000)
+                    if text:
+                        session.parts.append(text)
+                        session.silent_ms = 0
+                    elif rms < resolved_settings.stream_silence_rms:
+                        session.silent_ms += _FRAME_MS
+                    else:
+                        session.silent_ms = 0
 
-                punctuated = bool(parts) and len(_join_deltas(parts).strip()) >= resolved_settings.stream_min_segment_chars
-                if punctuated and (
-                    silent_ms >= resolved_settings.stream_silence_ms
-                    or now_ms - segment_started_ms >= resolved_settings.stream_max_segment_ms
-                ):
-                    event = flush_segment(now_ms)
-                    if event is not None:
-                        await websocket.send_json(event)
-                        continue
-                await websocket.send_json({"type": "partial", "seq": seq, "text": text})
-        except WebSocketDisconnect:
-            return
+                    punctuated = bool(session.parts) and len(_join_deltas(session.parts).strip()) >= resolved_settings.stream_min_segment_chars
+                    if punctuated and (
+                        session.silent_ms >= resolved_settings.stream_silence_ms
+                        or now_ms - session.segment_started_ms >= resolved_settings.stream_max_segment_ms
+                    ):
+                        event = flush_segment(now_ms)
+                        if event is not None:
+                            session.pending_segments.append(event)
+                            await websocket.send_json(event)
+                            continue
+                    await websocket.send_json({"type": "partial", "seq": session.seq, "text": text})
+            except WebSocketDisconnect:
+                return
+            except RuntimeError:
+                # The socket may disappear while an ASR inference task is running;
+                # the shared session retains its processed frame and pending final.
+                return
+            finally:
+                session.last_active = time.monotonic()
 
     @application.post("/v1/audio/transcriptions")
     async def transcribe(

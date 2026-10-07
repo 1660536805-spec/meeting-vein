@@ -105,6 +105,9 @@ class InsightRecord:
     importance_hint: Optional[str] = None
     related_to: Optional[str] = None                     # 关联节点 id
     relation_to_related: Optional[str] = None            # support / oppose / derive / child
+    ownership_index: Optional[int] = None                 # 当前候选列表中的父议题建议，不是外部节点 id
+    parent_index: Optional[int] = None                    # 当前批次中直接父观点的 insight 序号
+    importance_rationale: Optional[str] = None             # adopted / affects_action / repeated / evidence
 
 
 @dataclass
@@ -134,6 +137,8 @@ class GraphOp:
     reason: Optional[str] = None         # 用户指令的简要理由（落 cell.data.cmd.reason）
     meta_ids: list = field(default_factory=list)         # 绑定原始论据 metadata_refs
     thought: Optional[str] = None
+    confidence: Optional[float] = None
+    importance_rationale: Optional[str] = None
 
 
 @dataclass
@@ -158,7 +163,13 @@ class NodeData:
     lock: dict = field(default_factory=lambda: {"locked": False, "locked_by": None, "locked_at": None})
     resolved: bool = False
     metadata_refs: list = field(default_factory=list)     # meta_id 列表（utt_/agd_/man_）
+    confidence: float = 1.0
+    needs_confirmation: bool = False
     version: int = 1
+
+    def __post_init__(self):
+        if not self.resolved and self.confidence < 0.65:
+            self.needs_confirmation = True
 
 
 def node_data_to_dict(d: NodeData) -> dict:
@@ -166,6 +177,7 @@ def node_data_to_dict(d: NodeData) -> dict:
         "type": d.type, "label": d.label, "speaker_ref": d.speaker_ref,
         "importance": d.importance, "mention_count": d.mention_count, "edit": d.edit,
         "lock": d.lock, "resolved": d.resolved, "metadata_refs": d.metadata_refs,
+        "confidence": d.confidence, "needs_confirmation": d.needs_confirmation,
         "version": d.version,
     }
 

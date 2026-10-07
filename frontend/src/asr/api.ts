@@ -21,7 +21,18 @@ export interface IngestResponse {
   ok: true;
   utterance_id: string;
   duplicate: boolean;
+  state: "accepted" | "processing" | "committed" | "failed";
+  meta_id: string;
+  board_version: number | null;
+  board_effect?: "linked" | "unlinked" | null;
+  error?: string;
   batched?: boolean;
+}
+
+export interface UtteranceStatus extends Omit<IngestResponse, "ok" | "duplicate" | "batched"> {
+  attempts: number;
+  last_error?: string | null;
+  updated_at_ms?: number;
 }
 
 export interface ModelStatus {
@@ -33,7 +44,18 @@ export interface ModelStatus {
 }
 
 export interface ProductStatus {
-  llm_mode: "mock" | "configured";
+  llm_mode: "mock" | "real" | "unknown";
+  llm_instance: { type: "mock" | "openai_compatible" | "custom"; model?: string | null };
+  asr: {
+    streaming: { state: string; error?: string | null };
+    final: { state: string; error?: string | null; device?: string | null };
+  };
+  persistence: {
+    store_a: string;
+    store_b: string;
+    pending_retries: number;
+  };
+  pending_by_meeting?: Record<string, number>;
 }
 
 async function fetchOrThrow(
@@ -72,8 +94,13 @@ function serverError(payload: Record<string, unknown>, fallback: string): Error 
 
 export async function getModelStatus(fetcher: typeof fetch = fetch): Promise<ModelStatus> {
   const response = await fetchOrThrow(fetcher, "/asr/models/status", "无法连接本地 ASR 服务");
-  const payload = await readJson(response);
-  if (!response.ok) throw serverError(payload, "无法读取本地 ASR 状态");
+  let payload: Record<string, unknown>;
+  try {
+    payload = await readJson(response);
+  } catch {
+    throw new Error(response.ok ? "本地 ASR 服务响应格式无效" : `本地 ASR 服务不可用（HTTP ${response.status}）`);
+  }
+  if (!response.ok) throw serverError(payload, `本地 ASR 服务不可用（HTTP ${response.status}）`);
   if (!["not_loaded", "loading", "ready", "error"].includes(String(payload.state))) {
     throw new Error("服务响应格式无效，请稍后重试");
   }
@@ -84,10 +111,21 @@ export async function getProductStatus(fetcher: typeof fetch = fetch): Promise<P
   const response = await fetchOrThrow(fetcher, "/api/status", "无法连接会议看板服务");
   const payload = await readJson(response);
   if (!response.ok) throw serverError(payload, "无法读取看板状态");
-  if (payload.llm_mode !== "mock" && payload.llm_mode !== "configured") {
+  if (payload.llm_mode !== "mock" && payload.llm_mode !== "real" && payload.llm_mode !== "unknown") {
     throw new Error("服务响应格式无效，请稍后重试");
   }
-  return { llm_mode: payload.llm_mode };
+  const llmInstance = payload.llm_instance as ProductStatus["llm_instance"] | undefined;
+  const asr = payload.asr as ProductStatus["asr"] | undefined;
+  const persistence = payload.persistence as ProductStatus["persistence"] | undefined;
+  if (!llmInstance || !asr?.streaming || !asr?.final || !persistence) {
+    throw new Error("服务响应格式无效，请稍后重试");
+  }
+  const pendingByMeeting = payload.pending_by_meeting;
+  return {
+    llm_mode: payload.llm_mode, llm_instance: llmInstance, asr, persistence,
+    pending_by_meeting: pendingByMeeting && typeof pendingByMeeting === "object" && !Array.isArray(pendingByMeeting)
+      ? pendingByMeeting as Record<string, number> : undefined,
+  };
 }
 
 export async function transcribeAudio(
@@ -126,8 +164,27 @@ export async function submitUtterance(
   });
   const payload = await readJson(response);
   if (!response.ok || payload.ok !== true) throw serverError(payload, "看板未能接收转写，请重试发送");
-  if (typeof payload.utterance_id !== "string" || typeof payload.duplicate !== "boolean") {
+  if (typeof payload.utterance_id !== "string" || typeof payload.duplicate !== "boolean" ||
+      !["accepted", "processing", "committed", "failed"].includes(String(payload.state)) ||
+      typeof payload.meta_id !== "string") {
     throw new Error("服务响应格式无效，请稍后重试");
   }
   return payload as unknown as IngestResponse;
+}
+
+export async function getUtteranceStatus(
+  utteranceId: string,
+  meetingId: string,
+  fetcher: typeof fetch = fetch,
+): Promise<UtteranceStatus> {
+  const query = new URLSearchParams({ meeting_id: meetingId });
+  const response = await fetchOrThrow(fetcher,
+    `/api/utterances/${encodeURIComponent(utteranceId)}/status?${query}`, "无法连接会议看板服务");
+  const payload = await readJson(response);
+  if (!response.ok) throw serverError(payload, "无法读取转写处理状态");
+  if (typeof payload.utterance_id !== "string" || typeof payload.meta_id !== "string" ||
+      !["accepted", "processing", "committed", "failed"].includes(String(payload.state))) {
+    throw new Error("服务响应格式无效，请稍后重试");
+  }
+  return payload as unknown as UtteranceStatus;
 }

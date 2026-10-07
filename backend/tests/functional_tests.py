@@ -70,10 +70,14 @@ class TestStoreAGraphOps(unittest.TestCase):
         ])
         cells = self.sa.apply_graph_update(MEETING_ID, op)
         edges = [c for c in cells if c.get("shape") == "edge"]
-        self.assertEqual(len(edges), 1)
-        self.assertEqual(edges[0]["data"]["relation"], "support")
-        self.assertEqual(edges[0]["source"]["cell"], "n_p_x")
-        self.assertEqual(edges[0]["target"]["cell"], "n_issue_root")
+        support_edges = [edge for edge in edges if edge["data"]["relation"] == "support"]
+        parent_edges = [edge for edge in edges if edge["data"]["relation"] == "subordinate"]
+        self.assertEqual(len(support_edges), 1)
+        self.assertEqual(support_edges[0]["source"]["cell"], "n_p_x")
+        self.assertEqual(support_edges[0]["target"]["cell"], "n_issue_root")
+        self.assertEqual(len(parent_edges), 1)
+        self.assertEqual(parent_edges[0]["source"]["cell"], "n_issue_root")
+        self.assertEqual(parent_edges[0]["target"]["cell"], "n_p_x")
 
     # —— merge_as_duplicate ——
     def test_merge_as_duplicate_removes_child(self):
@@ -280,7 +284,7 @@ class TestUserCommandOps(unittest.TestCase):
              "data": {"relation": "subordinate"}},
             {"id": "e_a__b", "shape": "edge",
              "source": {"cell": "n_p_a"}, "target": {"cell": "n_p_b"},
-             "data": {"relation": "support"}},
+             "data": {"relation": "subordinate"}},
             {"id": "e_root__c", "shape": "edge",
              "source": {"cell": "n_issue_root"}, "target": {"cell": "n_p_c"},
              "data": {"relation": "subordinate"}},

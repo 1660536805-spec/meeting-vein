@@ -6,6 +6,7 @@ import pytest
 
 from app.asr_runtime import RuntimeStatus
 from app.config import Settings
+from app import main as main_module
 from app.main import create_app
 from app.streaming_runtime import StreamingRuntime
 
@@ -109,6 +110,53 @@ def test_websocket_flush_control_frame_returns_final_and_acknowledges():
             assert socket.receive_json() == {"type": "flushed"}
 
 
+def test_websocket_resume_preserves_frame_sequence_and_unacked_final_segment():
+    runtime = StreamingRuntime(Settings(), model_factory=lambda **_: FakeModel())
+    runtime.load()
+    app = create_app(runtime=StubFinalRuntime(), streaming_runtime=runtime)
+    session_id = "resume_session_0123456789abcdef"
+    with TestClient(app) as client:
+        with client.websocket_connect(
+            f"/v1/audio/stream?session_id={session_id}", headers={"origin": "http://127.0.0.1:5173"}
+        ) as socket:
+            ready = socket.receive_json()
+            assert ready["seq"] == 0
+            generation = ready["generation"]
+            socket.send_bytes(bytes(15_360))
+            assert socket.receive_json() == {"type": "partial", "seq": 1, "text": "第1块"}
+
+        with client.websocket_connect(
+            f"/v1/audio/stream?session_id={session_id}", headers={"origin": "http://127.0.0.1:5173"}
+        ) as socket:
+            ready = socket.receive_json()
+            assert ready["seq"] == 1
+            assert ready["generation"] == generation
+            assert ready["partial_text"] == "第1块"
+            socket.send_bytes(bytes(15_360))
+            assert socket.receive_json() == {"type": "partial", "seq": 2, "text": "第2块"}
+            socket.send_text('{"type":"flush"}')
+            final = socket.receive_json()
+            assert final["text"] == "第1块第2块"
+            first_segment_id = final["segment_id"]
+            assert generation in first_segment_id
+            assert final["seq"] == 2
+            assert socket.receive_json() == {"type": "flushed"}
+
+        with client.websocket_connect(
+            f"/v1/audio/stream?session_id={session_id}", headers={"origin": "http://127.0.0.1:5173"}
+        ) as socket:
+            assert socket.receive_json()["type"] == "ready"
+            replay = socket.receive_json()
+            assert replay["type"] == "final"
+            assert replay["segment_id"] == first_segment_id
+            socket.send_text('{"type":"ack","segment_id":"' + first_segment_id + '"}')
+
+        with client.websocket_connect(
+            f"/v1/audio/stream?session_id={session_id}", headers={"origin": "http://127.0.0.1:5173"}
+        ) as socket:
+            assert socket.receive_json()["type"] == "ready"
+
+
 def test_websocket_rejects_unapproved_origin():
     runtime = StreamingRuntime(Settings(), model_factory=lambda **_: FakeModel())
     runtime.load()
@@ -120,3 +168,23 @@ def test_websocket_rejects_unapproved_origin():
             ):
                 pass
         assert caught.value.code == 1008
+
+
+def test_websocket_rejects_new_session_when_all_session_slots_are_active(monkeypatch):
+    runtime = StreamingRuntime(Settings(), model_factory=lambda **_: FakeModel())
+    runtime.load()
+    app = create_app(runtime=StubFinalRuntime(), streaming_runtime=runtime)
+    monkeypatch.setattr(main_module, "_STREAM_SESSION_LIMIT", 1)
+    with TestClient(app) as client:
+        with client.websocket_connect(
+            "/v1/audio/stream?session_id=active_session_0123456789abcdef",
+            headers={"origin": "http://127.0.0.1:5173"},
+        ) as active:
+            assert active.receive_json()["type"] == "ready"
+            with client.websocket_connect(
+                "/v1/audio/stream?session_id=other_session_0123456789abcdef",
+                headers={"origin": "http://127.0.0.1:5173"},
+            ) as rejected:
+                assert rejected.receive_json() == {
+                    "type": "error", "message": "实时识别会话已满，请稍后重试",
+                }

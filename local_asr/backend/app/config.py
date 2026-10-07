@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     stream_silence_ms: int = Field(default=800, ge=0)
     stream_silence_rms: float = Field(default=0.01, gt=0)
     stream_min_segment_chars: int = Field(default=2, ge=1)
-    stream_max_segment_ms: int = Field(default=15_000, gt=0)
+    stream_max_segment_ms: int = Field(default=8_000, gt=0)
 
     debug_save_audio: bool = False
     debug_audio_dir: Path = Field(

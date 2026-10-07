@@ -32,6 +32,7 @@ export interface RepairReceipt {
 
 export interface BoardGraph {
   graph_id: string;
+  schema?: "amo.board/v1" | "amo.board/v2";
   version: number;
   updated_at: string | null;
   cells: any[];
@@ -42,6 +43,7 @@ export interface MetadataRecord {
   kind?: string;
   text: string;
   speaker_ref?: string;
+  display_name?: string;
   start_offset_ms?: number;
   end_offset_ms?: number;
   source?: string;
@@ -55,6 +57,7 @@ export interface UserOp {
   payload?: Record<string, any>;
   actor?: string;
   ts_ms?: number;
+  expected_version?: number;
 }
 
 export interface UpdateResult {
@@ -76,6 +79,7 @@ export interface CursorConfig {
 /** 历史会议摘要（GET /api/meetings）。 */
 export interface MeetingSummaryInfo {
   meeting_id: string;
+  schema?: "amo.board/v1" | "amo.board/v2";
   title: string;
   version: number;
   updated_at: string | null;
@@ -129,8 +133,16 @@ export interface SaveResult {
 
 async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText} @ ${url}`);
+  if (!res.ok) {
+    let payload: any = {};
+    try { payload = await res.json(); } catch { /* response may not be JSON */ }
+    throw new ApiError(res.status, payload, `${res.status} ${res.statusText} @ ${url}`);
+  }
   return (await res.json()) as T;
+}
+
+export class ApiError extends Error {
+  constructor(public status: number, public payload: any, message: string) { super(message); }
 }
 
 function post<T>(url: string, body: any): Promise<T> {
@@ -154,25 +166,63 @@ export const rest = {
   ) =>
     post<UpdateResult>(`/api/board/${encodeURIComponent(graphId)}/update`, { operations, ...opts }),
 
-  lock: (nodeId: string, graphId: string, locked: boolean, lockedBy = "human") =>
-    post<any>(`/api/node/${encodeURIComponent(nodeId)}/lock`, {
-      graph_id: graphId, locked, locked_by: lockedBy,
+  patchNode: (graphId: string, nodeId: string, expectedVersion: number,
+              fields: Record<string, any>, reason: string, actor = "web:user") =>
+    jsonFetch<{ ok: boolean; version: number; cells: any[] }>(
+      `/api/board/${encodeURIComponent(graphId)}/nodes/${encodeURIComponent(nodeId)}`,
+      { method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expected_version: expectedVersion, fields, reason, actor }) }),
+
+  previewMerge: (graphId: string, duplicateId: string, survivorId: string, expectedVersion: number) =>
+    post<any>(`/api/board/${encodeURIComponent(graphId)}/merge-preview`, {
+      duplicate_id: duplicateId, survivor_id: survivorId, expected_version: expectedVersion,
     }),
 
-  setImportance: (nodeId: string, graphId: string, level: string) =>
-    post<any>(`/api/node/${encodeURIComponent(nodeId)}/importance`, { graph_id: graphId, level }),
+  mergeNodes: (graphId: string, duplicateId: string, survivorId: string,
+               expectedVersion: number, reason: string, actor = "web:user") =>
+    post<any>(`/api/board/${encodeURIComponent(graphId)}/merge`, {
+      duplicate_id: duplicateId, survivor_id: survivorId, expected_version: expectedVersion, reason, actor,
+    }),
 
-  emitUserOp: (op: UserOp) =>
-    post<any>(`/api/node/${encodeURIComponent(op.node_id)}/op`, {
+  undoOperation: (graphId: string, operationVersion: number, expectedVersion: number) =>
+    post<any>(`/api/board/${encodeURIComponent(graphId)}/undo`, {
+      operation_version: operationVersion, expected_version: expectedVersion, actor: "web:user",
+    }),
+
+  lock: async (nodeId: string, graphId: string, locked: boolean, lockedBy = "human") => {
+    const board = await jsonFetch<BoardGraph>(`/api/board/${encodeURIComponent(graphId)}`);
+    return post<any>(`/api/node/${encodeURIComponent(nodeId)}/lock`, {
+      graph_id: graphId, locked, locked_by: lockedBy, expected_version: board.version,
+    });
+  },
+
+  setImportance: async (nodeId: string, graphId: string, level: string) => {
+    const board = await jsonFetch<BoardGraph>(`/api/board/${encodeURIComponent(graphId)}`);
+    return post<any>(`/api/node/${encodeURIComponent(nodeId)}/importance`, {
+      graph_id: graphId, level, expected_version: board.version,
+    });
+  },
+
+  emitUserOp: async (op: UserOp) => {
+    const expectedVersion = op.expected_version ?? (await jsonFetch<BoardGraph>(
+      `/api/board/${encodeURIComponent(op.graph_id)}`)).version;
+    return post<any>(`/api/node/${encodeURIComponent(op.node_id)}/op`, {
       graph_id: op.graph_id,
       op: op.op,
       payload: op.payload ?? {},
       actor: op.actor ?? "web:user",
       ts_ms: op.ts_ms,
-    }),
+      expected_version: expectedVersion,
+    });
+  },
 
-  rollback: (graphId: string, cellId: string, version: number) =>
-    post<any>(`/api/board/${encodeURIComponent(graphId)}/rollback`, { cell_id: cellId, version }),
+  rollback: async (graphId: string, cellId: string, version: number, expectedVersion?: number) => {
+    const expected = expectedVersion ?? (await jsonFetch<BoardGraph>(
+      `/api/board/${encodeURIComponent(graphId)}`)).version;
+    return post<any>(`/api/board/${encodeURIComponent(graphId)}/rollback`, {
+      cell_id: cellId, version, actor: "web:user", expected_version: expected,
+    });
+  },
 
   history: (graphId: string, cellId?: string) =>
     jsonFetch<{ graph_id: string; records: any[] }>(

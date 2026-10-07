@@ -1,6 +1,6 @@
 import type { Graph } from "@antv/x6";
 
-function currentSvg(graph: Graph): { xml: string; width: number; height: number } {
+export function serializeBoardSvg(graph: Graph): { xml: string; width: number; height: number } {
   const source = graph.container.querySelector("svg.x6-graph-svg") || graph.container.querySelector("svg");
   if (!(source instanceof SVGSVGElement)) throw new Error("看板尚未准备好");
   const width = Math.max(1, graph.container.clientWidth);
@@ -29,12 +29,12 @@ function download(blob: Blob, name: string): void {
 }
 
 export function downloadSVG(graph: Graph): void {
-  const { xml } = currentSvg(graph);
+  const { xml } = serializeBoardSvg(graph);
   download(new Blob([xml], { type: "image/svg+xml;charset=utf-8" }), "meeting-board.svg");
 }
 
 export async function downloadPNG(graph: Graph): Promise<void> {
-  const { xml, width, height } = currentSvg(graph);
+  const { xml, width, height } = serializeBoardSvg(graph);
   const url = URL.createObjectURL(new Blob([xml], { type: "image/svg+xml;charset=utf-8" }));
   try {
     const image = new Image();

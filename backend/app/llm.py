@@ -17,6 +17,7 @@ from typing import Callable, Dict, List, Optional
 
 from .models import MeetingSummary, InsightRecord, GraphUpdateOp, GraphOp, stable_hash
 from . import config
+from .errors import safe_error_code as _safe_error_code
 
 
 log = logging.getLogger("amo.llm")
@@ -74,7 +75,7 @@ class LLMMetrics:
     def on_timeout(self, err) -> None:
         with self._lock:
             self.timeouts += 1
-            self.last_error = str(err)[:200]
+            self.last_error = _safe_error_code(err)
 
     def on_circuit_trip(self) -> None:
         self._bump(circuit_trips=1)
@@ -89,7 +90,7 @@ class LLMMetrics:
     def on_fail(self, err) -> None:
         with self._lock:
             self.failed += 1
-            self.last_error = str(err)[:200]
+            self.last_error = _safe_error_code(err)
 
     def reset(self) -> None:
         with self._lock:
@@ -183,6 +184,23 @@ def adaptive_max_tokens(units: int) -> int:
     except (TypeError, ValueError):
         units = 0
     return max(base, min(cap, base + max(0, units) * per))
+
+
+def _structured_retry_messages(messages: list, stage: str) -> list:
+    """Ask for one corrected structured response after malformed model output."""
+    corrected = list(messages)
+    corrected.append({
+        "role": "user",
+        "content": (f"上一次{stage}输出无法解析或缺少必需字段。请重新完成同一任务，只输出完整、有效的 JSON 对象，"
+                    "不要使用 Markdown 代码围栏或在 JSON 前后添加说明；确保所有字符串和数组都闭合。"),
+    })
+    return corrected
+
+
+def _retry_token_budget(initial: int) -> int:
+    """Give a corrected response more room while respecting the configured cap."""
+    cap = max(config.CONFIG.llm_max_tokens_base, config.CONFIG.llm_max_tokens_cap)
+    return min(cap, max(initial, initial * 2))
 
 
 class LLMClient:
@@ -318,15 +336,15 @@ class OpenAIClient(LLMClient):
                     backoff = min(0.5 * (2 ** attempt), 4.0)
                     if time.monotonic() + backoff >= deadline:
                         break
-                    log.warning("[llm] chat attempt %d failed (%r), retry in %.1fs",
-                                attempt + 1, e, backoff)
+                    log.warning("[llm] chat attempt %d failed (%s), retry in %.1fs",
+                                attempt + 1, _safe_error_code(e), backoff)
                     time.sleep(backoff)
         assert last_exc is not None
         if breaker.record_failure():
             metrics.on_circuit_trip()
             log.warning("[llm] circuit opened after %d consecutive failures", breaker.failures)
         metrics.on_fail(last_exc)
-        raise LLMError(f"LLM request failed: {last_exc}") from last_exc
+        raise LLMError(f"LLM request failed ({_safe_error_code(last_exc)})") from None
 
     def _chat(self, messages, *, response_format=None, max_tokens=None) -> str:
         options = {"response_format": response_format} if response_format else {}
@@ -346,40 +364,52 @@ class OpenAIClient(LLMClient):
             {"role": "user", "content": f"[会议标题] {meeting_title or '未命名'}\n[转写]\n{user_p}"},
         ]
         data = None
-        for attempt in range(2):   # 端点偶发截断（JSON 半途而废）与空串同属 hiccup：重试一次
-            raw = self._chat(base, response_format={"type": "json_object"},
-                             max_tokens=adaptive_max_tokens(len(filtered_text)))
+        token_budget = adaptive_max_tokens(len(filtered_text))
+        for attempt in range(2):
+            prompt = base if attempt == 0 else _structured_retry_messages(base, "分析")
+            raw = self._chat(prompt, response_format={"type": "json_object"},
+                             max_tokens=token_budget if attempt == 0 else _retry_token_budget(token_budget))
             data = _extract_json(raw)
-            if isinstance(data, dict):
+            if isinstance(data, dict) and isinstance(data.get("insights"), list) and data["insights"]:
                 break
-            log.warning("[llm] analyze attempt %d invalid JSON, retry", attempt + 1)
-        if not isinstance(data, dict):
-            raise LLMError(f"analyze: invalid JSON output: {raw[:200]!r}")
+            log.warning("[llm] analyze attempt %d invalid or empty structured output, retry", attempt + 1)
+        if not isinstance(data, dict) or not isinstance(data.get("insights"), list) or not data["insights"]:
+            raise LLMError("analyze: invalid JSON output")
         try:
             insights = []
             for it in data.get("insights", []):
                 idx = it.get("evidence_index")
-                ev = [filtered_meta_ids[idx]] if isinstance(idx, int) and 0 <= idx < len(filtered_meta_ids) else []
+                ev = [filtered_meta_ids[idx]] if isinstance(idx, int) and not isinstance(idx, bool) and 0 <= idx < len(filtered_meta_ids) else []
+                # A one-utterance batch has an unambiguous source even when the
+                # model omits evidence_index. Keep every extracted claim traceable.
+                if not ev and len(filtered_meta_ids) == 1:
+                    ev = [filtered_meta_ids[0]]
                 insights.append(InsightRecord(
                     type=str(it.get("type", "point")),
                     summary=str(it.get("summary", "")).strip(),
                     confidence=_clamp01(it.get("confidence", 0.7)),
                     importance_hint=it.get("importance_hint"),
                     evidence=ev,
+                    ownership_index=it.get("ownership_index"),
+                    relation_to_related=it.get("relation_suggestion"),
+                    importance_rationale=it.get("importance_rationale"),
+                    parent_index=it.get("parent_index"),
                 ))
             if not insights:
                 raise LLMError("analyze: non-empty input produced no insights")
             return MeetingSummary(meeting_id="?", meeting_title=meeting_title, insights=insights,
                                   thought=data.get("thought", "[llm] 结构化抽取"))
-        except (TypeError, ValueError, KeyError) as e:
-            raise LLMError(f"analyze: invalid structured output: {e}") from e
+        except (TypeError, ValueError, KeyError):
+            raise LLMError("analyze: invalid structured output") from None
 
     def sync(self, summary: MeetingSummary, board_cells: list, focus: list,
              messages: Optional[list] = None,
              tool_executor: Optional[Callable[[str, Dict], dict]] = None) -> GraphUpdateOp:
         from . import prompts
         board_summary = prompts.serialize_for_llm(board_cells)
-        ins_lines = "\n".join(f"- {i.type}: {i.summary} (refs={i.evidence})" for i in summary.insights)
+        ins_lines = "\n".join(
+            f"- {i.type}: {i.summary} (refs={i.evidence}; parent_index={i.parent_index}; "
+            f"relation={i.relation_to_related})" for i in summary.insights)
         focus_note = prompts.serialize_for_cursor(focus) if focus else ""
         sys_p = (prompts.SYSTEM_PROMPT + "\n" + prompts.OUTPUT_SCHEMA)
         base = messages or [
@@ -388,12 +418,13 @@ class OpenAIClient(LLMClient):
         ]
         data = None
         raw = ""
-        for attempt in range(2):   # 端点偶发截断/把 tool_calls 内联进 content 同属 hiccup：重试一次
-            conversation = list(base)
+        token_budget = adaptive_max_tokens(len(summary.insights))
+        for attempt in range(2):
+            conversation = list(base) if attempt == 0 else _structured_retry_messages(base, "看板同步")
             raw = ""
             for _ in range(2):
                 options = {"response_format": {"type": "json_object"},
-                           "max_tokens": adaptive_max_tokens(len(summary.insights))}
+                           "max_tokens": token_budget if attempt == 0 else _retry_token_budget(token_budget)}
                 if tool_executor:
                     options["tools"] = [prompts.FETCH_METADATA_TOOL]
                 message = self._completion(conversation, **options)
@@ -416,9 +447,9 @@ class OpenAIClient(LLMClient):
             data = _extract_json(raw)
             if isinstance(data, dict) and isinstance(data.get("operations"), list):
                 break
-            log.warning("[llm] sync attempt %d invalid JSON, retry", attempt + 1)
+            log.warning("[llm] sync attempt %d invalid structured output, retry", attempt + 1)
         if not isinstance(data, dict) or not isinstance(data.get("operations"), list):
-            raise LLMError(f"sync: invalid JSON output: {raw[:200]!r}")
+            raise LLMError("sync: invalid JSON output")
         try:
             ops = []
             for op in data.get("operations", []):
@@ -435,10 +466,12 @@ class OpenAIClient(LLMClient):
                     mark=op.get("mark"),
                     reason=op.get("reason"),
                     meta_ids=list(op.get("meta_ids") or []),
+                    confidence=_clamp01(op.get("confidence"), default=0.5),
+                    importance_rationale=op.get("importance_rationale"),
                 ))
             return GraphUpdateOp(operations=ops, thought=data.get("thought", "[llm] insights → ops"))
-        except (TypeError, ValueError, KeyError) as e:
-            raise LLMError(f"sync: invalid structured output: {e}") from e
+        except (TypeError, ValueError, KeyError):
+            raise LLMError("sync: invalid structured output") from None
 
 
 # ---------------------------------------------------------------------------
@@ -473,6 +506,12 @@ def _importance_hint(node_type: str) -> str:
     return "high" if node_type in ("action", "conclusion", "conflict") else "normal"
 
 
+def _normalize_mock_label(text: str) -> str:
+    """Normalize formatting-only differences while keeping Chinese words and negation."""
+    compact = re.sub(r"[\W_]+", "", str(text or "").casefold())
+    return compact or str(text or "").strip()
+
+
 def _mock_analyze(filtered_text, filtered_meta_ids, meeting_title):
     insights = []
     for i, txt in enumerate(filtered_text):
@@ -483,18 +522,35 @@ def _mock_analyze(filtered_text, filtered_meta_ids, meeting_title):
             evidence=[meta] if meta else [], confidence=0.7,
             importance_hint=_importance_hint(ntype),
             related_to="n_issue_root",
-            relation_to_related="oppose" if ntype == "conflict" else "support"))
+            relation_to_related="oppose" if ntype == "conflict" else "support",
+            importance_rationale=("affects_action" if ntype == "action" else
+                                  "adopted" if ntype == "conclusion" else "evidence")))
     return MeetingSummary(meeting_id="?", meeting_title=meeting_title, insights=insights,
                           thought="[fallback] 规则分级 + 挂到议题根")
 
 
 def _mock_sync(summary, board_cells):
     ops = []
-    existing = {c["id"] for c in board_cells}
+    existing = {c["id"] for c in board_cells if isinstance(c, dict) and c.get("id")}
+    ids_by_label = {}
+    for cell in board_cells:
+        if not isinstance(cell, dict) or cell.get("shape") == "edge":
+            continue
+        data = cell.get("data") or {}
+        label = data.get("label")
+        if isinstance(label, str):
+            key = (data.get("type"), _normalize_mock_label(label))
+            ids_by_label.setdefault(key, cell["id"])
     for ins in summary.insights:
-        nid = f"n_p_{stable_hash(ins.summary, 10 ** 6)}"   # 文本派生，跨重启稳定→可按 id 合并
-        ops.append(GraphOp(op="add_node", node=nid, node_type=ins.type,
-                           label=ins.summary[:40], meta_ids=list(ins.evidence)))
+        node_type = "conflict" if ins.type == "dispute" else "issue" if ins.type == "question" else ins.type
+        key = (node_type, _normalize_mock_label(ins.summary))
+        nid = ids_by_label.get(key)
+        if nid is None:
+            nid = f"n_p_{stable_hash(key[1], 10 ** 6)}"  # 标点/空白差异归并，保留否定词
+            ids_by_label[key] = nid
+        ops.append(GraphOp(op="add_node", node=nid, node_type=node_type,
+                           label=ins.summary[:40], meta_ids=list(ins.evidence), confidence=ins.confidence,
+                           importance_rationale=ins.importance_rationale))
         if ins.related_to and ins.related_to in existing:
             ops.append(GraphOp(op="link", source=nid, target=ins.related_to,
                                relation=ins.relation_to_related or "support"))

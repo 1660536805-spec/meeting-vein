@@ -62,17 +62,19 @@ class UtteranceRouteValidationTests(unittest.TestCase):
     def test_status_discloses_mode_but_not_key(self) -> None:
         # Config 为 frozen dataclass，不能再 patch 实例字段；改为整体替换模块级单例（语义不变）。
         mock_cfg = dataclasses.replace(config.CONFIG, llm_enabled=False, llm_api_key="secret-for-test")
-        with patch.object(config, "CONFIG", mock_cfg):
+        with patch.object(config, "CONFIG", mock_cfg), patch.object(server.agent, "llm", MockLLM()):
             response = self.client.get("/api/status")
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json()["llm_mode"], "mock")
             self.assertNotIn("secret-for-test", response.text)
 
         real_cfg = dataclasses.replace(config.CONFIG, llm_enabled=True, llm_api_key="secret-for-test")
-        with patch.object(config, "CONFIG", real_cfg):
+        with patch.object(config, "CONFIG", real_cfg), patch.object(server.agent, "llm", MockLLM()):
             response = self.client.get("/api/status")
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.json()["llm_mode"], "configured")
+            # Server startup built a MockLLM instance; enabling config at request time does not
+            # mean that the running BoardAgent switched to a real client.
+            self.assertEqual(response.json()["llm_mode"], "mock")
             self.assertNotIn("secret-for-test", response.text)
 
     def test_accepted_event_updates_board_and_metadata(self) -> None:
@@ -92,6 +94,7 @@ class UtteranceRouteValidationTests(unittest.TestCase):
                 response = self.client.post("/api/utterances", json=EVENT)
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.json()["utterance_id"], "utt_local_1")
+                self.assertEqual(response.json()["state"], "committed")
                 self.assertFalse(response.json()["duplicate"])
                 cells = self.client.get("/api/board?meeting_id=mtg_demo").json()["cells"]
                 references = [ref for cell in cells for ref in cell.get("data", {}).get("metadata_refs", [])]
@@ -99,6 +102,10 @@ class UtteranceRouteValidationTests(unittest.TestCase):
                 records = self.client.get(f"/api/metadata?ids={references[0]}").json()["records"]
                 self.assertEqual(records[0]["text"], EVENT["text"])
                 self.assertEqual(records[0]["source_utterance_id"], "utt_local_1")
+                self.assertEqual(records[0]["display_name"], EVENT["speaker"]["display_name"])
+                status = self.client.get("/api/utterances/utt_local_1/status?meeting_id=mtg_demo")
+                self.assertEqual(status.json()["state"], "committed")
+                self.assertIsInstance(status.json()["board_version"], int)
                 event_types = [subscriber.get_nowait()["type"] for _ in range(subscriber.qsize())]
                 self.assertIn("board.update", event_types)
 
@@ -125,7 +132,8 @@ class UtteranceIngestorTests(unittest.IsolatedAsyncioTestCase):
 
         event = IncomingUtterance(**EVENT)
         first = await UtteranceIngestor(self.store_a, self.store_b, self.drive).ingest(event)
-        self.assertEqual(first, {"ok": True, "utterance_id": "utt_local_1", "duplicate": False})
+        self.assertEqual(first["state"], "committed")
+        self.assertFalse(first["duplicate"])
         self.assertEqual(self.events.qsize(), 1)
         self.assertEqual(len(self.driven), 1)
         self.assertEqual(self.driven[0][0], "mtg_demo")
@@ -136,7 +144,8 @@ class UtteranceIngestorTests(unittest.IsolatedAsyncioTestCase):
 
         restarted = UtteranceIngestor(StoreA(self.directory.name), StoreB(self.directory.name), self.drive)
         again = await restarted.ingest(event)
-        self.assertEqual(again, {"ok": True, "utterance_id": "utt_local_1", "duplicate": True})
+        self.assertEqual(again["state"], "committed")
+        self.assertTrue(again["duplicate"])
         self.assertEqual(len(self.driven), 1)
         self.assertEqual(self.events.qsize(), 1)
 
@@ -164,12 +173,55 @@ class UtteranceIngestorTests(unittest.IsolatedAsyncioTestCase):
 
         ingestor = UtteranceIngestor(self.store_a, self.store_b, flaky_drive)
         event = IncomingUtterance(**EVENT)
-        with self.assertRaisesRegex(RuntimeError, "agent unavailable"):
-            await ingestor.ingest(event)
+        first = await ingestor.ingest(event)
+        self.assertEqual(first["state"], "failed")
+        self.assertEqual(first["error"], "RuntimeError")
         result = await ingestor.ingest(event)
         self.assertFalse(result["duplicate"])
         self.assertEqual(attempts, 2)
         self.assertEqual(self.store_b.get(self.driven[0][1].utterance_id)["processing_state"], "done")
+
+    async def test_restart_recovers_durable_incomplete_record(self) -> None:
+        from app.utterance_ingest import IncomingUtterance, UtteranceIngestor, metadata_id
+
+        event = IncomingUtterance(**EVENT)
+        meta_id = metadata_id(event.meeting_id, event.utterance_id)
+        self.store_b.put(meta_id, {
+            "meta_id": meta_id, "kind": "utt", "meeting_id": event.meeting_id,
+            "source_utterance_id": event.utterance_id, "text": event.text,
+            "speaker_ref": event.speaker.speaker_ref, "display_name": event.speaker.display_name,
+            "start_offset_ms": event.start_offset_ms, "end_offset_ms": event.end_offset_ms,
+            "source": event.source, "processing_state": "processing",
+        })
+        self.store_b.flush(force=True)
+        recovered = await UtteranceIngestor(self.store_a, self.store_b, self.drive).recover_incomplete()
+        self.assertEqual(recovered, 1)
+        self.assertEqual(self.store_b.get(meta_id)["processing_state"], "done")
+
+    async def test_restart_after_board_commit_repairs_state_without_redriving(self) -> None:
+        from app.utterance_ingest import IncomingUtterance, UtteranceIngestor, metadata_id
+
+        event = IncomingUtterance(**EVENT)
+        meta_id = metadata_id(event.meeting_id, event.utterance_id)
+        self.store_a.create_meeting(event.meeting_id, "demo")
+        self.store_a.save(event.meeting_id, [{
+            "id": "point", "shape": "amo-node",
+            "data": {"type": "point", "metadata_refs": [meta_id]},
+        }])
+        self.store_b.put(meta_id, {
+            "meta_id": meta_id, "kind": "utt", "meeting_id": event.meeting_id,
+            "source_utterance_id": event.utterance_id, "text": event.text,
+            "speaker_ref": event.speaker.speaker_ref, "display_name": event.speaker.display_name,
+            "start_offset_ms": event.start_offset_ms, "end_offset_ms": event.end_offset_ms,
+            "source": event.source, "processing_state": "processing",
+        })
+        self.store_b.flush(force=True)
+
+        recovered = await UtteranceIngestor(self.store_a, self.store_b, self.drive).recover_incomplete()
+
+        self.assertEqual(recovered, 1)
+        self.assertEqual(self.store_b.get(meta_id)["processing_state"], "done")
+        self.assertEqual(self.driven, [])
 
     async def test_restart_after_graph_write_does_not_repeat_mention(self) -> None:
         from app.utterance_ingest import IncomingUtterance
@@ -191,8 +243,8 @@ class UtteranceIngestorTests(unittest.IsolatedAsyncioTestCase):
             original_put(meta_id, record)
 
         with patch.object(self.store_b, "put", side_effect=fail_first_done):
-            with self.assertRaisesRegex(OSError, "after graph write"):
-                await UtteranceIngestor(store_a, self.store_b, drive).ingest(IncomingUtterance(**EVENT))
+            first = await UtteranceIngestor(store_a, self.store_b, drive).ingest(IncomingUtterance(**EVENT))
+            self.assertEqual(first["state"], "processing")
 
         before = store_a.load("mtg_demo")
         mentions_before = sum(cell.get("data", {}).get("mention_count", 0) for cell in before)
