@@ -3,6 +3,18 @@
 .decision-workspace #board-shell, .decision-workspace #mascot { border:1px solid #233a55; border-radius:18px 18px 0 0; }
 .decision-workspace #board-shell { position:relative; background:radial-gradient(ellipse at 45% 68%,#092b3c66,transparent 45%),radial-gradient(ellipse at 76% 55%,#152d7566,transparent 34%),linear-gradient(135deg,#081523,#061321); }
 #board-stage { display:flex; flex:1; min-height:0; position:relative; }
+#board-controls { display:flex; align-items:center; flex-wrap:wrap; gap:8px; flex:0 0 auto; padding:10px; background:var(--night-panel); border-bottom:1px solid var(--master-line); }
+#board-controls #board-view-switch, #board-controls #board-scope-switch { position:static; box-shadow:none; }
+#board-controls #board-scope-switch { margin-left:auto; }
+#board-fullscreen { margin-left:auto; min-height:36px; padding:6px 12px; border:1px solid var(--master-line); border-radius:8px; background:var(--night-panel); color:var(--master-text); font:inherit; font-size:12px; cursor:pointer; }
+#board-scope-switch + #board-fullscreen { margin-left:0; }
+body.task-plan-mode #board-fullscreen { margin-left:auto; }
+#board-fullscreen:hover { background:var(--master-blue); color:var(--night-panel); }
+#board-fullscreen:focus-visible { outline:2px solid var(--master-blue); outline-offset:2px; }
+.decision-workspace #board-shell:fullscreen,
+.decision-workspace #board-shell[data-fullscreen-fallback] { position:fixed; inset:0; z-index:1000; width:100%; height:100dvh; min-height:0; max-height:none; border:0; border-radius:0; background:var(--night-panel); }
+.decision-workspace #board-shell:fullscreen #board-stage,
+.decision-workspace #board-shell[data-fullscreen-fallback] #board-stage { flex:1; min-height:0; }
 .decision-workspace #board { background:transparent; min-width:0; }
 .decision-workspace #board .x6-graph-background { background:transparent !important; }
 .decision-workspace #board .x6-node [selector="body"] { filter:drop-shadow(0 0 10px #147cba25); }

@@ -1,6 +1,7 @@
 import { Graph } from "@antv/x6";
 import { beginAutoAdjust, composeAutoFit, endAutoAdjust, getUserZoomFactor } from "./view-scale";
 import { projectBoard } from "./projection";
+import { observeGraphSize } from "./viewport";
 
 /** X6 看板渲染（Design_StructureGraph_Storage §3 / Research_X6_MindMap）。
  * 后端 Store A 的 cell 采用 X6 v1 风格 + 自定义 shape(amo-node)，本层做 v1→v2 归一化：
@@ -701,18 +702,8 @@ export function createGraph(container: HTMLElement, readOnly = false): Graph {
   });
   // X6 构造时按容器当前尺寸写死内联 width/height；首帧为 0 时会锁死 0×0（画布不可见）。
   // 清掉内联让 flex 接管，并随容器尺寸变化同步画布（ResizeObserver，写入值收敛无死循环）。
-  const syncSize = () => {
-    container.style.width = "";
-    container.style.height = "";
-    const w = container.clientWidth;
-    const h = container.clientHeight;
-    if (w > 0 && h > 0) {
-      graph.resize(w, h);
-      if (isDecisionWorkspace() && initialFocusDone) applyWorkspaceDefaultZoom(graph);
-    }
-  };
-  syncSize();
-  new ResizeObserver(syncSize).observe(container);
+  const disposeSize = observeGraphSize(graph);
+  graph.use({ name: "viewport-size", init() {}, dispose: disposeSize });
   // 只在此处绑定一次的图内编辑监听（renderBoard/applyBoardUpdate 不得再绑定）。
   trackLocalEdits(graph);
   // 只更新外观，保留节点位置、编辑内容、选择与当前缩放。

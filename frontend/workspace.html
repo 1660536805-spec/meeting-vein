@@ -107,7 +107,7 @@
       <div id="workspace-content">
        <div id="work-area">
         <div id="board-shell">
-          <div id="board-stage">
+          <div id="board-controls">
           <div id="board-view-switch" role="tablist" aria-label="看板视图">
             <button id="view-graph" type="button" role="tab" aria-selected="true">关系图</button>
             <button id="view-issues" type="button" role="tab" aria-selected="false">议题结构</button>
@@ -117,6 +117,9 @@
             <button id="scope-local" type="button" aria-pressed="true">当前关系</button>
             <button id="scope-full" type="button" aria-pressed="false">全图</button>
           </div>
+          <button id="board-fullscreen" type="button" aria-pressed="false">画布全屏</button>
+          </div>
+          <div id="board-stage">
           <section id="utterance-rail" aria-label="相关原始发言" hidden><div class="rail-caption">原始发言 <span id="utterance-count">0</span></div><div id="utterance-list"></div></section>
           <div id="board" tabindex="0" role="group" aria-describedby="board-keyboard-hint board-keyboard-status"
             aria-label="会议结构看板：议题、要点、论据、结论、行动项与分歧的关系图">
@@ -135,7 +138,7 @@
               <span id="board-zoom-value" aria-label="当前缩放比例">100%</span>
               <button id="tb-zoom-in" type="button" title="放大" aria-label="放大">+</button>
               <button id="tb-relayout" type="button" title="重新排版（解除手动位置，按层级自动重排）" aria-label="重新排版">重排</button>
-              <button id="board-fullscreen" type="button" aria-pressed="false">图谱全屏</button>
+              <button id="tb-fit" type="button" title="让当前图的全部节点显示在画布内" aria-label="适应画布">适应画布</button>
               <span class="tb-divider" aria-hidden="true"></span>
               <button id="edit-cell" type="button" title="编辑选中的节点" disabled>编辑节点</button>
               <button id="delete-cell" type="button" title="删除选中的节点或连线">删除选中</button>
