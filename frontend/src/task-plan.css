@@ -1,0 +1,70 @@
+#task-plan-view[hidden] { display: none; }
+#task-plan-view { position: absolute; inset: 0; z-index: 5; overflow: auto; background: var(--ant-bg-layout); color: var(--ant-text); padding: 20px 24px; }
+#task-plan-view * { box-sizing: border-box; }
+#task-plan-view h2 { margin: 0 0 8px; font-size: 24px; font-weight: 650; letter-spacing: -.02em; }
+#task-plan-view h3 { margin: 0 0 12px; font-size: 17px; font-weight: 600; }
+#task-plan-view h4 { font-size: 16px; margin: 0 0 12px; overflow-wrap: anywhere; }
+#task-plan-view p { margin: 6px 0 12px; line-height: 1.6; max-width: 70ch; }
+#task-plan-view header p, .plan-hint, .plan-rationale { color: var(--ant-text-secondary); font-size: 13px; }
+#task-plan-view button, #task-plan-view input, #task-plan-view select, #task-plan-view textarea { font: inherit; color: var(--ant-text); border: 1px solid var(--ant-border); border-radius: 8px; background: var(--ant-bg-container); padding: 8px 10px; min-height: 36px; }
+#task-plan-view button { cursor: pointer; font-size: 13px; }
+#task-plan-view button:hover { border-color: var(--ant-primary); background: var(--ant-primary-bg); }
+#task-plan-view button:disabled { opacity: .55; cursor: default; }
+#task-plan-view button:focus-visible, #task-plan-view input:focus-visible, #task-plan-view select:focus-visible, #task-plan-view textarea:focus-visible, #task-plan-view summary:focus-visible { outline: 2px solid var(--ant-primary); outline-offset: 3px; }
+#task-plan-view ::selection { background: var(--ant-primary-bg); color: var(--ant-text); }
+#task-plan-view input, #task-plan-view textarea { caret-color: var(--ant-primary); }
+#task-plan-view textarea::placeholder { color: var(--ant-text-secondary); opacity: 1; }
+#task-plan-view .plan-primary { background: var(--ant-primary); border-color: var(--ant-primary); color: var(--ant-bg-container); }
+.plan-header { display: flex; gap: 20px; justify-content: space-between; align-items: start; flex-wrap: wrap; }
+.plan-tools, .plan-switches { display: flex; gap: 8px; align-items: end; flex-wrap: wrap; }
+#task-plan-view label { display: grid; gap: 6px; font-size: 13px; }
+.plan-notice { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 13px; padding: 12px 0; }
+.plan-notice span { color: var(--ant-text-secondary); }
+.plan-notice p { color: var(--ant-error); width: 100%; }
+.plan-message { font-size: 13px; color: var(--ant-primary); min-height: 20px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.plan-switches button[aria-pressed="true"], .plan-task-list button[aria-pressed="true"] { border-color: var(--ant-primary) !important; background: var(--ant-primary-bg) !important; }
+.plan-body { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(270px, 320px); gap: 24px; align-items: start; }
+.plan-visual { position: relative; min-width: 0; border: 1px solid var(--ant-border-secondary); border-radius: 12px; background: var(--ant-bg-container); overflow: hidden; }
+.plan-canvas-frame { width: 100%; height: 340px; overflow: hidden; }
+.plan-canvas { width: 100%; height: 100%; }
+.plan-empty { position: absolute; inset: 0 0 auto; padding: 56px 32px; height: 340px; background: var(--ant-bg-container); }
+.plan-empty[hidden], .plan-graph-tools[hidden] { display: none; }
+.plan-graph-tools { display: flex; gap: 6px; padding: 10px 12px; border-top: 1px solid var(--ant-border-secondary); }
+.plan-task-list { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 12px; }
+.plan-task-list button { max-width: 100%; text-align: left; overflow-wrap: anywhere; }
+.plan-aside { min-width: 0; }
+.plan-inspector form { display: grid; gap: 12px; }
+.plan-date-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.plan-date-fields input { width: 100%; min-width: 0; font-size: 12px !important; font-variant-numeric: tabular-nums; }
+.plan-inspector fieldset { padding: 10px 0; margin: 0; border: 0; }
+.plan-inspector legend { font-size: 13px; padding: 0 0 8px; }
+#task-plan-view .plan-dependency { display: flex; align-items: center; gap: 8px; margin: 4px 0; overflow-wrap: anywhere; }
+#task-plan-view input[type="checkbox"] { width: 16px; height: 16px; min-height: 16px; accent-color: var(--ant-primary); flex-shrink: 0; }
+.plan-qa { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--ant-border-secondary); }
+.plan-qa textarea { width: 100%; resize: vertical; display: block; margin: 10px 0; }
+.plan-answer { white-space: pre-wrap; font-size: 13px; overflow-wrap: anywhere; }
+.plan-answer button { margin: 4px 4px 4px 0; }
+#task-plan-view summary { cursor: pointer; font-size: 13px; color: var(--ant-primary); padding: 10px 0; }
+#task-plan-view blockquote { margin: 4px 0 12px; padding: 12px; background: var(--ant-bg-layout); border: 1px solid var(--ant-border-secondary); border-radius: 8px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+body.task-plan-mode #board-scope-switch, body.task-plan-mode #utterance-rail, body.task-plan-mode #input-dock { display: none !important; }
+body.task-plan-mode #mascot { display: none; }
+body.task-plan-mode #workspace-content { grid-template-columns: minmax(0, 1fr); }
+body.task-plan-mode #board { visibility: hidden; }
+body.task-plan-mode #main { display: flex; flex-direction: column; overflow: hidden; }
+body.task-plan-mode #workspace-content { flex: 1; display: flex; min-height: 0; }
+body.task-plan-mode #work-area { flex: 1; height: auto; min-height: 0; }
+body.task-plan-mode #board-shell { min-height: 0; }
+@media (max-width: 900px) {
+  #task-plan-view { padding: 18px 16px; }
+  .plan-body { grid-template-columns: 1fr; }
+  .plan-aside { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .plan-qa { margin-top: 0; padding: 0; border: 0; }
+}
+@media (max-width: 600px) {
+  #task-plan-view { padding: 16px 12px; }
+  #task-plan-view h2 { font-size: 21px; }
+  .plan-tools { width: 100%; }
+  .plan-aside { display: block; }
+  .plan-qa { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--ant-border-secondary); }
+  .plan-canvas-frame, .plan-empty { height: 280px; }
+}

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Graph } from "@antv/x6";
 import { currentZoom, mountBoardToolbar, zoomBy } from "./toolbar";
+import { clearUserZoomFactor, getUserZoomFactor, noteUserZoom } from "./view-scale";
 
 type Handler = (...args: any[]) => void;
 type ZoomOptions = { absolute?: boolean };
@@ -40,6 +41,7 @@ function setupToolbarDom(): void {
 afterEach(() => {
   vi.restoreAllMocks();
   document.body.innerHTML = "";
+  clearUserZoomFactor();
 });
 
 describe("zoom helpers", () => {
@@ -67,6 +69,20 @@ describe("zoom helpers", () => {
 });
 
 describe("mountBoardToolbar", () => {
+  it("fits the current graph and releases the previous zoom preference", () => {
+    setupToolbarDom();
+    document.body.insertAdjacentHTML("beforeend", '<button id="tb-fit"></button>');
+    const graph = makeGraph(2);
+    noteUserZoom(2);
+    const dispose = mountBoardToolbar(graph);
+    document.getElementById("tb-fit")!.click();
+    expect(graph.zoomToFit).toHaveBeenCalledWith({ padding: 48, maxScale: 1 });
+    expect(getUserZoomFactor()).toBeNull();
+    dispose();
+    graph.zoomToFit.mockClear();
+    document.getElementById("tb-fit")!.click();
+    expect(graph.zoomToFit).not.toHaveBeenCalled();
+  });
   it("shows the initial zoom percentage and updates it on click", () => {
     setupToolbarDom();
     const graph = makeGraph(1);
