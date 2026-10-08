@@ -69,7 +69,7 @@ beforeEach(() => {
     asr: { final: { state: "ready" }, streaming: { state: "ready" } },
     persistence: { store_a: "ready", store_b: "ready", pending_retries: 0 } });
   transcribeAudioMock.mockResolvedValue({ ok: true, event, transcription: { text: event.text } });
-  submitUtteranceMock.mockResolvedValue({ ok: true, utterance_id: event.utterance_id, duplicate: false, state: "committed", meta_id: "meta-1", board_version: 2 });
+  submitUtteranceMock.mockResolvedValue({ ok: true, utterance_id: event.utterance_id, duplicate: false, state: "committed", meta_id: "meta-1", board_version: 2, board_effect: "linked" });
   getUtteranceStatusMock.mockResolvedValue({ utterance_id: event.utterance_id, meta_id: "meta-1", state: "committed", board_version: 2, attempts: 1 });
   liveFinishMock.mockResolvedValue(undefined);
 });
@@ -107,7 +107,7 @@ describe("ASR panel", () => {
     await waitFor(() => expect(submitUtteranceMock).toHaveBeenCalledWith(event));
   });
 
-  it("submits each live segment to the board and skips the whole recording fallback", async () => {
+  it("submits each live segment once and uses the whole recording only for review", async () => {
     const root = fixture(); mountAsrPanel(root, "mtg_demo");
     fireEvent.click(button(root, "#asr-record"));
     liveState.callbacks?.onSegment?.({ segmentId: "utt_local_stream_1", text: "第一个分支", language: "zh", startOffsetMs: 0, endOffsetMs: 1200 });
@@ -116,8 +116,7 @@ describe("ASR panel", () => {
       utterance_id: "utt_local_stream_1", text: "第一个分支", meeting_id: "mtg_demo", source: "local_streaming",
     }));
     fireEvent.click(button(root, "#asr-stop"));
-    await waitFor(() => expect(liveFinishMock).toHaveBeenCalled());
-    expect(transcribeAudioMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(transcribeAudioMock).toHaveBeenCalledTimes(1));
     expect(submitUtteranceMock).toHaveBeenCalledTimes(1);
   });
 
@@ -132,7 +131,7 @@ describe("ASR panel", () => {
     fireEvent.click(button(root, "#asr-stop"));
     await waitFor(() => expect(transcribeAudioMock).toHaveBeenCalled());
     expect(text(root, "#asr-transcript")).toBe(reviewEvent.text);
-    expect(text(root, "#asr-message")).toContain("建议补录遗漏：开场补充；尾部结论");
+    expect(text(root, "#asr-message")).toContain("建议补录：开场补充；尾部结论");
     expect(submitUtteranceMock).toHaveBeenCalledTimes(1);
   });
 
@@ -157,14 +156,14 @@ describe("ASR panel", () => {
     getModelStatusMock.mockReturnValue(new Promise((done) => { resolve = done; }));
     getProductStatusMock.mockResolvedValue({ llm_mode: "real", llm_instance: { type: "openai_compatible", model: "test-model" },
       asr: { final: { state: "ready" }, streaming: { state: "ready" } },
-      persistence: { store_a: "ready", store_b: "ready", pending_retries: 2 } });
+      persistence: { store_a: "ready", store_b: "ready", pending_retries: 2 }, pending_by_meeting: { mtg_demo: 2 } });
     const root = fixture(); const panel = mountAsrPanel(root, "mtg_demo");
     expect(text(root, "#asr-model-status")).toContain("检查");
     resolve({ state: "ready", device: "cpu" });
     await waitFor(() => expect(text(root, "#asr-model-status")).toContain("就绪"));
     expect(text(root, "#llm-mode")).toContain("真实模型实例");
     expect(text(root, "#llm-mode")).toContain("test-model");
-    expect(text(root, "#product-status")).toContain("待重试 2");
+    expect(text(root, "#product-status")).toContain("当前会议待整理 2 批");
     panel.dispose();
   });
 
@@ -194,7 +193,7 @@ describe("ASR panel", () => {
     fireEvent.click(button(root, "#asr-stop"));
     await waitFor(() => expect(submitUtteranceMock).toHaveBeenCalledWith(event));
     expect(text(root, "#asr-transcript")).toBe(event.text);
-    expect(text(root, "#asr-message")).toContain("已整理进看板");
+    expect(text(root, "#asr-message")).toContain("原话已关联到看板");
     expect(recorderPauseMock).toHaveBeenCalledTimes(1);
     expect(recorderResumeMock).toHaveBeenCalledTimes(1);
     panel.dispose(); expect(recorderDisposeMock).toHaveBeenCalled();

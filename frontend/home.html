@@ -11,9 +11,10 @@
   <link rel="stylesheet" href="/src/cover-motion.css" />
   <script type="module" src="/src/intro.ts"></script>
   <link rel="stylesheet" href="/src/theme.css" />
+  <link rel="stylesheet" href="/src/home-redesign.css" />
   <script type="module" src="/src/theme.ts"></script>
 </head>
-<body>
+<body class="home-page">
   <main>
     <section class="home-hero" id="story" aria-label="AI 会议秘书项目介绍">
       <div class="desktop-copy sr-only">
@@ -91,33 +92,107 @@
         <a class="mobile-enter" href="/workspace.html">开始一次相遇 <span aria-hidden="true">→</span></a>
       </div>
     </section>
-    <section class="capabilities" id="capabilities" aria-labelledby="capabilities-title">
-      <div class="night-glow" aria-hidden="true"></div>
-      <div class="capabilities-inner">
-        <div class="section-heading">
-          <div class="heading-copy">
-            <span class="eyebrow"><i></i> CORE CAPABILITIES · 核心能力</span>
-            <h2 id="capabilities-title">让讨论留下<br><em>清晰脉络</em></h2>
-            <p>从实时语音到结构化议题看板。双 Agent 提炼发言中的观点与论据，让每个结论都有出处，每项待办都有去向。</p>
-            <a class="section-enter" href="/workspace.html">进入会议看板 <span aria-hidden="true">↗</span></a>
+    <section class="home-story" id="capabilities" aria-labelledby="story-title">
+      <div class="home-story-inner">
+        <header class="story-intro">
+          <p class="story-kicker"><span class="section-index">01 /</span> 从一场对话开始</p>
+          <div class="story-intro-grid">
+            <h2 id="story-title">让每一句话，<br><em>找到自己的位置。</em></h2>
+            <p>一场讨论里，灵感、质疑和决定交错出现。会脉把发言与上下文连接起来，让团队看见想法如何形成，也知道接下来该做什么。</p>
           </div>
-          <div class="hero-diagram" aria-hidden="true">
-            <div class="diagram-top"><span><i></i> 讨论结构 · 实时生成</span><span>LIVE</span></div>
-            <svg viewBox="0 0 430 270" role="presentation"><defs><linearGradient id="graph-line"><stop stop-color="#8eb7ee"/><stop offset="1" stop-color="#e9bd83"/></linearGradient></defs><g fill="none" stroke="url(#graph-line)" stroke-opacity=".57" stroke-width="1.4"><path d="M215 132 98 60M215 132 334 63M215 132 78 202M215 132 335 209M98 60 78 202M334 63 335 209"/></g><g fill="#132843" stroke="#8bb4ec" stroke-width="2"><circle cx="98" cy="60" r="11"/><circle cx="334" cy="63" r="11"/><circle cx="78" cy="202" r="11"/><circle cx="335" cy="209" r="11"/></g><circle cx="215" cy="132" r="33" fill="#243a5a" stroke="#d9e8ff" stroke-width="1.5"/><circle cx="215" cy="132" r="39" fill="none" stroke="#8eb7ee" stroke-opacity=".35"/><g fill="#dce8fa" font-size="12" font-family="sans-serif"><text x="184" y="137">会议主题</text><text x="78" y="38">观点</text><text x="314" y="40">结论</text><text x="58" y="237">论据</text><text x="315" y="241">待办</text></g></svg>
-            <div class="diagram-bottom"><span class="diagram-wave"><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></span><span>发言正在变成脉络</span></div>
-          </div>
-        </div>
-        <div class="capability-list" aria-label="功能介绍">
-          <article class="feature-card feature-wide"><div class="feature-meta"><span>01 / 实时协作</span><span class="feature-signal">● LIVE</span></div><h3>实时结构化看板</h3><p>语音与文本输入实时驱动双 Agent，把发言整理成议题、观点和论据关系图。</p><div class="feature-visual visual-board" aria-hidden="true"><span>议题</span><i></i><span>观点 A</span><i></i><span>论据</span></div></article>
-          <article class="feature-card"><div class="feature-meta"><span>02 / 关系阅读</span><span>↗</span></div><h3>语义透镜与聚焦</h3><p>按支持、反对、从属等关系筛选连线，快速看清讨论脉络。</p><div class="feature-visual visual-tags" aria-hidden="true"><span>支持</span><span>反对</span><span>从属</span></div></article>
-          <article class="feature-card"><div class="feature-meta"><span>03 / 依据回看</span><span>↗</span></div><h3>每个结论都有出处</h3><p>节点关联原始发言与说话人，重要判断随时可以回看、核对。</p><div class="feature-visual visual-quote" aria-hidden="true"><span>“我们先完成方案评估…”</span><small>原始发言 · 14:32</small></div></article>
-          <article class="feature-card"><div class="feature-meta"><span>04 / 协同共创</span><span>↗</span></div><h3>人机协同编辑</h3><p>直接调整 AI 整理的节点与关系，让人工判断留在最终结构里。</p><div class="feature-visual visual-edit" aria-hidden="true"><span>观点整理</span><b>✓ 已确认</b></div></article>
-          <article class="feature-card"><div class="feature-meta"><span>05 / 会议档案</span><span>↗</span></div><h3>历史会议管理</h3><p>保存看板快照，回看会议结构与历史记录，延续上次讨论。</p><div class="feature-visual visual-history" aria-hidden="true"><span><i></i> 保存</span><span><i></i> 回看</span></div></article>
-          <article class="feature-card feature-wide"><div class="feature-meta"><span>06 / 智能陪伴</span><span>↗</span></div><h3>让整理过程更自然</h3><p>看板娘实时反馈会议状态；拖拽与悬停手势让观点和关系的调整更顺手。</p><div class="feature-visual visual-companion" aria-hidden="true"><span class="companion-face">✦</span><span>捕捉意图</span><i></i><span>整理看板</span><i></i><span>形成结论</span></div></article>
-        </div>
-        <div class="section-footer"><div><small>FROM CONVERSATION TO CLARITY</small><strong>每一次发言，都能成为下一步的起点。</strong></div><a href="/history.html">查看历史会议 <span aria-hidden="true">↗</span></a></div>
+        </header>
+        <ol class="journey" aria-label="从发言到会议纪要的三个环节">
+          <li><span class="journey-number">01 <i></i> CAPTURE</span><strong>接住现场</strong><p>语音逐段转写，文字随时补充。重要的表达从此有迹可循。</p></li>
+          <li><span class="journey-number">02 <i></i> CONNECT</span><strong>连接想法</strong><p>议题、观点、依据与分歧自动聚在一张可编辑的图谱里。</p></li>
+          <li><span class="journey-number">03 <i></i> CONTINUE</span><strong>推进下一步</strong><p>核对原话，整理结论和待办，让会议结果能继续被使用。</p></li>
+        </ol>
       </div>
     </section>
+
+    <section class="product-stage" id="product" aria-labelledby="product-title">
+      <div class="product-stage-heading">
+        <div><p class="story-kicker"><span class="section-index">02 /</span> 讨论结构 · 可视化</p><h2 id="product-title">看清讨论<br><em>如何生长。</em></h2></div>
+        <p>不是一份平铺的纪要，而是一张可以继续探索的关系图。每个节点都保留语境，每条连接都帮助你理解想法之间的关系。</p>
+      </div>
+      <div class="product-window" role="img" aria-label="会议知识图谱示例：从产品方向议题延伸出先做二维原型、开发周期和画面表现等观点与依据">
+        <div class="window-topbar"><div class="window-brand"><span class="window-logo">✦</span> 会脉 <span class="window-divider"></span><strong>游戏方案讨论</strong><span class="window-chevron">⌄</span></div><div class="window-status"><span class="status-pulse"></span> 讨论结构 · 实时整理</div><div class="window-actions"><span>分享</span><span class="window-export">导出 ↗</span></div></div>
+        <div class="window-body">
+          <aside class="window-sidebar" aria-hidden="true"><span>概览</span><span class="selected">脉络看板</span><span>发言记录</span><span>结论与待办</span><span class="sidebar-bottom">会脉 · 让观点有迹可循</span></aside>
+          <div class="window-canvas">
+            <div class="canvas-toolbar"><span>议题脉络</span><span>支持关系</span><span>反对关系</span><span class="canvas-toolbar-right">缩放 100% ···</span></div>
+            <svg class="graph-links" viewBox="0 0 850 455" preserveAspectRatio="none" aria-hidden="true"><path d="M178 224 C235 224 224 103 302 103 M178 224 C235 224 224 312 302 312 M502 103 C552 103 551 76 603 76 M502 103 C552 103 551 208 603 208 M502 312 C560 312 547 378 603 378"/><path class="graph-link-dashed" d="M502 312 C557 312 551 208 603 208"/></svg>
+            <div class="graph-node graph-root"><span class="node-kind"><i></i> 议题</span><strong>游戏方案该从哪里开始？</strong><small>讨论焦点</small></div>
+            <div class="graph-node graph-idea"><span class="node-kind"><i></i> 观点</span><strong>先做一版 2D 原型</strong><small>验证核心玩法是否成立</small></div>
+            <div class="graph-node graph-counter"><span class="node-kind"><i></i> 待讨论</span><strong>3D 的表现空间</strong><small>需要进一步评估</small></div>
+            <div class="graph-node graph-evidence"><span class="node-kind"><i></i> 依据</span><strong>开发周期有限</strong><small>来自原始发言</small></div>
+            <div class="graph-node graph-question"><span class="node-kind"><i></i> 疑问</span><strong>视觉目标能否满足？</strong><small>尚未达成共识</small></div>
+            <div class="graph-node graph-next"><span class="node-kind"><i></i> 下一步</span><strong>安排可玩性测试</strong><small>待确认负责人</small></div>
+            <div class="canvas-legend"><span><i></i> 发言正在形成脉络</span><span>示例内容 · 可人工调整</span></div>
+          </div>
+          <aside class="window-inspector" aria-hidden="true"><div class="inspector-tabs"><strong>节点详情</strong><span>关联内容</span></div><div class="inspector-type">观点 / 02</div><h3>先做一版 2D 原型</h3><p>先用最小可玩的版本验证玩法，再决定表现形式。</p><div class="inspector-rule"></div><small>关联原话</small><blockquote>“我们先做一版能试玩的 2D 原型，看看核心玩法能不能成立。”</blockquote><span class="inspector-source">原话可回看 ↗</span></aside>
+        </div>
+      </div>
+      <div class="product-caption"><span>会脉工作台 · 界面示意</span><div><a href="#technology">了解技术实现 ↓</a><a href="/workspace.html">亲自打开看板 <span aria-hidden="true">↗</span></a></div></div>
+    </section>
+
+    <section class="technology" id="technology" aria-labelledby="technology-title">
+      <div class="technology-inner">
+        <header class="technology-heading"><div><p class="story-kicker"><span class="section-index">03 /</span> TECHNOLOGY BEHIND HUIMAI</p><h2 id="technology-title">从声音到结构，<br><em>每一步都有依据。</em></h2></div><p>会脉把语音识别、语义分析和图谱更新拆成边界清晰的环节。双智能体各司其职，原始发言与整理后的关系图分别保存，让结果能够回到来源。</p></header>
+        <div class="tech-pipeline" aria-label="技术处理流程">
+          <div class="pipeline-step"><span>01 / INPUT</span><strong>语音与文字</strong><small>本机 ASR · 统一事件</small></div>
+          <div class="pipeline-arrow" aria-hidden="true">→</div>
+          <div class="pipeline-step"><span>02 / ANALYZE</span><strong>分析 Agent</strong><small>发言 → MeetingSummary</small></div>
+          <div class="pipeline-arrow" aria-hidden="true">→</div>
+          <div class="pipeline-step"><span>03 / SYNC</span><strong>图同步 Agent</strong><small>摘要 + 当前图 → GraphUpdateOp</small></div>
+          <div class="pipeline-arrow" aria-hidden="true">→</div>
+          <div class="pipeline-step"><span>04 / PRESENT</span><strong>关系看板</strong><small>双存储 · WebSocket · X6</small></div>
+        </div>
+        <div class="agent-detail">
+          <article><div class="agent-topline"><span>AGENT 01</span><span>语义层</span></div><h3>先理解会议<br>说了什么。</h3><p>分析 Agent 读取过滤后的发言，提炼议题、观点、依据、结论、行动与分歧，生成带原话引用的 <code>MeetingSummary</code>。它只负责语义理解，不直接修改看板。</p><div class="agent-output"><span>OUTPUT</span><code>MeetingSummary</code><small>观点 / 关系 / evidence meta_id</small></div></article>
+          <article><div class="agent-topline"><span>AGENT 02</span><span>结构层</span></div><h3>再决定图谱<br>如何更新。</h3><p>图同步 Agent 同时读取会议摘要和当前关系图，生成增量 <code>GraphUpdateOp</code>。候选操作经过结构校验；写入时尊重人工编辑、节点锁定与光标操作。</p><div class="agent-output"><span>OUTPUT</span><code>GraphUpdateOp</code><small>新增 / 连接 / 合并 / 调整</small></div></article>
+        </div>
+        <div class="algorithm-grid" aria-label="关键算法与工程机制">
+          <div><span>01 / STREAMING ASR</span><h3>分段识别，及时入板</h3><p>浏览器把 16 kHz 单声道 PCM 分块发送给本机流式 Paraformer；静音切分后的最终发言入板，SenseVoiceSmall 提供完整录音识别兜底。</p></div>
+          <div><span>02 / TRACEABILITY</span><h3>观点始终连着原话</h3><p>统一输入事件携带发言 ID。Store B 保存原始发言，Store A 保存派生关系图；图节点通过 <code>metadata_refs</code> 反查依据。</p></div>
+          <div><span>03 / HUMAN CONTROL</span><h3>增量更新，保留人工判断</h3><p>图操作先校验再写入；当节点被锁定或正在编辑时，冲突更新会跳过。看板经 WebSocket 推送，由 AntV X6 呈现。</p></div>
+        </div>
+        <div class="tech-stack"><strong>技术栈</strong><div><span>FunASR · Paraformer · SenseVoiceSmall</span><span>Python · FastAPI · LangGraph</span><span>TypeScript · Vite · AntV X6</span><span>WebSocket · 本地双存储</span></div></div>
+        <p class="tech-boundary">当前为本地 Demo：无真实模型连接时使用规则化 MockLLM 演示；真实语音与外部 LLM 链路需以实际运行状态和端到端验收为准。</p>
+      </div>
+    </section>
+
+    <section class="home-capabilities" id="structure" aria-labelledby="structure-title">
+      <div class="capabilities-heading"><p class="feature-index"><span class="section-index">04 /</span> 让理解更进一步</p><h2 id="structure-title">会脉整理信息，<br><em>你决定它意味着什么。</em></h2><p>AI 帮忙建立初稿，人的判断继续完善它。从一条发言到可执行的结论，每一步都能查看、编辑、核对。</p></div>
+      <div class="capability-rail">
+        <article><span class="capability-no">01 <i>↗</i></span><div class="capability-icon capability-icon-lens" aria-hidden="true"><span></span><span></span><span></span></div><h3>按关系看问题</h3><p>支持、反对与从属关系分开呈现。聚焦一条脉络，快速找到共识和分歧。</p><small>关系阅读 / 语义聚焦</small></article>
+        <article><span class="capability-no">02 <i>↗</i></span><div class="capability-icon capability-icon-edit" aria-hidden="true"><span>观点整理</span><b>✓ 已修正</b></div><h3>把判断交还给人</h3><p>节点内容与归属都能直接调整。AI 的初稿只是起点，团队始终掌握最终结构。</p><small>人工校正 / 协同共创</small></article>
+        <article><span class="capability-no">03 <i>↗</i></span><div class="capability-icon capability-icon-history" aria-hidden="true"><span>本次会议</span><span>历史记录</span><span>下次继续 →</span></div><h3>让讨论可以接续</h3><p>保存会议结构与历史记录，回看当时的判断，让下一次讨论从已有共识出发。</p><small>会议档案 / 持续回看</small></article>
+      </div>
+    </section>
+
+    <section class="home-feature home-feature-source" id="source" aria-labelledby="source-title">
+      <div class="source-demo" aria-label="示例：看板观点关联一条原始发言">
+        <div class="source-card"><span class="source-type">看板上的观点</span><strong>先做一版能试玩的 2D 原型</strong><span class="source-link">关联原话 <i aria-hidden="true">↘</i></span></div>
+        <div class="source-quote"><span class="quote-mark" aria-hidden="true">“</span><p>我们先做一版能试玩的 2D 原型，看看核心玩法能不能成立。</p><span>示例发言 · 原话可回看</span></div>
+      </div>
+      <div class="feature-copy">
+        <p class="feature-index">从结构回到现场</p>
+        <h2 id="source-title">整理出的观点，<br>要经得起回看。</h2>
+        <p>看板节点可以关联原始发言。遇到转写偏差或归类不准，先核对来源，再修改节点与关系；人的判断始终能留在最终结果里。</p>
+        <a href="/workspace.html">看看工作台 <span aria-hidden="true">↗</span></a>
+      </div>
+    </section>
+
+    <section class="meeting-flow" id="workflow" aria-labelledby="flow-title">
+      <div class="flow-heading"><p class="story-kicker">从会前到会后</p><h2 id="flow-title">不只整理这一刻，<br>也照顾会议的前后。</h2></div>
+      <div class="flow-list">
+        <div><span>会前</span><h3>确定要谈什么</h3><p>创建会议、整理议程，让每个议题有一个清晰的起点。</p></div>
+        <div><span>会中</span><h3>看见讨论如何展开</h3><p>语音和文字进入看板，随时编辑观点、关系与焦点。</p></div>
+        <div><span>会后</span><h3>把下一步带走</h3><p>审阅结论和待办，导出 Markdown 或 HTML 纪要，并在历史会议中回看。</p></div>
+      </div>
+    </section>
+
+    <section class="home-closing" aria-labelledby="closing-title"><div><p>从下一句话开始</p><h2 id="closing-title">让讨论有迹可循。</h2><span>打开工作台，开始一场可以回望的会议。</span></div><a href="/workspace.html">进入工作台 <span aria-hidden="true">↗</span></a></section>
   </main>
 </body>
 </html>

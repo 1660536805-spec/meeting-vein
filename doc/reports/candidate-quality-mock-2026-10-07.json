@@ -1,0 +1,233 @@
+{
+  "mode": "mock",
+  "sample_rows": 200,
+  "human_labeled_types": 41,
+  "type_confusion": {
+    "labels": [
+      "action",
+      "conclusion",
+      "conflict",
+      "evidence",
+      "issue",
+      "point",
+      "question"
+    ],
+    "matrix": {
+      "action": {
+        "action": 2,
+        "conclusion": 0,
+        "conflict": 0,
+        "evidence": 0,
+        "issue": 0,
+        "point": 3,
+        "question": 0
+      },
+      "conclusion": {
+        "action": 1,
+        "conclusion": 1,
+        "conflict": 1,
+        "evidence": 0,
+        "issue": 0,
+        "point": 6,
+        "question": 0
+      },
+      "conflict": {
+        "action": 0,
+        "conclusion": 0,
+        "conflict": 1,
+        "evidence": 0,
+        "issue": 0,
+        "point": 0,
+        "question": 0
+      },
+      "evidence": {
+        "action": 0,
+        "conclusion": 0,
+        "conflict": 0,
+        "evidence": 1,
+        "issue": 0,
+        "point": 1,
+        "question": 0
+      },
+      "issue": {
+        "action": 0,
+        "conclusion": 0,
+        "conflict": 0,
+        "evidence": 0,
+        "issue": 0,
+        "point": 1,
+        "question": 0
+      },
+      "point": {
+        "action": 1,
+        "conclusion": 0,
+        "conflict": 1,
+        "evidence": 3,
+        "issue": 0,
+        "point": 13,
+        "question": 0
+      },
+      "question": {
+        "action": 0,
+        "conclusion": 0,
+        "conflict": 0,
+        "evidence": 0,
+        "issue": 0,
+        "point": 5,
+        "question": 0
+      }
+    },
+    "count": 41,
+    "correct": 18,
+    "accuracy": 0.43902439024390244,
+    "per_label": {
+      "action": {
+        "support": 5,
+        "precision": 0.5,
+        "recall": 0.4,
+        "f1": 0.4444444444444445
+      },
+      "conclusion": {
+        "support": 9,
+        "precision": 1.0,
+        "recall": 0.1111111111111111,
+        "f1": 0.19999999999999998
+      },
+      "conflict": {
+        "support": 1,
+        "precision": 0.3333333333333333,
+        "recall": 1.0,
+        "f1": 0.5
+      },
+      "evidence": {
+        "support": 2,
+        "precision": 0.25,
+        "recall": 0.5,
+        "f1": 0.3333333333333333
+      },
+      "issue": {
+        "support": 1,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "point": {
+        "support": 18,
+        "precision": 0.4482758620689655,
+        "recall": 0.7222222222222222,
+        "f1": 0.5531914893617021
+      },
+      "question": {
+        "support": 5,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    }
+  },
+  "relation_labeled_rows": 11,
+  "relation_confusion": {
+    "labels": [
+      "duplicate",
+      "oppose",
+      "support"
+    ],
+    "matrix": {
+      "duplicate": {
+        "duplicate": 0,
+        "oppose": 0,
+        "support": 3
+      },
+      "oppose": {
+        "duplicate": 0,
+        "oppose": 0,
+        "support": 7
+      },
+      "support": {
+        "duplicate": 0,
+        "oppose": 0,
+        "support": 1
+      }
+    },
+    "count": 11,
+    "correct": 1,
+    "accuracy": 0.09090909090909091,
+    "per_label": {
+      "duplicate": {
+        "support": 3,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "oppose": {
+        "support": 7,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "support": {
+        "support": 1,
+        "precision": 0.09090909090909091,
+        "recall": 1.0,
+        "f1": 0.16666666666666669
+      }
+    }
+  },
+  "conflict_confusion": {
+    "labels": [
+      "no",
+      "yes"
+    ],
+    "matrix": {
+      "no": {
+        "no": 4,
+        "yes": 0
+      },
+      "yes": {
+        "no": 7,
+        "yes": 0
+      }
+    },
+    "count": 11
+  },
+  "assignment": {
+    "evidence_link": {
+      "labels": [
+        "no",
+        "yes"
+      ],
+      "matrix": {
+        "no": {
+          "no": 0,
+          "yes": 0
+        },
+        "yes": {
+          "no": 0,
+          "yes": 41
+        }
+      },
+      "count": 41
+    },
+    "gold_anchor_rows": 11,
+    "correct_anchor_assignments": 0,
+    "anchor_accuracy": 0.0
+  },
+  "deduplication": {
+    "gold_pairs": 3,
+    "predicted_pairs": 0,
+    "true_positive_pairs": 0,
+    "false_positive_pairs": 0,
+    "false_negative_pairs": 3,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+  },
+  "limitations": [
+    "真实 LLM 结果须由独立 predictions 文件提供；本工具不会发送会议原文到外部服务。",
+    "Mock 不产出说话人或候选议题归属；anchor accuracy 按标注的关系目标严格计算。",
+    "Mock evidence_link 41/41 仅验证输入 meta_id 原样绑定，不代表语义归属准确率。"
+  ],
+  "gold_file": "backend/tests/annotations/debate-200-gold.csv",
+  "prediction_file": "MockLLM runtime output",
+  "report_file": "doc/reports/candidate-quality-mock-2026-10-07.json"
+}

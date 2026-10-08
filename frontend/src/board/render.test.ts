@@ -7,7 +7,7 @@ afterEach(() => vi.restoreAllMocks());
 describe("reference workspace design", () => {
   afterEach(() => document.body.classList.remove("decision-workspace"));
 
-  it("places decisions after viewpoints while preserving human positioned nodes and source references", () => {
+  it("places decisions after viewpoints in the decision view and preserves source references", () => {
     document.body.classList.add("decision-workspace");
     const fromJSON = vi.fn();
     const graph = {
@@ -20,18 +20,20 @@ describe("reference workspace design", () => {
     } as unknown as Graph;
     renderBoard(graph, [
       { id: "point", shape: "amo-node", data: { type: "point", label: "优先核心渠道", metadata_refs: ["utterance-1"] } },
-      { id: "decision", shape: "amo-node", data: { type: "conclusion", label: "先跑试点" } },
+      { id: "decision", shape: "amo-node", data: { type: "conclusion", label: "先跑试点", parent_id: "point" } },
       { id: "action", shape: "amo-node", position: { x: 420, y: 360 }, data: { type: "action", label: "完成草案", edit: { position_frozen: true } } },
       { id: "edge", shape: "edge", source: "point", target: "decision", data: { relation: "support" } },
+      { id: "semantic", shape: "edge", source: "decision", target: "action", data: { relation: "support" } },
     ]);
     const { nodes, edges } = fromJSON.mock.calls[0][0];
     expect(nodes[1].x).toBeGreaterThan(nodes[0].x);
-    expect(nodes[2]).toMatchObject({ x: 420, y: 360 });
+    expect(nodes[2]).toMatchObject({ x: 80 });
     expect(nodes[0].data.metadata_refs).toEqual(["utterance-1"]);
     // 决策页深色主题：point 类型色 #61DDAA 向白色提亮 82%
     expect(nodes[0].attrs.body.stroke).toBe("#7de3b9");
     expect(nodes[1].attrs.body.stroke).toBe("#8b7efd");   // conclusion #7262FD 提亮 82%
-    expect(edges[0].labels[0].attrs.label.text).toBe("支持");
+    expect(edges.find((edge: { id: string }) => edge.id === "edge").labels).toEqual([]);
+    expect(edges.find((edge: { id: string }) => edge.id === "semantic").labels[0].attrs.label.text).toBe("支持");
     expect(edges[0].connector.name).toBe("smooth");
   });
 });
@@ -121,7 +123,7 @@ describe("narrow board layout", () => {
     expect(zoom.mock.calls[0][0]).toBeGreaterThanOrEqual(0.75);
   });
 
-  it("aligns viewpoints horizontally and stacks their evidence vertically", () => {
+  it("lays out parent and child levels left to right and sibling branches vertically", () => {
     const fromJSON = vi.fn();
     const graph = { container: { clientWidth: 1266 }, fromJSON, zoomToFit: vi.fn() } as unknown as Graph;
     renderBoard(graph, [
@@ -139,19 +141,16 @@ describe("narrow board layout", () => {
     ]);
     const nodes = fromJSON.mock.calls[0][0].nodes as Array<{ id: string; x: number; y: number }>;
     const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
-    // 观点横向并排同 y，根居两列中点上方
-    expect(byId.pointA.y).toBe(byId.pointB.y);
-    expect(byId.pointA.y).toBeGreaterThan(byId.root.y);
-    expect(byId.pointB.x).toBeGreaterThan(byId.pointA.x);
-    expect(byId.root.x).toBeGreaterThan(byId.pointA.x);
-    expect(byId.root.x).toBeLessThan(byId.pointB.x);
-    // 各观点列内论据纵向堆叠（同 x、逐行向下）
-    expect(byId.evA1.x).toBe(byId.pointA.x);
-    expect(byId.evA2.x).toBe(byId.pointA.x);
-    expect(byId.evA1.y).toBeGreaterThan(byId.pointA.y);
+    expect(byId.pointA.x).toBeGreaterThan(byId.root.x);
+    expect(byId.pointB.x).toBe(byId.pointA.x);
+    expect(byId.pointB.y).toBeGreaterThan(byId.pointA.y);
+    expect(byId.root.y).toBeGreaterThan(byId.pointA.y);
+    expect(byId.root.y).toBeLessThan(byId.pointB.y);
+    expect(byId.evA1.x).toBeGreaterThan(byId.pointA.x);
+    expect(byId.evA2.x).toBe(byId.evA1.x);
     expect(byId.evA2.y).toBeGreaterThan(byId.evA1.y);
-    expect(byId.evB1.x).toBe(byId.pointB.x);
-    expect(byId.evB1.y).toBeGreaterThan(byId.pointB.y);
+    expect(byId.evB1.x).toBe(byId.evA1.x);
+    expect(byId.evB1.y).toBeGreaterThan(byId.evA2.y);
     expect((fromJSON.mock.calls[0][0] as { edges: Array<{ id: string }> }).edges.map((edge) => edge.id)).toContain("e3");
   });
 
@@ -200,10 +199,16 @@ describe("board editing affordances", () => {
   it("attaches no tools to edges (no red ⊗ clutter; delete via hover + Delete key)", () => {
     const fromJSON = vi.fn();
     const graph = { container: { clientWidth: 1266 }, fromJSON, zoomToFit: vi.fn() } as unknown as Graph;
-    renderBoard(graph, [{ id: "e1", shape: "edge", source: "a", target: "b", data: { relation: "oppose" } }]);
+    renderBoard(graph, [
+      { id: "a", shape: "amo-node", data: { type: "point", label: "观点 A" } },
+      { id: "b", shape: "amo-node", data: { type: "point", label: "观点 B" } },
+      { id: "e1", shape: "edge", source: "a", target: "b", data: { relation: "oppose" } },
+      { id: "orphan", shape: "edge", source: "a", target: "missing", data: { relation: "support" } },
+    ]);
 
     const rendered = fromJSON.mock.calls[0][0] as { edges: Array<{ tools?: unknown }> };
     expect(rendered.edges[0].tools).toBeUndefined();
+    expect(rendered.edges).toHaveLength(1);
   });
 });
 
