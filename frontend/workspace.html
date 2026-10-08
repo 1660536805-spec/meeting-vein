@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="/src/workspace-design.css" />
   <link rel="stylesheet" href="/src/theme.css" />
   <link rel="stylesheet" href="/src/issues.css" />
+  <link rel="stylesheet" href="/src/task-plan.css" />
   <script type="module" src="/src/theme.ts"></script>
   <style>
     #file-open-help[hidden] { display: none; }
@@ -110,6 +111,7 @@
           <div id="board-view-switch" role="tablist" aria-label="看板视图">
             <button id="view-graph" type="button" role="tab" aria-selected="true">关系图</button>
             <button id="view-issues" type="button" role="tab" aria-selected="false">议题结构</button>
+            <button id="view-tasks" type="button" role="tab" aria-selected="false" aria-controls="task-plan-view">任务计划</button>
           </div>
           <div id="board-scope-switch" role="group" aria-label="关系图范围">
             <button id="scope-local" type="button" aria-pressed="true">当前关系</button>
@@ -159,6 +161,7 @@
             </aside>
           </div>
           <div id="issue-view" class="issue-structure" role="tabpanel" aria-label="议题结构" hidden></div>
+          <div id="task-plan-view" role="tabpanel" aria-label="会后任务计划" hidden></div>
           </div>
         </div>
        </div>
