@@ -106,14 +106,18 @@ def create_app(
     @asynccontextmanager
     async def lifespan(_: FastAPI):
         status = resolved_runtime.status()
-        if status.state == "not_loaded":
+        if status.state == "not_loaded" and getattr(resolved_settings, "enable_models", True):
             threading.Thread(
                 target=_load_runtime,
                 args=(resolved_runtime,),
                 name="local-asr-model-loader",
                 daemon=True,
             ).start()
-        if resolved_streaming is not None and resolved_streaming.status().state == "not_loaded":
+        if (
+            resolved_streaming is not None
+            and resolved_streaming.status().state == "not_loaded"
+            and getattr(resolved_settings, "enable_models", True)
+        ):
             threading.Thread(
                 target=_load_runtime,
                 args=(resolved_streaming,),

@@ -53,3 +53,7 @@ local_asr/model_cache/
 local_asr/debug_audio/
 local_asr/tmp_audio/
 local_asr/.modelscope/
+
+# ---------- AI 工具中间产物（PPT 生成/渲染缓存，不入库） ----------
+.codex-finalizer/
+.codex-pptx-build/

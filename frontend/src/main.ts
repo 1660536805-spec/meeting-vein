@@ -613,7 +613,8 @@ function normalizeChangeSet(cs: any): GraphChangeSet | null {
   };
 }
 
-const ws = new BoardWS(`ws://${location.host}/ws`, {
+const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";   // 同源部署：https 页面必须走 wss，否则被混合内容拦截
+const ws = new BoardWS(`${wsProtocol}//${location.host}/ws`, {
   onBoard: (cells, _graphId, info) => {
     lastCells = cells;
     if (typeof info?.version === "number" && Number.isFinite(info.version)) boardVersion = info.version;

@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     vad_model: str = "fsmn-vad"
     language: str = "auto"
     prefer_mps: bool = True
+    # 部署开关（LOCAL_ASR_ENABLE_MODELS）：置 0 时不在启动时加载 FunASR 双模型，
+    # 供容器/低配环境使用。语音能力显示为未就绪，文本与手动输入路径仍可用。
+    enable_models: bool = True
     model_cache_dir: Path = Field(
         default_factory=lambda: Path.home() / ".cache" / "modelscope"
     )

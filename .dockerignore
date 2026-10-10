@@ -1,0 +1,56 @@
+# 会脉 · 构建上下文忽略规则
+# 目标：镜像只含代码与前端构建所需源文件，绝不包含密钥、会议数据、模型缓存或本地环境。
+
+# ---- 凭据与环境（含子目录；保留 .env.example 作为样例）----
+**/.env
+**/.env.*
+!**/.env.example
+
+# ---- 版本控制 / 编辑器 / 系统文件 ----
+.git
+.gitignore
+.superpowers
+.codex-*
+**/.DS_Store
+
+# ---- Python ----
+.venv
+**/.venv
+**/__pycache__
+**/*.py[cod]
+**/*.egg-info
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+
+# ---- Node ----
+**/node_modules
+**/dist
+
+# ---- 运行数据与模型缓存 ----
+**/.amo_data
+**/.amo_*
+**/model_cache
+**/.modelscope
+**/debug_audio
+**/tmp_audio
+
+# ---- 本地 ASR 样本与基准（运行时不需要）----
+local_asr/samples
+local_asr/scripts
+
+# ---- 大文件媒体（视频/音频/图片素材，不进镜像）----
+*.mp4
+*.mov
+*.wav
+*.aiff
+*.zip
+产品视频
+会脉-*
+output
+doc/assets
+
+# ---- 文档与研报（运行时不需要）----
+docs
+doc
+exports

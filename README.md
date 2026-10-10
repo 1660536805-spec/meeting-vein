@@ -109,6 +109,35 @@ cd ../backend && PYTHONPATH=. ../.venv/bin/python -m unittest discover -s tests 
 cd ../frontend && npm test -- --run && npm run build
 ```
 
+## 魔搭创空间在线部署（Docker）
+
+除本机运行外，可用单镜像把整个原型部署为**评审可访问的在线体验链接**。镜像由 Nginx 在唯一公开端口 `7860` 提供服务，并把 `/api`、`/ws`、`/asr` 同源反向代理到容器内的会议后端与本地 ASR。
+
+```bash
+# 本地构建并运行（国内镜像源已设为默认；部署到 x86_64 创空间时追加 --platform linux/amd64）
+docker build -t meeting-vein:local .
+docker run --rm -p 7860:7860 meeting-vein:local
+# 打开 http://127.0.0.1:7860/
+```
+
+构建产物与约束：
+
+- `Dockerfile`：多阶段（Node 构建前端 → Python 运行时）；基础镜像、apt / pip / npm 源均可通过 `--build-arg` 覆盖（默认国内镜像）。
+- `docker/nginx.conf`：7860 同源入口，多页 fallback + `/api`、`/ws`、`/asr` 代理。
+- `docker/entrypoint.sh`：启动并监控 Nginx + 会议 API + 本地 ASR，任一必需进程退出即容器失败，便于创空间日志暴露故障。
+- `.dockerignore`：排除 `.env`、密钥、会议数据（`.amo_data`）、模型缓存、媒体与文档，镜像不含任何凭据或个人数据。
+
+容器内的能力边界（与创空间说明一致）：
+
+| 项 | 容器默认 | 说明 |
+| --- | --- | --- |
+| 大模型 | `AMO_LLM_ENABLED=0`（MockLLM） | 保持演示可用且不外发会议文本；需要真实模型时在创空间设私密环境变量 `AMO_LLM_ENABLED=1` 与 `OPENAI_*`。 |
+| 本地 ASR | `LOCAL_ASR_ENABLE_MODELS=0` | 不加载 FunASR/torch 双模型（镜像不含重依赖），语音显示为未就绪；**手动/文本输入到看板更新的完整链路仍可用**。需要语音时可装 `asr` 依赖并置 `LOCAL_ASR_ENABLE_MODELS=1`。 |
+| 数据目录 | `/app/backend/.amo_data` | 容器内可写；实际持久性取决于创空间实例，重启可能重置，重要数据请随时导出快照。 |
+| 模型缓存 | `/data/models/*` | 仅在启用 ASR 模型时使用，可用 `LOCAL_ASR_MODEL_CACHE_DIR` / `LOCAL_ASR_STREAMING_CACHE_DIR` 覆盖。 |
+
+创空间侧：创建 Docker 类型、公开访问级别的创空间，对外端口填 `7860`；构建前需完成平台要求的账号绑定与实名认证。发布后把在线地址补充到本节与报名说明，并明确标注当前为 **Mock 演示模式**，不得把 Mock 输出当作真实模型推理。
+
 ## 设计文档索引
 
 `doc/Design.md`（总纲）、`Design_Agent_DataFlow.md`（双 Agent 编排）、`Design_StructureGraph_Storage.md`（双存储）、
