@@ -86,7 +86,7 @@ export function mountDecisionPanel(onFocus: (id: string) => void) {
     const records = ids.map((id) => metadataCache.get(id)).filter((r): r is MetadataRecord => Boolean(r && r.text && r.kind !== "summary")).reverse();
     utteranceCount.textContent = String(records.length);
     records.slice(0, 8).forEach((record) => {
-      const speaker = record.display_name?.trim() || record.speaker_ref?.replace(/^(web|cli|spk|ent|ms):/, "") || "发言人";
+      const speaker = formatSpeakerName(record.speaker_ref, record.display_name);
       const time = projection.formatEvidenceTime(record);
       const card = document.createElement("button"); card.type = "button"; card.className = "utterance-card";
       card.innerHTML = `<div class="utterance-head"><span class="speaker-avatar">${escape(speaker[0])}</span><span>${escape(speaker)}</span><small>${escape(time)}</small></div><p>${escape(record.text)}</p>`;
