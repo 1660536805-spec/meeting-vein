@@ -57,7 +57,7 @@ design-system/      UI token 参考（Linear 暗色 / Miro 白板）
 
 ## macOS 本地启动
 
-需要 Python 3.12、Node.js/npm、`ffmpeg` 和 `uv`。首次安装会下载较大的 PyTorch、FunASR 和模型权重；请预留磁盘空间和网络时间。模型权重首次加载状态可在页面和 `http://127.0.0.1:9000/models/status` 查看。
+需要 Python 3.12、Node.js 20.19+/22.12+/24+ 与 npm、`ffmpeg` 和 `uv`。首次安装会下载较大的 PyTorch、FunASR 和模型权重；请预留磁盘空间和网络时间。模型权重首次加载状态可在页面和 `http://127.0.0.1:9000/models/status` 查看。
 
 ```bash
 cd /path/to/ai_meeting_organizer-fusion

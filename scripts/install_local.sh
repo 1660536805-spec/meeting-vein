@@ -8,6 +8,10 @@ for requirement in uv node npm; do
     exit 1
   fi
 done
+if ! node -e 'const [major, minor] = process.versions.node.split(".").map(Number); process.exit((major === 20 && minor >= 19) || (major === 22 && minor >= 12) || major >= 24 ? 0 : 1)'; then
+  echo "Node.js 需要 20.19+、22.12+ 或 24+；当前为 $(node --version)。" >&2
+  exit 1
+fi
 
 cd "$meeting_root"
 if [[ ! -x .venv/bin/python ]]; then
