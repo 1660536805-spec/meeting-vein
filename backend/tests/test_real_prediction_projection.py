@@ -1,9 +1,19 @@
 import unittest
+from types import SimpleNamespace
 
 from scripts import generate_real_predictions
 
 
 class RealPredictionProjectionTests(unittest.TestCase):
+    def test_response_summary_keeps_hashes_and_shape_without_raw_content(self):
+        message = SimpleNamespace(content='{"insights":[{"type":"point"}]}', tool_calls=[
+            SimpleNamespace(function=SimpleNamespace(name="graph_update", arguments='{"secret":"example"}'))])
+        summary = generate_real_predictions.summarize_model_message(message)
+        self.assertEqual(summary["json_shape"], {"keys": ["insights"], "insight_count": 1})
+        self.assertEqual(summary["tool_calls"][0]["name"], "graph_update")
+        self.assertNotIn("secret", str(summary))
+        self.assertNotIn("point", str(summary))
+
     def test_project_relation_edges_preserves_the_other_node_id(self):
         project = getattr(generate_real_predictions, "project_relation_edges", None)
         self.assertIsNotNone(project)

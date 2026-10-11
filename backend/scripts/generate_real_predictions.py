@@ -21,12 +21,15 @@ from __future__ import annotations
 import argparse
 import asyncio
 import csv
+import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 import tempfile
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 BACKEND = Path(__file__).resolve().parents[1]
@@ -35,6 +38,29 @@ sys.path.insert(0, str(BACKEND))
 
 GOLD = ROOT / "backend/tests/annotations/debate-200-gold.csv"
 MID = "mtg_quality_eval"
+
+
+def summarize_model_message(message) -> dict:
+    """Keep a reproducible response fingerprint without archiving meeting text."""
+    content = getattr(message, "content", None) or ""
+    calls = getattr(message, "tool_calls", None) or []
+    tools = []
+    for call in calls:
+        function = getattr(call, "function", None)
+        arguments = getattr(function, "arguments", "") or ""
+        tools.append({"name": getattr(function, "name", None),
+                      "arguments_sha256": hashlib.sha256(arguments.encode()).hexdigest(),
+                      "arguments_chars": len(arguments)})
+    try:
+        decoded = json.loads(content)
+        shape = ({"keys": sorted(decoded), "insight_count": len(decoded.get("insights", []))}
+                 if isinstance(decoded, dict) else None)
+    except (ValueError, TypeError):
+        shape = None
+    return {"content_sha256": hashlib.sha256(content.encode()).hexdigest(),
+            "content_chars": len(content), "json_shape": shape, "tool_calls": tools}
+
+
 def project_relation_edges(cells: list[dict], node_by_meta: dict[int, str]) -> dict[int, list[dict]]:
     """Project actual graph edges to the source rows linked to each endpoint."""
     by_node: dict[str, set[tuple[str, str]]] = {}
@@ -90,6 +116,24 @@ async def drive(items, batch_size: int, sleep_s: float, max_passes: int, cooldow
     if isinstance(llm, MockLLM):
         print("[FATAL] build_llm() 回退到了 MockLLM —— 真实 LLM 未启用，评测将无意义。", file=sys.stderr)
         raise SystemExit(2)
+    response_summaries: list[dict] = []
+    current_batch: list[int] = []
+    original_completion = getattr(llm, "_completion", None)
+    if original_completion is not None:
+        def recorded_completion(messages, **options):
+            started = time.monotonic()
+            try:
+                result = original_completion(messages, **options)
+            except Exception as exc:
+                response_summaries.append({"line_numbers": list(current_batch),
+                                           "elapsed_ms": round((time.monotonic() - started) * 1000),
+                                           "error_type": type(exc).__name__})
+                raise
+            response_summaries.append({"line_numbers": list(current_batch),
+                                       "elapsed_ms": round((time.monotonic() - started) * 1000),
+                                       **summarize_model_message(result)})
+            return result
+        llm._completion = recorded_completion
     print(f"[mode] {type(llm).__name__} model={app_config.CONFIG.llm_model} "
           f"base_url={app_config.CONFIG.llm_base_url}")
 
@@ -111,6 +155,7 @@ async def drive(items, batch_size: int, sleep_s: float, max_passes: int, cooldow
         still: list[tuple[int, str]] = []
         batches = [pending[i:i + batch_size] for i in range(0, len(pending), batch_size)]
         for bi, chunk in enumerate(batches, 1):
+            current_batch[:] = [line_no for line_no, _ in chunk]
             utterances = []
             chunk_lines = set()
             for line_no, text in chunk:
@@ -164,7 +209,7 @@ async def drive(items, batch_size: int, sleep_s: float, max_passes: int, cooldow
     print(f"[board] cells={len(cells)} nodes_with_refs={len(node_by_meta)} "
           f"lines_with_insight={len(insights_by_line)} ok_lines={len(ok_lines)} "
           f"failed_lines={sorted(set(l for l, _ in pending))[:20]}")
-    return insights_by_line, node_by_meta, relation_edges_by_line, ok_lines
+    return insights_by_line, node_by_meta, relation_edges_by_line, ok_lines, response_summaries
 
 
 def main():
@@ -182,7 +227,13 @@ def main():
         rows = rows[:args.limit]
     items = [(int(r["line_no"]), r["utterance"].strip()) for r in rows if r["utterance"].strip()]
 
-    insights_by_line, node_by_meta, relation_edges_by_line, committed_lines = asyncio.run(
+    started_at = datetime.now(timezone.utc).isoformat()
+    try:
+        git_head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+        git_dirty = bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip())
+    except (OSError, subprocess.CalledProcessError):
+        git_head, git_dirty = None, None
+    insights_by_line, node_by_meta, relation_edges_by_line, committed_lines, responses = asyncio.run(
         drive(items, args.batch_size, args.sleep, args.passes, args.cooldown_wait))
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -191,6 +242,31 @@ def main():
     with args.output.open("w", encoding="utf-8") as fh:
         for record in records:
             fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+    responses_path = args.output.with_suffix(".responses.jsonl")
+    with responses_path.open("w", encoding="utf-8") as fh:
+        for response in responses:
+            fh.write(json.dumps(response, ensure_ascii=False) + "\n")
+    from app import config as app_config
+    def digest(path: Path) -> str:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    manifest = {"schema": "amo.quality-run/v1", "record_kind": "captured_during_run",
+                "started_at": started_at, "ended_at": datetime.now(timezone.utc).isoformat(),
+                "git_head": git_head, "working_tree_dirty_at_start": git_dirty,
+                "model": app_config.CONFIG.llm_model,
+                "provider_base_url": app_config.CONFIG.llm_base_url,
+                "batch_size": args.batch_size, "sleep_seconds": args.sleep,
+                "max_passes": args.passes, "cooldown_seconds": args.cooldown_wait,
+                "input_rows": len(items), "committed_prediction_rows": len(records),
+                "failed_line_numbers": sorted(set(line for line, _ in items) - committed_lines),
+                "input_gold_csv_sha256": digest(GOLD),
+                "prompt_yaml_sha256": digest(BACKEND / "app/prompts.yaml"),
+                "generator_py_sha256": digest(Path(__file__)),
+                "prediction_jsonl_sha256": digest(args.output),
+                "response_summary_jsonl_sha256": digest(responses_path),
+                "response_summary_file": str(responses_path.relative_to(ROOT)),
+                "response_summary_limits": "Hashes, lengths and structure only; raw model text is not archived."}
+    args.output.with_suffix(".manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"[out] {len(records)} 条已提交预测（输入 {len(items)} 句，"
           f"失败 {len(items) - len(committed_lines)} 句）→ {args.output}")
 
