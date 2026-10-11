@@ -57,3 +57,4 @@ local_asr/.modelscope/
 # ---------- AI 工具中间产物（PPT 生成/渲染缓存，不入库） ----------
 .codex-finalizer/
 .codex-pptx-build/
+output/releases/
