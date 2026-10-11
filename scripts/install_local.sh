@@ -10,7 +10,9 @@ for requirement in uv node npm; do
 done
 
 cd "$meeting_root"
-uv venv --python 3.12 .venv
+if [[ ! -x .venv/bin/python ]]; then
+  uv venv --python 3.12 .venv
+fi
 uv pip install --python .venv/bin/python -r requirements.txt
 (cd frontend && npm ci)
 
