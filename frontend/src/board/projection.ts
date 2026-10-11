@@ -141,7 +141,9 @@ export function projectBoard(cells: any[]): BoardProjection {
   const conclusions = nodes.filter((node) => node.data.type === "conclusion");
   for (const node of conclusions) {
     const status = String(node.data.status ?? "").toLowerCase();
-    if (!closed(node.data) && status !== "confirmed" && status !== "superseded") {
+    const humanClosed = node.data.manual_override?.status === true
+      && ["confirmed", "dismissed", "superseded"].includes(status);
+    if (!humanClosed) {
       unresolvedByKey.set(`confirmation:${node.id}`, {
         id: `confirmation:${node.id}`, kind: "confirmation", nodeIds: [node.id],
         label: String(node.data.label ?? "待确认结论"), source: "conclusion",

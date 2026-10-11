@@ -26,6 +26,16 @@
 #history-board { min-width: 0; min-height: 0; position: relative; overflow: hidden; background: #0c1b2e; }
 #history-records { overflow: auto; border-left: 1px solid var(--ui-line-soft); background: #112138; }
 #history-records h2 { margin: 0; padding: 16px; border-bottom: 1px solid var(--ui-line-soft); font-size: 13px; }
+#history-link-form { display:grid; gap:8px; padding:12px; border-bottom:1px solid var(--ui-line-soft); }
+#history-link-form[hidden] { display:none; }
+#history-link-form label { display:grid; gap:4px; color:#aabbd0; font-size:11px; }
+#history-link-form input,#history-link-form select { min-width:0; width:100%; padding:7px; border:1px solid #4a6180; border-radius:6px; background:#0e1b2d; color:#f0f3f8; }
+#history-link-form button { padding:7px; border:1px solid #4e6e97; border-radius:6px; background:#1b304b; color:#e5edf9; cursor:pointer; }
+#history-link-message { margin:0; color:#aabbd0; font-size:11px; }
+#history-timeline { padding:10px; color:#aabbd0; font-size:11px; }
+.history-timeline-card { margin-bottom:8px; padding:10px; border:1px solid #3b536f; border-radius:8px; background:#182b43; }
+.history-timeline-card strong { color:#e5edf9; font-size:12px; }
+.history-timeline-card p { margin:6px 0 0; line-height:1.45; overflow-wrap:anywhere; }
 #history-utterance-list { padding: 10px; }
 .history-utterance { margin-bottom: 8px; padding: 10px 11px; border: 1px solid #33495f; border-left: 3px solid #4e6e97; border-radius: 8px; background: #142640; }
 .history-utterance-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }

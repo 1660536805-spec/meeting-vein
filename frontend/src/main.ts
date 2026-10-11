@@ -7,6 +7,8 @@ import {
 } from "./board/render";
 import { mountBoardToolbar } from "./board/toolbar";
 import { mountDecisionPanel } from "./board/decision-panel";
+import { mountActionTracker } from "./board/action-tracker";
+import { mountPreparationPanel } from "./board/preparation-panel";
 import { CursorEventAdapter } from "./board/cursor";
 import { MascotController, SUPPORTED_MASCOT_MOTIONS } from "./mascot/MascotController";
 import { Live2DMascotView } from "./mascot/Live2DMascotView";
@@ -111,7 +113,23 @@ const decisionPanel = mountDecisionPanel((id) => {
   selectCell(id);
   setLink({ focus: id, reach: id, route: undefined });
   renderScopedBoard();
+}, (id) => {
+  selectCell(id);
+  setLink({ focus: id, reach: id, route: undefined });
+  renderScopedBoard();
+  document.getElementById("edit-cell")?.click();
 });
+const actionTracker = mountActionTracker(document.getElementById("action-tracker")!, MEETING_ID);
+const preparationPanel = mountPreparationPanel(document.getElementById("preparation-panel")!, MEETING_ID);
+let preparationLoaded = false;
+function refreshDecisionAndActions(cells: any[]): void {
+  void decisionPanel.update(cells);
+  void actionTracker.update(cells);
+  if (!preparationLoaded) {
+    preparationLoaded = true;
+    void preparationPanel.update();
+  }
+}
 renderBoard(graph, []);
 
 // ===== 看板内视图切换：关系图 / 议题结构（读取同一份 lastCells，与看板图同源联动）=====
@@ -305,7 +323,7 @@ undoOperationButton?.addEventListener("click", async () => {
     boardVersion = result.version;
     lastCells = result.cells;
     applyBoardUpdate(graph, scopedCells(lastCells));
-    void decisionPanel.update(lastCells);
+    refreshDecisionAndActions(lastCells);
     undoableOperationVersion = null;
     undoOperationButton.hidden = true;
     setSummary(`已撤销删除或合并，当前版本 v${boardVersion}`);
@@ -343,7 +361,7 @@ document.getElementById("node-editor-merge")?.addEventListener("click", async ()
     boardVersion = result.version;
     lastCells = result.cells;
     applyBoardUpdate(graph, scopedCells(lastCells));
-    void decisionPanel.update(lastCells);
+    refreshDecisionAndActions(lastCells);
     if (editor) editor.hidden = true;
     selectCell("");
     undoableOperationVersion = boardVersion;
@@ -355,7 +373,7 @@ document.getElementById("node-editor-merge")?.addEventListener("click", async ()
       if (Array.isArray(error.payload?.cells)) {
         lastCells = error.payload.cells;
         applyBoardUpdate(graph, scopedCells(lastCells));
-        void decisionPanel.update(lastCells);
+        refreshDecisionAndActions(lastCells);
       }
       if (previewBox) { previewBox.hidden = false; previewBox.textContent = `看板已更新到 v${boardVersion}，请重新预览影响后再合并。`; }
     } else if (previewBox) { previewBox.hidden = false; previewBox.textContent = error instanceof Error ? error.message : "合并失败，请检查节点状态。"; }
@@ -372,7 +390,7 @@ document.getElementById("node-editor-undo")?.addEventListener("click", async () 
     if (Array.isArray(result.cells)) lastCells = result.cells;
     boardVersion = result.version ?? boardVersion + 1;
     applyBoardUpdate(graph, scopedCells(lastCells));
-    void decisionPanel.update(lastCells);
+    refreshDecisionAndActions(lastCells);
     if (editor) editor.hidden = true;
     setSummary(`已撤销该节点修改，当前版本 v${boardVersion}`);
   } catch (error) {
@@ -406,7 +424,7 @@ editorForm?.addEventListener("submit", async (event) => {
     boardVersion = result.version;
     lastCells = result.cells;
     applyBoardUpdate(graph, scopedCells(lastCells));
-    void decisionPanel.update(lastCells);
+    refreshDecisionAndActions(lastCells);
     if (editor) editor.hidden = true;
     setSummary("人工修改已保存并锁定相关字段");
   } catch (error) {
@@ -417,7 +435,7 @@ editorForm?.addEventListener("submit", async (event) => {
       if (Array.isArray(error.payload?.cells)) {
         lastCells = error.payload.cells;
         applyBoardUpdate(graph, scopedCells(lastCells));
-        void decisionPanel.update(lastCells);
+        refreshDecisionAndActions(lastCells);
         markSelected(selectedId, true);
       }
       if (editorConflict) {
@@ -622,7 +640,7 @@ const ws = new BoardWS(`${wsProtocol}//${location.host}/ws`, {
     highlighter.clear();          // 先清旧高亮（引用的是旧 cell），再重渲染
     focusBaseStyles.clear();
     applyBoardUpdate(graph, scopedCells(cells));
-    void decisionPanel.update(cells);
+    refreshDecisionAndActions(cells);
     refreshView();
     markSelected(selectedId, true);   // 重渲染后补回选中态描边
     if (info?.type === "board.rollback") {
@@ -672,7 +690,7 @@ fetch(`/api/board?meeting_id=${MEETING_ID}`)
     updateMeetingState(d.status || "draft");
     focusBaseStyles.clear();
     renderBoard(graph, scopedCells(d.cells));
-    void decisionPanel.update(d.cells);
+    refreshDecisionAndActions(d.cells);
     refreshView(true);
     if (issueViewActive) renderIssueView();
   })
@@ -843,7 +861,7 @@ async function refreshSavedBoard(): Promise<void> {
   if (issueViewActive) renderIssueView();
   focusBaseStyles.clear();
   applyBoardUpdate(graph, scopedCells(saved.cells));
-  void decisionPanel.update(saved.cells);
+  refreshDecisionAndActions(saved.cells);
   refreshView();
 }
 
@@ -877,6 +895,8 @@ async function changeMeetingStatus(status: "live" | "ended"): Promise<void> {
       ...review.disputes.map((item) => `· ${item.label || `${item.from || "观点"} ↔ ${item.to || "观点"}`}`),
       `缺负责人/期限的待办：${review.incomplete_actions.length}`,
       ...review.incomplete_actions.map((item) => `· ${item.label}（待补：${item.missing.join("、")}）`),
+      `会前待决问题：${review.pending_questions?.length ?? 0}`,
+      ...(review.pending_questions ?? []).map((item) => `· ${item.text}`),
       "结束后仍可人工修正，也可以重新打开会议。",
     ];
     if (!window.confirm(`结束会议前请检查：\n\n${lines.join("\n")}\n\n确认结束？`)) return;

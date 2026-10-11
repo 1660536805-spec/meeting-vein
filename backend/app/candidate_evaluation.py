@@ -66,10 +66,31 @@ def evaluation_report(rows, predictions, mode: str) -> dict:
                        for r in typed]
 
     relation_rows = [r for r in rows if (r.get("relation_anchor") or "").strip()]
-    expected_relations = [r["relation_anchor"].split(":", 1)[0] for r in relation_rows]
-    predicted_relations = [(normalized.get(int(r["line_no"]), {}).get("relation") or "__missing__")
-                           for r in relation_rows]
-    expected_conflicts = [r["relation_anchor"].startswith("oppose:") for r in relation_rows]
+    expected_relations, predicted_relations = [], []
+    owner_results = []
+    for row in relation_rows:
+        line = int(row["line_no"])
+        target_line_raw = (row.get("relation_target_line_no") or "").strip()
+        source = normalized.get(line, {})
+        if not target_line_raw or "relation_edges" not in source:
+            continue
+        target = normalized.get(int(target_line_raw), {})
+        target_node_id = target.get("node_id")
+        if not target_node_id:
+            continue
+        matching_edges = [edge for edge in source["relation_edges"]
+                          if edge.get("target_node_id") == target_node_id]
+        gold_relation = row["relation_anchor"].split(":", 1)[0]
+        same_node = source.get("node_id") == target_node_id
+        predicted_relation = "duplicate" if same_node else next(
+            (edge.get("relation") for edge in matching_edges
+             if edge.get("relation") == gold_relation), None)
+        if predicted_relation is None and matching_edges:
+            predicted_relation = matching_edges[0].get("relation")
+        expected_relations.append(gold_relation)
+        predicted_relations.append(predicted_relation or "__missing__")
+        owner_results.append(same_node or bool(matching_edges))
+    expected_conflicts = [relation == "oppose" for relation in expected_relations]
     predicted_conflicts = [relation == "oppose" for relation in predicted_relations]
 
     gold_clusters: dict[int, str] = {}
@@ -96,31 +117,21 @@ def evaluation_report(rows, predictions, mode: str) -> dict:
         expected_evidence.append(True)
         predicted_evidence.append(evidence == line)
 
-    owner_rows = [r for r in relation_rows]
-    owner_expected, owner_predicted = [], []
-    for row in owner_rows:
-        line = int(row["line_no"])
-        gold_target = row["relation_anchor"].split(":", 1)[1]
-        guess = normalized.get(line, {}).get("ownership_anchor")
-        owner_expected.append(bool(gold_target))
-        owner_predicted.append(bool(guess and guess == gold_target))
-
     return {
         "mode": mode,
         "sample_rows": len(rows),
         "human_labeled_types": len(typed),
         "type_confusion": confusion_matrix(expected_types, predicted_types),
         "relation_labeled_rows": len(relation_rows),
+        "unscored_relation_rows": len(relation_rows) - len(expected_relations),
         "relation_confusion": confusion_matrix(expected_relations, predicted_relations),
         "conflict_confusion": binary_confusion(expected_conflicts, predicted_conflicts),
         "assignment": {
             "evidence_link": binary_confusion(expected_evidence, predicted_evidence),
-            "gold_anchor_rows": len(owner_rows),
-            "correct_anchor_assignments": sum(owner_expected[i] and owner_predicted[i]
-                                               for i in range(len(owner_rows))),
-            "anchor_accuracy": (sum(owner_expected[i] and owner_predicted[i]
-                                     for i in range(len(owner_rows))) / len(owner_rows)
-                                if owner_rows else None),
+            "gold_anchor_rows": len(relation_rows),
+            "scored_anchor_rows": len(owner_results),
+            "correct_anchor_assignments": sum(owner_results),
+            "anchor_accuracy": sum(owner_results) / len(owner_results) if owner_results else None,
         },
         "deduplication": duplicate_pair_metrics(gold_clusters, duplicate_predictions),
         "limitations": ["真实 LLM 结果须由独立 predictions 文件提供；本工具不会发送会议原文到外部服务。"],

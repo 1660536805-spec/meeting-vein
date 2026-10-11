@@ -42,29 +42,38 @@ def main():
     ap.add_argument("--mock", type=Path, default=None)
     ap.add_argument("--predictions", type=Path, default=None)
     ap.add_argument("--out", type=Path, required=True)
-    ap.add_argument("--model", default="deepseek-chat")
+    ap.add_argument("--model", default="未记录")
     args = ap.parse_args()
 
     real = json.loads(args.real.read_text(encoding="utf-8"))
     mock = json.loads(args.mock.read_text(encoding="utf-8")) if args.mock and args.mock.exists() else None
+    prediction_file = args.predictions or Path(real.get("prediction_file", ""))
+    prediction_count = None
+    if prediction_file.is_file():
+        prediction_count = sum(bool(line.strip()) for line in prediction_file.open(encoding="utf-8"))
 
     tc = real["type_confusion"]
     cc = real["conflict_confusion"]
     dedup = real["deduplication"]
     asg = real["assignment"]
     m_yes = cc["matrix"]["yes"]
-    conflict_prec = m_yes["yes"] / (m_yes["yes"] + cc["matrix"]["no"]["yes"]) if (m_yes["yes"] + cc["matrix"]["no"]["yes"]) else 0.0
-    conflict_rec = m_yes["yes"] / (m_yes["yes"] + m_yes["no"]) if (m_yes["yes"] + m_yes["no"]) else 0.0
-    conflict_f1 = 2 * conflict_prec * conflict_rec / (conflict_prec + conflict_rec) if (conflict_prec + conflict_rec) else 0.0
+    if cc["count"]:
+        conflict_prec = m_yes["yes"] / (m_yes["yes"] + cc["matrix"]["no"]["yes"]) if (m_yes["yes"] + cc["matrix"]["no"]["yes"]) else 0.0
+        conflict_rec = m_yes["yes"] / (m_yes["yes"] + m_yes["no"]) if (m_yes["yes"] + m_yes["no"]) else 0.0
+        conflict_f1 = 2 * conflict_prec * conflict_rec / (conflict_prec + conflict_rec) if (conflict_prec + conflict_rec) else 0.0
+    else:
+        conflict_prec = conflict_rec = conflict_f1 = None
 
     L = []
     A = L.append
     A(f"# 会脉 · 候选质量评测报告（真实 LLM）")
     A("")
-    A(f"**评测日期**：{date.today().isoformat()}　**模型**：`{args.model}`（OpenAI 兼容端点）")
+    A(f"**评测日期**：{date.today().isoformat()}　**模型**：`{args.model}`")
     A(f"**被测管线**：`app.orchestrator.BoardAgent`（LangGraph 双 Agent，analyze→sync→commit），逐句批次（batch=1，与线上默认 debounce=0 一致）")
     A(f"**金标**：`{real.get('gold_file')}`（辩论-200，人工标注）")
     A(f"**预测文件**：`{real.get('prediction_file')}`")
+    if prediction_count is not None:
+        A(f"**成功提交预测**：{prediction_count}/{real['sample_rows']} 句；失败 {real['sample_rows'] - prediction_count} 句计为缺失。")
     A("")
     A("---")
     A("")
@@ -75,12 +84,12 @@ def main():
       + (f"，相对 Mock 基线 {pct(mock['type_confusion']['accuracy'])} 提升 "
          f"{(tc['accuracy'] - mock['type_confusion']['accuracy']) * 100:.1f} 个百分点。" if mock else "。"))
     A("")
-    A(f"- **冲突（oppose）检测**：precision {pct(conflict_prec)} / recall {pct(conflict_rec)} / F1 {pct(conflict_f1)}"
-      + (f"（Mock 基线 recall {pct(mock['conflict_confusion']['matrix']['yes']['yes'] / max(1, sum(mock['conflict_confusion']['matrix']['yes'].values())))}）。" if mock else "。"))
+    A(f"- **关系目标评分**：{real['relation_confusion']['count']}/{real['relation_labeled_rows']} 条可评分；"
+      f"其余 {real.get('unscored_relation_rows', 0)} 条不可评分，缺少人工目标行或可比较的节点预测。")
+    A(f"- **冲突（oppose）检测**：precision {pct(conflict_prec)} / recall {pct(conflict_rec)} / F1 {pct(conflict_f1)}。")
     A(f"- **重复簇去重**（pairwise）：precision {pct(dedup['precision'])} / recall {pct(dedup['recall'])} / F1 {pct(dedup['f1'])}"
       + (f"（Mock 基线 F1 {pct(mock['deduplication']['f1'])}）。" if mock else "。"))
-    A(f"- **溯源绑定**：{asg['evidence_link']['matrix']['yes']['yes']}/{asg['evidence_link']['count']} 条候选绑定到来源句"
-      f"（见 §4 局限：单句批次由兜底逻辑补全）。")
+    A(f"- **溯源绑定**：{asg['evidence_link']['matrix']['yes']['yes']}/{asg['evidence_link']['count']} 条候选绑定到来源句；该指标不检验语义关联是否正确。")
     A("")
     A("---")
     A("")
@@ -90,7 +99,7 @@ def main():
     A("|---|---|")
     A(f"| 样本 | 辩论赛-200 句（`backend/tests/辩论赛200句.txt`）|")
     A(f"| 人工标注候选 | {real['human_labeled_types']} 条（仅辩论类有金标）|")
-    A(f"| 关系标注行 | {real['relation_labeled_rows']} 条（oppose/support/duplicate）|")
+    A(f"| 关系标注行 | {real['relation_labeled_rows']} 条；其中 {real['relation_confusion']['count']} 条可评分 |")
     A(f"| 模型 | {args.model} |")
     A(f"| 管线 | 生产 BoardAgent（analyze + sync 双 Agent）|")
     A(f"| 批次 | batch=1（逐句）|")
@@ -134,7 +143,7 @@ def main():
     A("### 3.4 溯源绑定")
     A("")
     A(f"- evidence_link：{asg['evidence_link']['matrix']['yes']['yes']}/{asg['evidence_link']['count']} 候选绑定到来源句。")
-    A(f"- 语义锚键归属（anchor_accuracy）：{pct(asg['anchor_accuracy'])} —— 该项需标注集私有锚键，真实模型无从得知，**不作能力评价**（详见 §4）。")
+    A(f"- 目标节点归属：{pct(asg['anchor_accuracy'])}（正确 {asg.get('correct_anchor_assignments', 0)}/{asg.get('scored_anchor_rows', 0)} 条可评分；金标共 {asg['gold_anchor_rows']} 条）；不可评分项目不记为 0%。")
     A("")
     if mock:
         A("### 3.5 与 Mock 基线对比")
@@ -149,16 +158,17 @@ def main():
     A("")
     A("## 4. 发现与局限（诚实披露）")
     A("")
-    A(real.get("limitations", []))
-    for x in real.get("limitations", []):
-        pass
+    if "debate-200-gold.csv" in real.get("gold_file", ""):
+        A("- **类型口径待仲裁**：辩论赛金标把部分开篇立场和末尾重申标为 `conclusion`，"
+          "但产品提示词仅把已达成的决议或共识标为 `conclusion`。错误切片中有 7 条因此被预测为 `point`；"
+          "须由第二标注者统一口径后重算，不能直接把模型改成将辩论立场当作已确认决议。")
     for x in real.get("limitations", []):
         A(f"- {x}")
     A("")
     A("补充（本次实跑观察）：")
-    A("- **`evidence_index` 缺失**：真实模型在多句批次下普遍不输出 `evidence_index`，导致跨句溯源绑定丢失；单句批次（batch=1）由管线兜底逻辑自动补全为唯一来源句。建议在提示词中加入强约束或改用「逐句批次」策略以稳定溯源。")
-    A("- **类型体系口径差异**：金标把「带数据/事实的论证理由」标为 `point`，而产品提示词要求此类产出 `evidence`；这一口径差异会同时压低 precision 与 recall，属**评测基准与产品字典的对齐问题**，而非单纯模型误差。")
-    A("- **语义锚键不可比**：`relation_anchor` 后缀（如 `remote_position`）是标注集私有键，模型无法产出，故 `anchor_accuracy` 恒为 0，不代表关系推断能力。")
+    A(f"- **可评分覆盖率**：{real['relation_confusion']['count']}/{real['relation_labeled_rows']} 条关系有人工目标行及可比较的节点预测；"
+      "未覆盖项不参与关系准确率和目标归属准确率。")
+    A("- **标注规模**：当前辩论样本的类型、关系、重复正例数量较少；不能外推到其他会议场景。")
     A("")
     A("---")
     A("")
@@ -167,19 +177,22 @@ def main():
     A("```bash")
     A("cd backend")
     A("# 1) 用真实 LLM + 生产管线生成预测（逐句批次）")
-    A("../.venv/bin/python scripts/generate_real_predictions.py --batch-size 1")
+    A("../.venv/bin/python scripts/generate_real_predictions.py --batch-size 1 --passes 4 \\")
+    A("    --output ../doc/reports/predictions-real-debate200-v2.jsonl")
     A("# 2) 对金标评分")
     A("../.venv/bin/python scripts/evaluate_candidates.py --mode real \\")
-    A("    --predictions ../doc/reports/predictions-real-debate200.jsonl")
+    A("    --predictions ../doc/reports/predictions-real-debate200-v2.jsonl \\")
+    A("    --output ../doc/reports/candidate-quality-real-2026-10-10-v2.json")
     A("# 3) 渲染本报告")
     A("../.venv/bin/python scripts/render_quality_report.py \\")
-    A("    --real ../doc/reports/candidate-quality-real-<date>.json \\")
-    A("    --mock ../doc/reports/candidate-quality-mock-2026-10-07.json \\")
-    A("    --out  ../doc/reports/candidate-quality-report-<date>.md")
+    A("    --real ../doc/reports/candidate-quality-real-2026-10-10-v2.json \\")
+    A("    --mock ../doc/reports/candidate-quality-mock-2026-10-10-v2.json \\")
+    A("    --predictions ../doc/reports/predictions-real-debate200-v2.jsonl \\")
+    A("    --model deepseek-chat --out ../doc/reports/candidate-quality-report-2026-10-10-v2.md")
     A("```")
     A("")
-    A("> 说明：真实 LLM 模式会把会议原文发送到所配置的外部端点（`OPENAI_BASE_URL`）。"
-      "本仓库默认 `.env` 使用 deepseek 端点；评测脚本本身不主动外发，预测文件由独立的 `generate_real_predictions.py` 生成，便于审计。")
+    A("> 说明：真实预测生成脚本会把测试语料发送到所配置的模型端点；评分脚本只读取本地文件。"
+      "请同时保存模型名、提示词版本、运行日志和失败行，才可复核预测来源。")
     A("")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)

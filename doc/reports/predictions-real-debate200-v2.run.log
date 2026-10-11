@@ -1,0 +1,29 @@
+[mode] OpenAIClient model=deepseek-chat base_url=https://api.deepseek.com
+[input] 200 句发言，batch_size=1 max_passes=4
+  [1] batch 1/200 lines=1 ERR:sync candidate validation failed: substantive analysis produced no board operation
+Deserializing unregistered type app.models.SpeakerRef from checkpoint. This will be blocked in a future version. Set LANGGRAPH_STRICT_MSGPACK=true to block now, or add to allowed_msgpack_modules to allow explicitly: [('app.models', 'SpeakerRef')]
+Deserializing unregistered type app.models.NormUtterance from checkpoint. This will be blocked in a future version. Set LANGGRAPH_STRICT_MSGPACK=true to block now, or add to allowed_msgpack_modules to allow explicitly: [('app.models', 'NormUtterance')]
+Deserializing unregistered type app.models.InsightRecord from checkpoint. This will be blocked in a future version. Set LANGGRAPH_STRICT_MSGPACK=true to block now, or add to allowed_msgpack_modules to allow explicitly: [('app.models', 'InsightRecord')]
+Deserializing unregistered type app.models.MeetingSummary from checkpoint. This will be blocked in a future version. Set LANGGRAPH_STRICT_MSGPACK=true to block now, or add to allowed_msgpack_modules to allow explicitly: [('app.models', 'MeetingSummary')]
+Deserializing unregistered type app.models.GraphUpdateOp from checkpoint. This will be blocked in a future version. Set LANGGRAPH_STRICT_MSGPACK=true to block now, or add to allowed_msgpack_modules to allow explicitly: [('app.models', 'GraphUpdateOp')]
+Deserializing unregistered type app.models.GraphOp from checkpoint. This will be blocked in a future version. Set LANGGRAPH_STRICT_MSGPACK=true to block now, or add to allowed_msgpack_modules to allow explicitly: [('app.models', 'GraphOp')]
+  [1] batch 130/200 lines=130 ERR:sync candidate validation failed: substantive analysis produced no board operation
+  [1] batch 177/200 lines=177 ERR:sync candidate validation failed: substantive analysis produced no board operation
+[pass 1] 完成，仍失败 3 句（累计 592s）
+[pass 2] 重试 3 句；等待熔断冷却 35s…
+  [2] batch 1/3 lines=1 ERR:sync candidate validation failed: substantive analysis produced no board operation
+  [2] batch 2/3 lines=130 ERR:sync candidate validation failed: substantive analysis produced no board operation
+  [2] batch 3/3 lines=177 ERR:sync candidate validation failed: substantive analysis produced no board operation
+[pass 2] 完成，仍失败 3 句（累计 636s）
+[pass 3] 重试 3 句；等待熔断冷却 35s…
+  [3] batch 1/3 lines=1 ERR:sync candidate validation failed: substantive analysis produced no board operation
+  [3] batch 2/3 lines=130 ERR:sync candidate validation failed: substantive analysis produced no board operation
+  [3] batch 3/3 lines=177 ERR:sync candidate validation failed: substantive analysis produced no board operation
+[pass 3] 完成，仍失败 3 句（累计 679s）
+[pass 4] 重试 3 句；等待熔断冷却 35s…
+  [4] batch 1/3 lines=1 ERR:sync candidate validation failed: substantive analysis produced no board operation
+  [4] batch 2/3 lines=130 ERR:sync candidate validation failed: substantive analysis produced no board operation
+  [4] batch 3/3 lines=177 ERR:sync candidate validation failed: substantive analysis produced no board operation
+[pass 4] 完成，仍失败 3 句（累计 722s）
+[board] cells=512 nodes_with_refs=195 lines_with_insight=200 ok_lines=197 failed_lines=[1, 130, 177]
+[out] 197 条已提交预测（输入 200 句，失败 3 句）→ doc/reports/predictions-real-debate200-v2.jsonl

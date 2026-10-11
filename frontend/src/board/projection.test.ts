@@ -59,6 +59,14 @@ describe("projectBoard", () => {
     expect(projection.formatEvidenceTime({})).toBe("时间未知");
   });
 
+  it("keeps an AI-marked confirmed conclusion in the review queue", () => {
+    const projection = projectBoard([
+      { id: "ai", data: { type: "conclusion", label: "候选", status: "confirmed" } },
+      { id: "human", data: { type: "conclusion", label: "决议", status: "confirmed", manual_override: { status: true } } },
+    ]);
+    expect(projection.unresolved.map((item) => item.nodeIds)).toEqual([["ai"]]);
+  });
+
   it("limits the default relationship view to two hops around its focus", () => {
     const cells = [
       { id: "root", data: { type: "issue", parent_id: null } },

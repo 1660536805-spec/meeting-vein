@@ -10,13 +10,17 @@ if [[ ! "$frontend_port" =~ ^[0-9]+$ ]] || (( 10#$frontend_port < 1024 || 10#$fr
   exit 1
 fi
 
-for requirement in ffmpeg node npm lsof; do
+requirements=(node npm lsof)
+if [[ "${AMO_SKIP_ASR:-0}" != "1" ]]; then requirements+=(ffmpeg); fi
+for requirement in "${requirements[@]}"; do
   if ! command -v "$requirement" >/dev/null 2>&1; then
     echo "缺少 $requirement；请先安装后再启动。" >&2
     exit 1
   fi
 done
-for executable in "$board_python" "$asr_python"; do
+executables=("$board_python")
+if [[ "${AMO_SKIP_ASR:-0}" != "1" ]]; then executables+=("$asr_python"); fi
+for executable in "${executables[@]}"; do
   if [[ ! -x "$executable" ]]; then
     echo "缺少 Python 环境：$executable；请按 README 安装依赖。" >&2
     exit 1
@@ -26,7 +30,9 @@ if [[ ! -x "$meeting_root/frontend/node_modules/.bin/vite" ]]; then
   echo "缺少前端依赖；请先在 frontend 运行 npm ci。" >&2
   exit 1
 fi
-for port in "$frontend_port" 8000 9000; do
+ports=("$frontend_port" 8000)
+if [[ "${AMO_SKIP_ASR:-0}" != "1" ]]; then ports+=(9000); fi
+for port in "${ports[@]}"; do
   if lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null; then
     echo "端口 $port 已被占用；请先停止对应服务。" >&2
     exit 1
@@ -45,12 +51,18 @@ trap 'exit 143' TERM
 
 (cd "$meeting_root/backend" && exec env PYTHONPATH=. "$board_python" -m uvicorn app.server:app --host 127.0.0.1 --port 8000) &
 children+=("$!")
-(cd "$meeting_root/local_asr" && exec env PYTHONPATH=backend LOCAL_ASR_FRONTEND_ORIGINS="$asr_frontend_origins" "$asr_python" -m uvicorn app.main:app --host 127.0.0.1 --port 9000) &
-children+=("$!")
+if [[ "${AMO_SKIP_ASR:-0}" != "1" ]]; then
+  (cd "$meeting_root/local_asr" && exec env PYTHONPATH=backend LOCAL_ASR_FRONTEND_ORIGINS="$asr_frontend_origins" "$asr_python" -m uvicorn app.main:app --host 127.0.0.1 --port 9000) &
+  children+=("$!")
+fi
 (cd "$meeting_root/frontend" && exec ./node_modules/.bin/vite --host 127.0.0.1 --port "$frontend_port" --strictPort) &
 children+=("$!")
 
 echo "会议看板：http://127.0.0.1:$frontend_port/"
 echo "看板 API：http://127.0.0.1:8000/api/status"
-echo "本地 ASR：http://127.0.0.1:9000/models/status"
+if [[ "${AMO_SKIP_ASR:-0}" != "1" ]]; then
+  echo "本地 ASR：http://127.0.0.1:9000/models/status"
+else
+  echo "文字演示模式：本地 ASR 未启动；可通过文字输入演示。"
+fi
 wait "${children[@]}"

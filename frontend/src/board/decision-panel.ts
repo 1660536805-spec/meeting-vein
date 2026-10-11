@@ -1,5 +1,7 @@
 import { rest, type MetadataRecord } from "../api/rest";
 import { projectBoard } from "./projection";
+import { projectDecisionCards } from "./decision-cards";
+import { formatSpeakerName } from "./speaker";
 
 const escape = (value: unknown): string => String(value ?? "").replace(/[&<>"']/g, (c) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
@@ -7,7 +9,8 @@ const escape = (value: unknown): string => String(value ?? "").replace(/[&<>"']/
 
 type InsightKind = "focus" | "confirmed" | "conflict" | "action";
 
-export function mountDecisionPanel(onFocus: (id: string) => void) {
+export function mountDecisionPanel(onFocus: (id: string) => void,
+                                   onReview: (id: string) => void = onFocus) {
   const metadataCache = new Map<string, MetadataRecord>();
   const railHost = document.getElementById("utterance-rail")!;
   const rail = document.getElementById("utterance-list")!;
@@ -37,6 +40,51 @@ export function mountDecisionPanel(onFocus: (id: string) => void) {
     }
   }
 
+  function renderDecisionCards(cells: any[]) {
+    const host = document.getElementById("decision-card-list");
+    if (!host) return;
+    host.replaceChildren();
+    const cards = projectDecisionCards(cells);
+    if (!cards.length) {
+      const empty = document.createElement("p");
+      empty.className = "insight-empty";
+      empty.textContent = "出现结论后，可在这里核对支持、反对依据并人工确认。";
+      host.append(empty);
+      return;
+    }
+    for (const card of cards) {
+      const section = document.createElement("section");
+      section.className = "decision-card";
+      const title = document.createElement("h3");
+      title.textContent = card.label;
+      const status = document.createElement("span");
+      status.className = `decision-status decision-status-${card.status}`;
+      status.textContent = card.status === "confirmed" ? "已确认"
+        : card.status === "dismissed" ? "已驳回" : "待人工确认";
+      title.append(status);
+      section.append(title);
+      for (const [heading, items] of [["支持依据", card.supports], ["反对依据", card.objections]] as const) {
+        const row = document.createElement("p");
+        row.className = "decision-evidence";
+        row.textContent = `${heading}：${items.length ? items.map((item) => item.label).join("；") : "暂无"}`;
+        section.append(row);
+      }
+      if (card.missingEvidence) {
+        const warning = document.createElement("p");
+        warning.className = "decision-warning";
+        warning.textContent = "尚无可追溯原话依据";
+        section.append(warning);
+      }
+      const review = document.createElement("button");
+      review.type = "button";
+      review.className = "decision-review";
+      review.textContent = "查看来源并审核";
+      review.addEventListener("click", () => onReview(card.id));
+      section.append(review);
+      host.append(section);
+    }
+  }
+
   async function update(cells: any[]) {
     const ownRevision = ++revision;
     const projection = projectBoard(cells);
@@ -47,7 +95,7 @@ export function mountDecisionPanel(onFocus: (id: string) => void) {
     const focus = projection.focus ? [projection.focus.cell] : [];
     const root = projection.roots.map((id) => projection.nodeById.get(id)).find(Boolean);
     const confirmed = projection.conclusions.filter((node) =>
-      node.data.status === "confirmed" || node.data.resolved === true).map((node) => node.cell);
+      node.data.status === "confirmed" && node.data.manual_override?.status === true).map((node) => node.cell);
     const conflicts = projection.unresolved.map((item) => {
       const participants = item.nodeIds.map((id) => projection.nodeById.get(id)).filter(Boolean);
       const representative = participants[0];
@@ -71,6 +119,7 @@ export function mountDecisionPanel(onFocus: (id: string) => void) {
       group("focus", focus); group("confirmed", confirmed); group("conflict", conflicts); group("action", actions);
     };
     renderGroups();
+    renderDecisionCards(cells);
     if (!nodes.length) return;
 
     const nodeForMeta = new Map<string, string>();

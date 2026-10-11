@@ -1,0 +1,299 @@
+{
+  "mode": "real",
+  "sample_rows": 200,
+  "human_labeled_types": 41,
+  "type_confusion": {
+    "labels": [
+      "__missing__",
+      "action",
+      "conclusion",
+      "conflict",
+      "evidence",
+      "issue",
+      "other",
+      "point",
+      "question"
+    ],
+    "matrix": {
+      "__missing__": {
+        "__missing__": 0,
+        "action": 0,
+        "conclusion": 0,
+        "conflict": 0,
+        "evidence": 0,
+        "issue": 0,
+        "other": 0,
+        "point": 0,
+        "question": 0
+      },
+      "action": {
+        "__missing__": 0,
+        "action": 2,
+        "conclusion": 0,
+        "conflict": 0,
+        "evidence": 1,
+        "issue": 0,
+        "other": 1,
+        "point": 1,
+        "question": 0
+      },
+      "conclusion": {
+        "__missing__": 0,
+        "action": 0,
+        "conclusion": 1,
+        "conflict": 0,
+        "evidence": 1,
+        "issue": 0,
+        "other": 0,
+        "point": 7,
+        "question": 0
+      },
+      "conflict": {
+        "__missing__": 0,
+        "action": 0,
+        "conclusion": 1,
+        "conflict": 0,
+        "evidence": 0,
+        "issue": 0,
+        "other": 0,
+        "point": 0,
+        "question": 0
+      },
+      "evidence": {
+        "__missing__": 0,
+        "action": 0,
+        "conclusion": 0,
+        "conflict": 0,
+        "evidence": 2,
+        "issue": 0,
+        "other": 0,
+        "point": 0,
+        "question": 0
+      },
+      "issue": {
+        "__missing__": 1,
+        "action": 0,
+        "conclusion": 0,
+        "conflict": 0,
+        "evidence": 0,
+        "issue": 0,
+        "other": 0,
+        "point": 0,
+        "question": 0
+      },
+      "other": {
+        "__missing__": 0,
+        "action": 0,
+        "conclusion": 0,
+        "conflict": 0,
+        "evidence": 0,
+        "issue": 0,
+        "other": 0,
+        "point": 0,
+        "question": 0
+      },
+      "point": {
+        "__missing__": 0,
+        "action": 0,
+        "conclusion": 0,
+        "conflict": 0,
+        "evidence": 3,
+        "issue": 0,
+        "other": 0,
+        "point": 15,
+        "question": 0
+      },
+      "question": {
+        "__missing__": 1,
+        "action": 0,
+        "conclusion": 0,
+        "conflict": 0,
+        "evidence": 1,
+        "issue": 0,
+        "other": 0,
+        "point": 1,
+        "question": 2
+      }
+    },
+    "count": 41,
+    "correct": 22,
+    "accuracy": 0.5365853658536586,
+    "per_label": {
+      "__missing__": {
+        "support": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "action": {
+        "support": 5,
+        "precision": 1.0,
+        "recall": 0.4,
+        "f1": 0.5714285714285715
+      },
+      "conclusion": {
+        "support": 9,
+        "precision": 0.5,
+        "recall": 0.1111111111111111,
+        "f1": 0.1818181818181818
+      },
+      "conflict": {
+        "support": 1,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "evidence": {
+        "support": 2,
+        "precision": 0.25,
+        "recall": 1.0,
+        "f1": 0.4
+      },
+      "issue": {
+        "support": 1,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "other": {
+        "support": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "point": {
+        "support": 18,
+        "precision": 0.625,
+        "recall": 0.8333333333333334,
+        "f1": 0.7142857142857143
+      },
+      "question": {
+        "support": 5,
+        "precision": 1.0,
+        "recall": 0.4,
+        "f1": 0.5714285714285715
+      }
+    }
+  },
+  "relation_labeled_rows": 11,
+  "unscored_relation_rows": 1,
+  "relation_confusion": {
+    "labels": [
+      "__missing__",
+      "duplicate",
+      "oppose",
+      "subordinate"
+    ],
+    "matrix": {
+      "__missing__": {
+        "__missing__": 0,
+        "duplicate": 0,
+        "oppose": 0,
+        "subordinate": 0
+      },
+      "duplicate": {
+        "__missing__": 2,
+        "duplicate": 0,
+        "oppose": 0,
+        "subordinate": 1
+      },
+      "oppose": {
+        "__missing__": 6,
+        "duplicate": 0,
+        "oppose": 1,
+        "subordinate": 0
+      },
+      "subordinate": {
+        "__missing__": 0,
+        "duplicate": 0,
+        "oppose": 0,
+        "subordinate": 0
+      }
+    },
+    "count": 10,
+    "correct": 1,
+    "accuracy": 0.1,
+    "per_label": {
+      "__missing__": {
+        "support": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "duplicate": {
+        "support": 3,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "oppose": {
+        "support": 7,
+        "precision": 1.0,
+        "recall": 0.14285714285714285,
+        "f1": 0.25
+      },
+      "subordinate": {
+        "support": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    }
+  },
+  "conflict_confusion": {
+    "labels": [
+      "no",
+      "yes"
+    ],
+    "matrix": {
+      "no": {
+        "no": 3,
+        "yes": 0
+      },
+      "yes": {
+        "no": 6,
+        "yes": 1
+      }
+    },
+    "count": 10
+  },
+  "assignment": {
+    "evidence_link": {
+      "labels": [
+        "no",
+        "yes"
+      ],
+      "matrix": {
+        "no": {
+          "no": 0,
+          "yes": 0
+        },
+        "yes": {
+          "no": 2,
+          "yes": 39
+        }
+      },
+      "count": 41
+    },
+    "gold_anchor_rows": 11,
+    "scored_anchor_rows": 10,
+    "correct_anchor_assignments": 2,
+    "anchor_accuracy": 0.2
+  },
+  "deduplication": {
+    "gold_pairs": 3,
+    "predicted_pairs": 0,
+    "true_positive_pairs": 0,
+    "false_positive_pairs": 0,
+    "false_negative_pairs": 3,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+  },
+  "limitations": [
+    "真实 LLM 结果须由独立 predictions 文件提供；本工具不会发送会议原文到外部服务。"
+  ],
+  "gold_file": "/Users/leo/Downloads/工作文件/开元造物黑客松/ai_meeting_organizer-fusion/backend/tests/annotations/debate-200-gold.csv",
+  "prediction_file": "doc/reports/predictions-real-debate200-v2.jsonl",
+  "report_file": "doc/reports/candidate-quality-real-2026-10-10-v2.json"
+}

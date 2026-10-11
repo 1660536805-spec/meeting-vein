@@ -16,6 +16,8 @@
 """
 from __future__ import annotations
 import asyncio
+import base64
+import binascii
 import json
 import logging
 import os
@@ -43,8 +45,11 @@ from .utterance_ingest import IncomingUtterance, UtteranceIngestor, metadata_id
 from .models import GraphOp, GraphUpdateOp, stable_hash
 from .tools.graph_tools import GraphTools
 from .tools.metadata_tools import MetadataTools
-from .minutes import parse_agenda, render_minutes, review_before_close
+from .minutes import human_confirmed, parse_agenda, render_minutes, review_before_close
 from .errors import safe_error_code
+from .action_ledger import ActionLedger, ActionConflict
+from .preparation import PreparationStore, PreparationConflict
+from .meeting_links import MeetingLinks, MeetingLinkConflict, topic_projection
 
 
 logging.basicConfig(level=os.getenv("AMO_LOG_LEVEL", "INFO").upper(),
@@ -65,6 +70,9 @@ ROOT = _storage_root()
 bus = EventBus()
 store_a = StoreA(ROOT)
 store_b = StoreB(ROOT)
+action_ledger = ActionLedger(os.path.join(ROOT, "actions.sqlite3"))
+preparation_store = PreparationStore(os.path.join(ROOT, "preparation.sqlite3"))
+meeting_links = MeetingLinks(os.path.join(ROOT, "meeting_links.sqlite3"))
 agent = BoardAgent(store_a, store_b, build_llm())
 graph_tools = GraphTools(store_a, store_b)
 metadata_tools = MetadataTools(store_a, store_b)
@@ -272,6 +280,43 @@ class RenameMeetingRequest(BaseModel):
     title: str = Field(min_length=1, max_length=60)
 
 
+class RegisterActionRequest(BaseModel):
+    action_node_id: str = Field(min_length=1, max_length=120)
+    decision_node_id: Optional[str] = Field(default=None, max_length=120)
+    event_id: str = Field(min_length=1, max_length=120)
+
+
+class UpdateActionRequest(BaseModel):
+    expected_version: int = Field(ge=1)
+    changes: dict
+
+
+class MaterialUploadRequest(BaseModel):
+    filename: str = Field(min_length=1, max_length=120)
+    content_base64: str = Field(min_length=1, max_length=7_000_000)
+
+
+class PreparationQuestionRequest(BaseModel):
+    event_id: str = Field(min_length=1, max_length=120)
+    text: str = Field(min_length=1, max_length=200)
+    source_kind: str = Field(pattern="^(agenda|material|manual)$")
+    source_ref: Optional[str] = Field(default=None, max_length=200)
+
+
+class PreparationQuestionUpdateRequest(BaseModel):
+    expected_version: int = Field(ge=1)
+    status: str = Field(pattern="^(pending|resolved|dismissed)$")
+
+
+class MeetingLinkRequest(BaseModel):
+    source_meeting_id: str = Field(min_length=1, max_length=120)
+    source_topic_node_id: str = Field(min_length=1, max_length=120)
+    target_topic_node_id: str = Field(min_length=1, max_length=120)
+    event_id: str = Field(min_length=1, max_length=120)
+    actor: str = Field(min_length=1, max_length=120)
+    reason: str = Field(min_length=1, max_length=500)
+
+
 def _valid_path_meeting_id(graph_id: str) -> str:
     if not is_valid_meeting_id(graph_id):
         raise HTTPException(status_code=400, detail="invalid meeting_id")
@@ -317,6 +362,177 @@ async def create_meeting(req: CreateMeetingRequest):
     return {"ok": True, **store_a.create_meeting(meeting_id, title, agenda, req.agenda_text)}
 
 
+@app.get("/api/meetings/{graph_id}/preparation")
+async def meeting_preparation(graph_id: str):
+    graph_id = _valid_path_meeting_id(graph_id)
+    details = store_a.meeting_details(graph_id)
+    if details is None:
+        raise HTTPException(status_code=404, detail="meeting not found")
+    return {"ok": True, "materials": preparation_store.list_materials(graph_id),
+            "suggestions": preparation_store.suggest(graph_id, details["agenda"]),
+            "questions": preparation_store.list_questions(graph_id)}
+
+
+@app.post("/api/meetings/{graph_id}/links", dependencies=[Depends(require_token)])
+async def create_meeting_link(graph_id: str, req: MeetingLinkRequest):
+    graph_id = _valid_path_meeting_id(graph_id)
+    source_id = _valid_path_meeting_id(req.source_meeting_id)
+    if not store_a.exists(graph_id) or not store_a.exists(source_id):
+        raise HTTPException(status_code=404, detail="meeting not found")
+    try:
+        topic_projection(store_a.load(source_id), req.source_topic_node_id)
+        topic_projection(store_a.load(graph_id), req.target_topic_node_id)
+        link = meeting_links.create(source_id, graph_id, req.source_topic_node_id,
+                                    req.target_topic_node_id, req.event_id, req.actor, req.reason)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except MeetingLinkConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"ok": True, "link": link}
+
+
+@app.get("/api/meetings/{graph_id}/timeline")
+async def meeting_timeline(graph_id: str):
+    graph_id = _valid_path_meeting_id(graph_id)
+    if not store_a.exists(graph_id):
+        raise HTTPException(status_code=404, detail="meeting not found")
+    entries = []
+    for link in meeting_links.list_for_target(graph_id):
+        source_id = link["source_meeting_id"]
+        if not store_a.exists(source_id):
+            continue
+        old = topic_projection(store_a.load(source_id), link["source_topic_node_id"])
+        new = topic_projection(store_a.load(graph_id), link["target_topic_node_id"])
+        old_ids = set(old.pop("node_ids"))
+        new.pop("node_ids")
+        carried = [action for action in action_ledger.list_for_meeting(source_id)
+                   if action["status"] not in {"done", "cancelled"}
+                   and (action["action_node_id"] in old_ids or action["decision_node_id"] in old_ids)]
+        old_cells = {cell.get("id"): cell for cell in store_a.load(source_id) if cell.get("shape") != "edge"}
+        for action in carried:
+            action["label"] = (old_cells.get(action["action_node_id"], {}).get("data") or {}).get("label") or action["action_node_id"]
+        for evidence in new["evidence"]:
+            evidence["source_utterances"] = [{"meta_id": ref, "text": (store_b.get(ref) or {}).get("text")}
+                                               for ref in evidence["metadata_refs"]]
+        entries.append({"link": link, "source_meeting": store_a.meeting_details(source_id),
+                        "target_meeting": store_a.meeting_details(graph_id),
+                        "old_topic": old, "new_topic": new, "unfinished_actions": carried})
+    return {"ok": True, "entries": entries}
+
+
+@app.post("/api/meetings/{graph_id}/materials", dependencies=[Depends(require_token)])
+async def upload_meeting_material(graph_id: str, req: MaterialUploadRequest):
+    graph_id = _valid_path_meeting_id(graph_id)
+    if not store_a.exists(graph_id):
+        raise HTTPException(status_code=404, detail="meeting not found")
+    try:
+        raw = base64.b64decode(req.content_base64, validate=True)
+        material = preparation_store.add_material(graph_id, req.filename, raw)
+    except (ValueError, binascii.Error) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"ok": True, "material": material}
+
+
+@app.get("/api/meetings/{graph_id}/material-source")
+async def meeting_material_source(graph_id: str, source_ref: str):
+    graph_id = _valid_path_meeting_id(graph_id)
+    if not store_a.exists(graph_id):
+        raise HTTPException(status_code=404, detail="meeting not found")
+    try:
+        excerpt = preparation_store.source_excerpt(graph_id, source_ref)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"ok": True, "source_ref": source_ref, "text": excerpt}
+
+
+@app.post("/api/meetings/{graph_id}/questions", dependencies=[Depends(require_token)])
+async def add_meeting_question(graph_id: str, req: PreparationQuestionRequest):
+    graph_id = _valid_path_meeting_id(graph_id)
+    if not store_a.exists(graph_id):
+        raise HTTPException(status_code=404, detail="meeting not found")
+    try:
+        question = preparation_store.add_question(graph_id, req.event_id, req.text,
+                                                   req.source_kind, req.source_ref)
+    except PreparationConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"ok": True, "question": question}
+
+
+@app.patch("/api/meetings/{graph_id}/questions/{question_id}", dependencies=[Depends(require_token)])
+async def update_meeting_question(graph_id: str, question_id: str,
+                                  req: PreparationQuestionUpdateRequest):
+    graph_id = _valid_path_meeting_id(graph_id)
+    if not store_a.exists(graph_id):
+        raise HTTPException(status_code=404, detail="meeting not found")
+    try:
+        question = preparation_store.update_question(graph_id, question_id,
+                                                      req.expected_version, req.status)
+    except PreparationConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"ok": True, "question": question}
+
+
+@app.get("/api/meetings/{graph_id}/actions")
+async def list_meeting_actions(graph_id: str):
+    graph_id = _valid_path_meeting_id(graph_id)
+    if not store_a.exists(graph_id):
+        raise HTTPException(status_code=404, detail="meeting not found")
+    return {"ok": True, "actions": action_ledger.list_for_meeting(graph_id)}
+
+
+@app.post("/api/meetings/{graph_id}/actions", dependencies=[Depends(require_token)])
+async def register_meeting_action(graph_id: str, req: RegisterActionRequest):
+    graph_id = _valid_path_meeting_id(graph_id)
+    if not store_a.exists(graph_id):
+        raise HTTPException(status_code=404, detail="meeting not found")
+    nodes = {cell.get("id"): cell for cell in store_a.load(graph_id)
+             if cell.get("shape") != "edge"}
+    action_node = nodes.get(req.action_node_id)
+    if not action_node or (action_node.get("data") or {}).get("type") != "action":
+        raise HTTPException(status_code=422, detail="action_node_id must reference an action node")
+    if req.decision_node_id:
+        decision = nodes.get(req.decision_node_id)
+        if not decision or not human_confirmed(decision):
+            raise HTTPException(status_code=422, detail="decision_node_id must reference a human-confirmed conclusion")
+    try:
+        action = action_ledger.register(graph_id, req.action_node_id, req.event_id,
+                                        req.decision_node_id)
+    except ActionConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"ok": True, "action": action}
+
+
+@app.patch("/api/meetings/{graph_id}/actions/{action_id}", dependencies=[Depends(require_token)])
+async def update_meeting_action(graph_id: str, action_id: str, req: UpdateActionRequest):
+    graph_id = _valid_path_meeting_id(graph_id)
+    if not store_a.exists(graph_id):
+        raise HTTPException(status_code=404, detail="meeting not found")
+    try:
+        action = action_ledger.update(graph_id, action_id, req.expected_version, req.changes)
+    except ActionConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="action not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"ok": True, "action": action}
+
+
+@app.get("/api/meetings/{graph_id}/actions/{action_id}/history")
+async def meeting_action_history(graph_id: str, action_id: str):
+    graph_id = _valid_path_meeting_id(graph_id)
+    if not store_a.exists(graph_id):
+        raise HTTPException(status_code=404, detail="meeting not found")
+    actions = action_ledger.list_for_meeting(graph_id)
+    if not any(action["id"] == action_id for action in actions):
+        raise HTTPException(status_code=404, detail="action not found")
+    return {"ok": True, "events": action_ledger.history(graph_id, action_id)}
+
+
 @app.get("/api/meetings/{graph_id}/close-preview")
 async def meeting_close_preview(graph_id: str):
     graph_id = _valid_path_meeting_id(graph_id)
@@ -324,7 +540,7 @@ async def meeting_close_preview(graph_id: str):
     if details is None:
         raise HTTPException(status_code=404, detail="meeting not found")
     return {"ok": True, "graph_id": graph_id,
-            "review": review_before_close(store_a.load(graph_id))}
+            "review": review_before_close(store_a.load(graph_id), action_ledger.list_for_meeting(graph_id), preparation_store.list_questions(graph_id))}
 
 
 @app.post("/api/meetings/{graph_id}/status", dependencies=[Depends(require_token)])
@@ -338,7 +554,7 @@ async def update_meeting_status(graph_id: str, req: MeetingStatusRequest):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     await _broadcast_board(graph_id)
     return {"ok": True, **result,
-            "review": review_before_close(store_a.load(graph_id)) if req.status == "ended" else None}
+            "review": review_before_close(store_a.load(graph_id), action_ledger.list_for_meeting(graph_id), preparation_store.list_questions(graph_id)) if req.status == "ended" else None}
 
 
 @app.get("/api/meetings/{graph_id}/minutes")
@@ -349,7 +565,9 @@ async def meeting_minutes(graph_id: str, format: str = Query(default="markdown",
         raise HTTPException(status_code=404, detail="meeting not found")
     content = render_minutes(details["title"] or graph_id, details["agenda"], details["status"],
                              store_a.load(graph_id), store_b.list_utterances(graph_id),
-                             format=format, history=store_a.history(graph_id))
+                             format=format, history=store_a.history(graph_id),
+                             actions=action_ledger.list_for_meeting(graph_id),
+                             questions=preparation_store.list_questions(graph_id))
     filename = f"{graph_id}-minutes.{ 'html' if format == 'html' else 'md' }"
     headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
     if format == "html":
@@ -373,6 +591,11 @@ async def meeting_snapshot_file(graph_id: str):
         "cells": store_a.load(graph_id),
         "utterances": store_b.list_utterances(graph_id),
         "history": store_a.history(graph_id),
+        "actions": action_ledger.list_for_meeting(graph_id),
+        "action_history": action_ledger.history(graph_id),
+        "materials": preparation_store.export_materials(graph_id),
+        "questions": preparation_store.list_questions(graph_id),
+        "incoming_meeting_links": meeting_links.list_for_target(graph_id),
     }
     return JSONResponse(document, headers={
         "Content-Disposition": f'attachment; filename="{graph_id}-snapshot.json"',

@@ -171,6 +171,10 @@
         </div>
         </div>
         <div id="assistant-insights" aria-label="会议实时摘要">
+          <details class="insight-group preparation-group">
+            <summary><span class="insight-group-title">会前准备</span></summary>
+            <section class="insight-section preparation-section"><h2><span class="insight-icon">?</span>材料与待决问题</h2><div id="preparation-panel"></div></section>
+          </details>
           <section class="insight-section summary-section"><h2><span class="insight-icon">≋</span>会议摘要</h2><p id="meeting-summary" class="meeting-summary-text">发言后会在这里汇总议题、结论和下一步。</p></section>
           <details class="insight-group discussion-group">
             <summary><span class="insight-group-title">讨论进展</span><span class="insight-group-counts"><span>焦点 <b id="focus-count">0</b></span><span>未解决 <b id="conflict-count">0</b></span></span></summary>
@@ -179,8 +183,10 @@
           </details>
           <details class="insight-group decision-group">
             <summary><span class="insight-group-title">决策与行动</span><span class="insight-group-counts"><span>结论 <b id="confirmed-count">0</b></span><span>下一步 <b id="action-count">0</b></span></span></summary>
+            <section class="insight-section decision-card-section"><h2><span class="insight-icon">◇</span>决策卡</h2><div id="decision-card-list"></div></section>
             <section class="insight-section confirmed-section"><h2><span class="insight-icon">✓</span>已确认结论</h2><div id="confirmed-list"></div></section>
             <section class="insight-section action-section"><h2><span class="insight-icon">✓</span>下一步</h2><div id="action-list"></div></section>
+            <section class="insight-section action-tracker-section"><h2><span class="insight-icon">↗</span>行动台账</h2><div id="action-tracker"></div></section>
           </details>
         </div>
       </aside>

@@ -46,6 +46,17 @@
               </div>
             </div>
             <aside id="history-records">
+              <h2>跨会复盘</h2>
+              <form id="history-link-form">
+                <label>延续自会议<select id="history-source-meeting" required></select></label>
+                <label>旧议题<select id="history-source-topic" required></select></label>
+                <label>本会议议题<select id="history-target-topic" required></select></label>
+                <label>关联人<input id="history-link-actor" maxlength="120" required placeholder="主持人" /></label>
+                <label>关联原因<input id="history-link-reason" maxlength="500" required placeholder="说明两次会议为何相关" /></label>
+                <button type="submit">确认关联</button>
+                <p id="history-link-message" role="status"></p>
+              </form>
+              <div id="history-timeline"></div>
               <h2>逐句对话</h2>
               <div id="history-utterance-list"></div>
               <h2>保存版本</h2>

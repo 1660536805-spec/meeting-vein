@@ -15,7 +15,7 @@ class MinutesTests(unittest.TestCase):
     def test_minutes_only_call_confirmed_nodes_decisions_and_show_provenance_gaps(self):
         cells = [
             {"id": "issue", "data": {"type": "issue", "label": "上线节奏"}},
-            {"id": "decision", "data": {"type": "conclusion", "label": "先小范围试点", "status": "confirmed", "parent_id": "issue", "metadata_refs": ["u1"]}},
+            {"id": "decision", "data": {"type": "conclusion", "label": "先小范围试点", "status": "confirmed", "manual_override": {"status": True}, "parent_id": "issue", "metadata_refs": ["u1"]}},
             {"id": "draft", "data": {"type": "conclusion", "label": "下月全量上线", "status": "needs_confirmation", "parent_id": "issue"}},
             {"id": "todo", "data": {"type": "todo", "label": "整理试点名单", "parent_id": "issue", "status": "open"}},
         ]
@@ -28,6 +28,22 @@ class MinutesTests(unittest.TestCase):
         self.assertIn("待补充负责人", markdown)
         self.assertIn("待补充期限", markdown)
         self.assertIn("未确认", markdown)
+
+    def test_minutes_use_action_ledger_and_never_promote_ai_status(self):
+        cells = [
+            {"id": "issue", "data": {"type": "issue", "label": "上线节奏"}},
+            {"id": "ai_decision", "data": {"type": "conclusion", "label": "直接发布", "status": "confirmed", "parent_id": "issue"}},
+            {"id": "human_decision", "data": {"type": "conclusion", "label": "先试点", "status": "confirmed", "manual_override": {"status": True}, "parent_id": "issue"}},
+            {"id": "action", "data": {"type": "action", "label": "整理名单", "parent_id": "issue"}},
+        ]
+        actions = [{"action_node_id": "action", "decision_node_id": "human_decision", "owner": "小李",
+                    "due_date": "2026-10-20", "status": "in_progress"}]
+        markdown = render_minutes("评审", ["上线节奏"], "ended", cells, [], actions=actions)
+        self.assertIn("**先试点**", markdown)
+        self.assertNotIn("**直接发布**", markdown)
+        self.assertIn("直接发布（未确认）", markdown)
+        self.assertIn("整理名单（负责人：小李；期限：2026-10-20", markdown)
+        self.assertIn("来源决议：先试点", markdown)
 
     def test_minutes_include_manual_change_reason(self):
         markdown = render_minutes("评审", [], "ended", [], [], history=[{

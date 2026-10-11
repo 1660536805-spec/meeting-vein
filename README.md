@@ -29,7 +29,9 @@
 | M1 单机内测 | 未完成 | 目标是单机部署、单人编辑、多人只读查看，并完整走通建会、议程、输入、纠错、结束与纪要导出；不能据当前 Demo 宣称完成。 |
 | M2 对外试用 | 未开始 | 登录权限、跨设备安全分享、撤销、备份恢复、监控及腾讯会议授权接入尚未交付。 |
 
-MockLLM 是规则化演示输出，不是真实模型推理，也不能用于宣称抽取质量。真实 LLM 仅在实际实例成功初始化后才可作为真实链路；模型 key 或端点配置本身不构成真实链路验收。指标目标及测量定义见 [`doc/Design.md`](doc/Design.md)，当前尚无合格标注集的质量报告。
+MockLLM 是规则化演示输出，不是真实模型推理，也不能用于宣称抽取质量。真实 LLM 仅在实际实例成功初始化后才可作为真实链路；模型 key 或端点配置本身不构成真实链路验收。当前真实模型样本测量及数据局限见 [`doc/reports/candidate-quality-report-2026-10-10-v2.md`](doc/reports/candidate-quality-report-2026-10-10-v2.md)，待双人复核的标注流程见 [`backend/tests/annotations/labeling-protocol.md`](backend/tests/annotations/labeling-protocol.md)。
+
+本机快速演示见 [`output/本机演示包-启动与验收.md`](output/本机演示包-启动与验收.md)：可先用 `AMO_SKIP_ASR=1 bash scripts/start_local.sh` 运行文字演示，无需安装大型语音模型。新功能包括会前材料与待决问题、人工审核决策卡、行动台账和关会前检查。
 
 ## 目录
 

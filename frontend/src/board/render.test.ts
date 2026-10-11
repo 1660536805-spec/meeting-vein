@@ -260,4 +260,15 @@ describe("user command marks (data.cmd)", () => {
     expect(rendered.nodes[0].attrs.typeLabel.text).toContain("待确认");
     expect(rendered.nodes[0].attrs.typeLabel.title).toContain("影响行动");
   });
+
+  it("does not label a human-confirmed conclusion as pending because of earlier low confidence", () => {
+    const { graph, fromJSON } = graphOf();
+    renderBoard(graph, [{ id: "decision", shape: "amo-node", data: {
+      type: "conclusion", label: "先试点", status: "confirmed", manual_override: { status: true },
+      confidence: 0.5, needs_confirmation: true,
+    } }]);
+    const rendered = fromJSON.mock.calls[0][0] as { nodes: Array<{ attrs: { typeLabel: { text: string } } }> };
+    expect(rendered.nodes[0].attrs.typeLabel.text).toContain("已确认");
+    expect(rendered.nodes[0].attrs.typeLabel.text).not.toContain("待确认");
+  });
 });

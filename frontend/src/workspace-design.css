@@ -64,6 +64,32 @@
 .insight-card strong:after { content:"›"; font-size:18px; font-weight:300; line-height:1; color:#b7c9e9; }
 .insight-card p { color:#a4b9dc; font-size:12px; line-height:1.5; margin:4px 0 0; }
 .conflict-section .insight-card strong { color:#f490bc; }
+.decision-card { margin:0 0 8px; padding:10px; border:1px solid var(--ant-border, #34516e); border-radius:10px; background:var(--ant-bg-container, #112035); color:var(--ant-text, #f0f4fe); }
+.decision-card h3 { display:flex; justify-content:space-between; gap:8px; align-items:start; margin:0 0 7px; font-size:13px; line-height:1.45; }
+.decision-status { flex:none; border-radius:999px; padding:2px 7px; font-size:11px; font-weight:500; background:var(--ant-warning-bg, #3a2b18); color:var(--ant-warning, #e3a962); }
+.decision-status-confirmed { background:var(--ant-success-bg, #123c34); color:var(--ant-success, #6ccbb3); }
+.decision-status-dismissed { background:var(--ant-error-bg, #402430); color:var(--ant-error, #e4869d); }
+.decision-evidence, .decision-warning { margin:4px 0; font-size:12px; line-height:1.5; color:var(--ant-text-secondary, #a4b9dc); }
+.decision-warning { color:var(--ant-warning, #e3a962); }
+.decision-review { margin-top:8px; border:1px solid var(--ant-primary-border, #4c6e9c); border-radius:7px; padding:5px 9px; background:var(--ant-primary-bg, #183152); color:var(--ant-primary, #8cadf5); cursor:pointer; }
+.decision-review:hover, .decision-review:focus-visible { border-color:var(--ant-primary-hover, #aac7ff); outline-offset:2px; }
+.action-tracker-card { display:grid; gap:7px; margin:0 0 9px; padding:10px; border:1px solid var(--ant-border, #34516e); border-radius:10px; background:var(--ant-bg-container, #112035); color:var(--ant-text, #f0f4fe); font-size:12px; }
+.action-tracker-card strong { font-size:13px; }
+.action-tracker-card label { display:grid; gap:3px; color:var(--ant-text-secondary, #a4b9dc); }
+.action-tracker-card input, .action-tracker-card select { width:100%; min-height:30px; border:1px solid var(--ant-border, #34516e); border-radius:6px; padding:4px 7px; background:var(--ant-bg-container, #112035); color:var(--ant-text, #f0f4fe); color-scheme:dark; }
+[data-theme="light"] .action-tracker-card input, [data-theme="light"] .action-tracker-card select { color-scheme:light; }
+.action-warning { margin:0; color:#e4aa60; }
+.prep-upload,.prep-manual,.prep-candidate,.prep-question { display:grid; gap:6px; margin:0 0 9px; padding:9px; border:1px solid var(--ant-border,#34516e); border-radius:8px; background:var(--ant-bg-container,#112035); font-size:12px; }
+.prep-upload label { display:grid; gap:6px; }
+.prep-upload input,.prep-manual input,.prep-candidate input { width:100%; min-width:0; padding:6px; border:1px solid var(--ant-border,#34516e); border-radius:6px; background:var(--ant-bg-container,#112035); color:var(--ant-text,#f0f4fe); }
+.prep-upload button,.prep-manual button,.prep-candidate button,.prep-question button { width:max-content; max-width:100%; padding:5px 9px; border:1px solid var(--ant-primary-border,#4c6e9c); border-radius:6px; background:var(--ant-primary-bg,#183152); color:var(--ant-primary,#8cadf5); cursor:pointer; }
+.prep-question small,.prep-candidate small,.prep-sources { color:var(--ant-text-secondary,#a4b9dc); overflow-wrap:anywhere; }
+.preparation-section h3 { margin:12px 0 6px; font-size:12px; }
+.action-source-decision { margin:0; color:var(--ant-text-secondary, #a4b9dc); }
+.action-history { margin:0; padding-left:18px; color:var(--ant-text-secondary, #a4b9dc); line-height:1.6; }
+.action-history[hidden] { display:none; }
+.action-register, .action-save { border:1px solid var(--ant-primary-border, #4c6e9c); border-radius:7px; padding:5px 9px; background:var(--ant-primary-bg, #183152); color:var(--ant-primary, #8cadf5); cursor:pointer; }
+.action-register:disabled, .action-save:disabled { opacity:.6; cursor:wait; }
 .insight-empty { color:#6f88a7; font-size:11px; margin:4px 0 2px; line-height:1.5; }
 .decision-workspace #mascot #composer { flex:0 0 96px; min-height:96px; margin:0 -16px; }
 @media(max-width:1150px) and (min-width:851px) {

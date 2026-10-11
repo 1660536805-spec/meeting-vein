@@ -34,12 +34,19 @@ def _node_label(cell: dict) -> str:
     return str((cell.get("data") or {}).get("label") or cell.get("id") or "未命名")
 
 
+def human_confirmed(cell: dict) -> bool:
+    data = cell.get("data") or {}
+    return (data.get("type") == "conclusion" and data.get("status") == "confirmed"
+            and (data.get("manual_override") or {}).get("status") is True)
+
+
 def _minutes_markdown(title: str, agenda: list[str], status: str,
                       cells: Iterable[dict], utterances: Iterable[dict],
-                      history: Iterable[dict] = ()) -> str:
+                      history: Iterable[dict] = (), actions: Iterable[dict] = ()) -> str:
     nodes = [c for c in cells if isinstance(c, dict) and c.get("shape") != "edge"]
     edges = [c for c in cells if isinstance(c, dict) and c.get("shape") == "edge"]
     by_id = {c.get("id"): c for c in nodes}
+    action_by_node = {a.get("action_node_id"): a for a in actions if isinstance(a, dict)}
     utterance_by_id = {u.get("meta_id"): u for u in utterances if isinstance(u, dict)}
     structural_parent = {}
     for edge in edges:
@@ -86,8 +93,7 @@ def _minutes_markdown(title: str, agenda: list[str], status: str,
     for topic in agenda_topics:
         lines.extend(["", f"## {topic}", "", "### 已确认结论"])
         topic_nodes = [n for n in nodes if topic_for(n) == topic]
-        confirmed = [n for n in topic_nodes if (n.get("data") or {}).get("type") == "conclusion"
-                     and (n.get("data") or {}).get("status") == "confirmed"]
+        confirmed = [n for n in topic_nodes if human_confirmed(n)]
         if not confirmed:
             lines.append("- 暂无已确认结论")
         for node in confirmed:
@@ -102,7 +108,8 @@ def _minutes_markdown(title: str, agenda: list[str], status: str,
                 lines.append(f"  - 人工改动：{', '.join(sorted(data['manual_override'])) if isinstance(data['manual_override'], dict) else '已人工校正'}")
 
         lines.extend(["", "### 未决与分歧"])
-        unresolved = [n for n in topic_nodes if (n.get("data") or {}).get("status") == "needs_confirmation"
+        unresolved = [n for n in topic_nodes if ((n.get("data") or {}).get("type") == "conclusion" and not human_confirmed(n))
+                      or (n.get("data") or {}).get("status") == "needs_confirmation"
                       or (n.get("data") or {}).get("type") in {"conflict", "question"}]
         unresolved_edge_ids = set()
         for edge in edges:
@@ -122,20 +129,24 @@ def _minutes_markdown(title: str, agenda: list[str], status: str,
             lines.append(f"- {_node_label(node)}（未确认）")
 
         lines.extend(["", "### 行动项"])
-        todos = [n for n in topic_nodes if (n.get("data") or {}).get("type") == "todo"]
+        todos = [n for n in topic_nodes if (n.get("data") or {}).get("type") in {"todo", "action"}]
         if not todos:
             lines.append("- 暂无行动项")
         for node in todos:
             data = node.get("data") or {}
-            owner = data.get("owner") or data.get("assignee")
-            due = data.get("deadline") or data.get("due_date")
-            status_text = data.get("status") or "待确认"
+            tracked = action_by_node.get(node.get("id")) or {}
+            owner = tracked.get("owner") or data.get("owner") or data.get("assignee")
+            due = tracked.get("due_date") or data.get("deadline") or data.get("due_date")
+            status_text = tracked.get("status") or data.get("status") or "待确认"
             gaps = []
             if not owner:
                 gaps.append("待补充负责人")
             if not due:
                 gaps.append("待补充期限")
             lines.append(f"- {_node_label(node)}（负责人：{owner or '待补充'}；期限：{due or '待补充'}；状态：{status_text}；{'、'.join(gaps) if gaps else '字段完整'}）")
+            linked = by_id.get(tracked.get("decision_node_id"))
+            if linked:
+                lines.append(f"  - 来源决议：{_node_label(linked)}")
             refs = data.get("metadata_refs") or []
             if refs:
                 for ref in refs:
@@ -178,8 +189,14 @@ def _markdown_to_safe_html(markdown: str) -> str:
 
 def render_minutes(title: str, agenda: list[str], status: str, cells: Iterable[dict],
                    utterances: Iterable[dict], *, format: str = "markdown",
-                   history: Iterable[dict] = ()) -> str:
-    markdown = _minutes_markdown(title, agenda, status, cells, utterances, history)
+                   history: Iterable[dict] = (), actions: Iterable[dict] = (),
+                   questions: Iterable[dict] = ()) -> str:
+    markdown = _minutes_markdown(title, agenda, status, cells, utterances, history, actions)
+    question_rows = list(questions)
+    if question_rows:
+        labels = {"pending": "待解决", "resolved": "已解决", "dismissed": "已搁置"}
+        markdown += "\n\n## 会前待决问题\n"
+        markdown += "\n".join(f"- [{labels.get(q.get('status'), '待核对')}] {q.get('text', '')}（来源：{q.get('source_ref') or '人工补充'}）" for q in question_rows)
     if format == "markdown":
         return markdown
     if format == "html":
@@ -187,14 +204,16 @@ def render_minutes(title: str, agenda: list[str], status: str, cells: Iterable[d
     raise ValueError("format must be markdown or html")
 
 
-def review_before_close(cells: Iterable[dict]) -> dict:
+def review_before_close(cells: Iterable[dict], actions: Iterable[dict] = (),
+                        questions: Iterable[dict] = ()) -> dict:
     """Return the unresolved decisions, disagreements and incomplete actions to review."""
     nodes = [c for c in cells if isinstance(c, dict) and c.get("shape") != "edge"]
     edges = [c for c in cells if isinstance(c, dict) and c.get("shape") == "edge"]
     by_id = {c.get("id"): c for c in nodes}
+    tracked_actions = {a.get("action_node_id"): a for a in actions if isinstance(a, dict)}
     unconfirmed = [{"id": c.get("id"), "label": _node_label(c)} for c in nodes
                    if (c.get("data") or {}).get("type") == "conclusion"
-                   and (c.get("data") or {}).get("status") != "confirmed"]
+                   and not human_confirmed(c)]
     disputes = []
     for edge in edges:
         data = edge.get("data") or {}
@@ -209,12 +228,15 @@ def review_before_close(cells: Iterable[dict]) -> dict:
     incomplete_actions = []
     for cell in nodes:
         data = cell.get("data") or {}
-        if data.get("type") != "todo":
+        if data.get("type") not in {"todo", "action"}:
+            continue
+        tracked = tracked_actions.get(cell.get("id")) or {}
+        if tracked.get("status") in {"done", "cancelled"}:
             continue
         missing = []
-        if not (data.get("owner") or data.get("assignee")):
+        if not (tracked.get("owner") or data.get("owner") or data.get("assignee")):
             missing.append("负责人")
-        if not (data.get("deadline") or data.get("due_date")):
+        if not (tracked.get("due_date") or data.get("deadline") or data.get("due_date")):
             missing.append("期限")
         if missing:
             incomplete_actions.append({"id": cell.get("id"), "label": _node_label(cell), "missing": missing})
@@ -223,4 +245,6 @@ def review_before_close(cells: Iterable[dict]) -> dict:
         if data.get("type") == "conflict" and data.get("status") not in {"resolved", "closed"}:
             disputes.append({"label": _node_label(cell)})
     return {"unconfirmed": unconfirmed, "disputes": disputes,
-            "incomplete_actions": incomplete_actions}
+            "incomplete_actions": incomplete_actions,
+            "pending_questions": [{"id": q.get("id"), "text": q.get("text")}
+                                  for q in questions if q.get("status") == "pending"]}

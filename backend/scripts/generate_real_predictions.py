@@ -13,10 +13,8 @@
 本脚本按「限流 + 多轮重试（跨冷却窗口）」消除瞬时抖动导致的整段丢失；仅在 analyze 阶段
 失败时才丢弃该句（此时 checkpointer 仍残留上一批 summary，必须忽略以免污染）。
 
-输出每行（JSONL）字段对齐评测器：
-  line_no, type, relation, ownership_anchor, evidence_line_no, node_id
-说明：ownership_anchor 需要标注集私有的语义锚键（relation_anchor 的后缀），
-真实 LLM 无从得知，故置 null —— 评测器由此得出 anchor_accuracy=0 属预期，非模型能力缺陷。
+输出每行（JSONL）包含 node_id 和 relation_edges（实际图边的目标节点与关系），
+评测器通过人工标注的目标发言行解析对应节点，再对比源节点与目标节点。
 """
 from __future__ import annotations
 
@@ -37,7 +35,42 @@ sys.path.insert(0, str(BACKEND))
 
 GOLD = ROOT / "backend/tests/annotations/debate-200-gold.csv"
 MID = "mtg_quality_eval"
-_PREF = {"oppose": 5, "support": 4, "duplicate": 3, "subordinate": 2, "derive": 1, "replace": 0}
+def project_relation_edges(cells: list[dict], node_by_meta: dict[int, str]) -> dict[int, list[dict]]:
+    """Project actual graph edges to the source rows linked to each endpoint."""
+    by_node: dict[str, set[tuple[str, str]]] = {}
+    for cell in cells:
+        if cell.get("shape") != "edge" and cell.get("source") is None:
+            continue
+        source = cell.get("source")
+        target = cell.get("target")
+        source = source.get("cell") if isinstance(source, dict) else source
+        target = target.get("cell") if isinstance(target, dict) else target
+        relation = (cell.get("data") or {}).get("relation")
+        if not source or not target or not relation:
+            continue
+        by_node.setdefault(str(source), set()).add((str(target), str(relation)))
+        by_node.setdefault(str(target), set()).add((str(source), str(relation)))
+    return {line: [{"target_node_id": other, "relation": relation}
+                   for other, relation in sorted(by_node.get(str(node_id), set()))]
+            for line, node_id in node_by_meta.items()}
+
+
+def build_prediction_records(insights_by_line: dict[int, dict], node_by_meta: dict[int, str],
+                             relation_edges_by_line: dict[int, list[dict]],
+                             committed_lines: set[int]) -> list[dict]:
+    """Only committed batches can be counted as predictions from the full pipeline."""
+    records = []
+    for line_no in sorted(committed_lines):
+        ins = insights_by_line.get(line_no, {})
+        records.append({
+            "line_no": line_no,
+            "type": ins.get("type"),
+            "relation": ins.get("relation"),
+            "relation_edges": relation_edges_by_line.get(line_no, []),
+            "evidence_line_no": line_no if line_no in insights_by_line else None,
+            "node_id": node_by_meta.get(line_no),
+        })
+    return records
 
 
 def load_rows(path: Path):
@@ -119,21 +152,6 @@ async def drive(items, batch_size: int, sleep_s: float, max_passes: int, cooldow
     # 节点归属：Store A 落库后 node.data.metadata_refs → meta_id
     cells = store_a.load(MID)
 
-    def _endpoint(v):
-        return (v or {}).get("cell") if isinstance(v, dict) else v
-
-    rel_by_node: dict[str, set] = {}
-    for c in cells:
-        if str(c.get("shape")) == "edge" or c.get("source") is not None:
-            rel = (c.get("data") or {}).get("relation")
-            for nid in (_endpoint(c.get("source")), _endpoint(c.get("target"))):
-                if nid:
-                    rel_by_node.setdefault(str(nid), set()).add(rel)
-
-    def _relation_for(node_id: str):
-        rels = {r for r in (rel_by_node.get(str(node_id)) or set()) if r}
-        return max(rels, key=lambda r: _PREF.get(r, -1)) if rels else None
-
     node_by_meta: dict[int, str] = {}
     for c in cells:
         if str(c.get("shape")) != "edge" and str(c.get("id", "")).startswith("n_"):
@@ -141,15 +159,12 @@ async def drive(items, batch_size: int, sleep_s: float, max_passes: int, cooldow
                 m = re.search(r"(\d+)$", str(r))
                 if m:
                     node_by_meta[int(m.group(1))] = c.get("id")
-    for line_no, node_id in node_by_meta.items():
-        ins = insights_by_line.setdefault(line_no, {})
-        if not ins.get("relation"):
-            ins["relation"] = _relation_for(node_id)
+    relation_edges_by_line = project_relation_edges(cells, node_by_meta)
 
     print(f"[board] cells={len(cells)} nodes_with_refs={len(node_by_meta)} "
           f"lines_with_insight={len(insights_by_line)} ok_lines={len(ok_lines)} "
           f"failed_lines={sorted(set(l for l, _ in pending))[:20]}")
-    return insights_by_line, node_by_meta
+    return insights_by_line, node_by_meta, relation_edges_by_line, ok_lines
 
 
 def main():
@@ -167,24 +182,17 @@ def main():
         rows = rows[:args.limit]
     items = [(int(r["line_no"]), r["utterance"].strip()) for r in rows if r["utterance"].strip()]
 
-    insights_by_line, node_by_meta = asyncio.run(
+    insights_by_line, node_by_meta, relation_edges_by_line, committed_lines = asyncio.run(
         drive(items, args.batch_size, args.sleep, args.passes, args.cooldown_wait))
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    n = 0
+    records = build_prediction_records(
+        insights_by_line, node_by_meta, relation_edges_by_line, committed_lines)
     with args.output.open("w", encoding="utf-8") as fh:
-        for line_no in sorted(set(insights_by_line) | set(node_by_meta)):
-            ins = insights_by_line.get(line_no, {})
-            fh.write(json.dumps({
-                "line_no": line_no,
-                "type": ins.get("type"),
-                "relation": ins.get("relation"),
-                "ownership_anchor": None,     # 标注集私有锚键，模型不可知（见文件头说明）
-                "evidence_line_no": line_no,
-                "node_id": node_by_meta.get(line_no),
-            }, ensure_ascii=False) + "\n")
-            n += 1
-    print(f"[out] {n} 条预测（覆盖 {len(items)} 句中 {len(insights_by_line)} 句）→ {args.output}")
+        for record in records:
+            fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+    print(f"[out] {len(records)} 条已提交预测（输入 {len(items)} 句，"
+          f"失败 {len(items) - len(committed_lines)} 句）→ {args.output}")
 
 
 if __name__ == "__main__":

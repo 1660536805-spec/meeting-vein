@@ -2,7 +2,8 @@ import "@antv/x6/dist/index.css";
 import type { Graph } from "@antv/x6";
 import { createGraph, renderBoard } from "./board/render";
 import { mountBoardToolbar } from "./board/toolbar";
-import { meetingsApi, type MeetingSummary, type MeetingHistoryRecord, type UtteranceRecord } from "./api/meetings";
+import { meetingsApi, type MeetingSummary, type MeetingHistoryRecord, type UtteranceRecord,
+  type MeetingTimelineEntry } from "./api/meetings";
 
 const list = document.getElementById("history-list")!;
 const empty = document.getElementById("history-list-empty")!;
@@ -16,9 +17,77 @@ const records = document.getElementById("history-record-list")!;
 const error = document.getElementById("history-error")!;
 const renameForm = document.getElementById("rename-form") as HTMLFormElement;
 const renameInput = document.getElementById("rename-input") as HTMLInputElement;
+const linkForm = document.getElementById("history-link-form") as HTMLFormElement;
+const sourceMeeting = document.getElementById("history-source-meeting") as HTMLSelectElement;
+const sourceTopic = document.getElementById("history-source-topic") as HTMLSelectElement;
+const targetTopic = document.getElementById("history-target-topic") as HTMLSelectElement;
+const linkActor = document.getElementById("history-link-actor") as HTMLInputElement;
+const linkReason = document.getElementById("history-link-reason") as HTMLInputElement;
+const linkMessage = document.getElementById("history-link-message")!;
+const timelineHost = document.getElementById("history-timeline")!;
 let meetings: MeetingSummary[] = [];
 let activeId = new URLSearchParams(location.search).get("meeting_id") || "";
 let graph: Graph | null = null;
+
+function setTopicOptions(select: HTMLSelectElement, cells: any[]): void {
+  select.replaceChildren();
+  for (const cell of cells) {
+    if (cell.shape === "edge" || cell.data?.type !== "issue" || cell.id === "n_issue_root") continue;
+    const option = document.createElement("option");
+    option.value = cell.id;
+    option.textContent = cell.data.label || cell.id;
+    select.append(option);
+  }
+}
+
+async function updateSourceTopics(): Promise<void> {
+  sourceTopic.replaceChildren();
+  if (!sourceMeeting.value) return;
+  const requestedId = sourceMeeting.value;
+  try {
+    const board = await meetingsApi.board(requestedId);
+    if (sourceMeeting.value === requestedId) setTopicOptions(sourceTopic, board.cells);
+  } catch { linkMessage.textContent = "旧会议议题加载失败，请刷新后重试。"; }
+}
+
+function renderTimeline(entries: MeetingTimelineEntry[]): void {
+  timelineHost.replaceChildren();
+  if (!entries.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "尚未关联旧会议议题。由主持人确认后才会显示跨会复盘。";
+    timelineHost.append(empty);
+  }
+  for (const entry of entries) {
+    const card = document.createElement("section");
+    card.className = "history-timeline-card";
+    const heading = document.createElement("strong");
+    heading.textContent = `${entry.source_meeting.title} · ${entry.old_topic.topic.label} → ${entry.new_topic.topic.label}`;
+    const reason = document.createElement("p");
+    reason.textContent = `${entry.link.actor}：${entry.link.reason}`;
+    card.append(heading, reason);
+    const groups: Array<[string, string[]]> = [
+      ["上次人工决议", entry.old_topic.confirmed_decisions.map((item) => item.label)],
+      ["本次新增证据", entry.new_topic.evidence.flatMap((item) =>
+        item.source_utterances.map((source) => source.text || `${item.label}（原话待核对）`))],
+      ["本次人工决议", entry.new_topic.confirmed_decisions.map((item) => item.label)],
+      ["上次未完成行动", entry.unfinished_actions.map((item) =>
+        `${item.label} · ${item.owner || "待分配"} · ${item.status}`)],
+    ];
+    for (const [label, values] of groups) {
+      const section = document.createElement("p");
+      section.textContent = `${label}：${values.length ? values.join("；") : "暂无"}`;
+      card.append(section);
+    }
+    timelineHost.append(card);
+  }
+}
+
+async function updateTimeline(id: string): Promise<void> {
+  try {
+    const result = await meetingsApi.timeline(id);
+    if (activeId === id) renderTimeline(result.entries);
+  } catch { if (activeId === id) timelineHost.textContent = "跨会时间线加载失败，请刷新后重试。"; }
+}
 
 function date(value: string | null | undefined): string {
   if (!value) return "时间未知";
@@ -124,6 +193,16 @@ async function selectMeeting(id: string): Promise<void> {
     renderBoard(graph, board.cells);
     renderUtterances(utter.utterances);
     renderRecords(history.records);
+    setTopicOptions(targetTopic, board.cells);
+    sourceMeeting.replaceChildren();
+    for (const item of meetings.filter((meeting) => meeting.meeting_id !== id)) {
+      const option = document.createElement("option");
+      option.value = item.meeting_id;
+      option.textContent = item.title;
+      sourceMeeting.append(option);
+    }
+    linkForm.hidden = sourceMeeting.options.length === 0 || targetTopic.options.length === 0;
+    await Promise.all([updateSourceTopics(), updateTimeline(id)]);
   } catch (reason) {
     showError(reason);
   }
@@ -144,6 +223,23 @@ async function loadMeetings(): Promise<void> {
 }
 
 document.getElementById("history-refresh")!.addEventListener("click", () => void loadMeetings());
+sourceMeeting.addEventListener("change", () => void updateSourceTopics());
+linkForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!activeId || !sourceMeeting.value || !sourceTopic.value || !targetTopic.value) return;
+  const targetId = activeId;
+  const button = linkForm.querySelector<HTMLButtonElement>("button[type=submit]")!;
+  button.disabled = true;
+  linkMessage.textContent = "正在保存关联…";
+  try {
+    await meetingsApi.linkMeeting(targetId, { source_meeting_id: sourceMeeting.value,
+      source_topic_node_id: sourceTopic.value, target_topic_node_id: targetTopic.value,
+      event_id: crypto.randomUUID(), actor: linkActor.value.trim(), reason: linkReason.value.trim() });
+    linkMessage.textContent = "跨会关联已保存";
+    await updateTimeline(targetId);
+  } catch { linkMessage.textContent = "关联失败；请核对议题或刷新后重试。"; }
+  finally { button.disabled = false; }
+});
 document.getElementById("history-rename")!.addEventListener("click", () => {
   renameInput.value = title.textContent || "";
   renameForm.hidden = false;

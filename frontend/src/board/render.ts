@@ -319,8 +319,10 @@ function normalize(cells: any[]): { nodes: any[]; edges: any[] } {
     const lines = String(c.data?.label ?? "").split("\n");
     const title = lines[0];
     const subtitle = lines.slice(1).join("\n") || NODE_TYPE_LABELS[c.data?.type] || "要点";
-    const needsConfirmation = Boolean(c.data?.needs_confirmation)
-      || (typeof c.data?.confidence === "number" && c.data.confidence < 0.65 && !c.data?.resolved);
+    const humanConfirmed = c.data?.type === "conclusion" && c.data?.status === "confirmed"
+      && c.data?.manual_override?.status === true;
+    const needsConfirmation = !humanConfirmed && (Boolean(c.data?.needs_confirmation)
+      || (typeof c.data?.confidence === "number" && c.data.confidence < 0.65 && !c.data?.resolved));
     const rationale = IMPORTANCE_RATIONALES[c.data?.importance?.rationale] ?? "";
     const stateTitle = [
       typeof c.data?.confidence === "number" ? `置信度 ${Math.round(c.data.confidence * 100)}%` : "",
@@ -359,7 +361,7 @@ function normalize(cells: any[]): { nodes: any[]; edges: any[] } {
           icon: { d: style.icon, transform: "translate(18,33)", fill: "none", stroke: c.data?.type === "action" ? "#fff" : grayed ? stroke : style.stroke, strokeWidth: c.data?.type === "point" ? 5 : c.data?.type === "action" ? 3 : 2, strokeLinecap: c.data?.type === "point" ? "butt" : "round", strokeLinejoin: "round", pointerEvents: "none" },
         } : {}),
         typeLabel: {
-          text: `${decision ? subtitle : NODE_TYPE_LABELS[c.data?.type] ?? "要点"}${grayed ? "·暂不考虑" : ""}${needsConfirmation ? "·待确认" : ""}`,
+          text: `${decision ? subtitle : NODE_TYPE_LABELS[c.data?.type] ?? "要点"}${grayed ? "·暂不考虑" : ""}${humanConfirmed ? "·已确认" : needsConfirmation ? "·待确认" : ""}`,
           ...(stateTitle ? { title: stateTitle } : {}),
           fill: grayed ? "#9c9c9c" : style.accent,
           fontSize: decision ? 12 : 11,

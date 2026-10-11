@@ -30,3 +30,4 @@ httpx==0.28.1
 
 # master 提示词契约外置
 pyyaml==6.0.3
+pypdf==6.20.0

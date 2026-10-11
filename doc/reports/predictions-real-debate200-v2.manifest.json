@@ -1,0 +1,33 @@
+{
+  "schema": "amo.quality-run/v1",
+  "record_kind": "reconstructed_from_completed_run_log",
+  "recorded_at": "2026-10-10T14:23:11.652617+00:00",
+  "git_head": "56bccb6889a2066753f1caf70f7f4dca3147f294",
+  "working_tree_dirty_at_run": true,
+  "model": "deepseek-chat",
+  "provider_base_url": "https://api.deepseek.com",
+  "pipeline": "app.orchestrator.BoardAgent analyze -> sync -> commit",
+  "command": "PYTHONPATH=backend .venv/bin/python -u backend/scripts/generate_real_predictions.py --batch-size 1 --sleep 0.4 --passes 4 --output doc/reports/predictions-real-debate200-v2.jsonl",
+  "batch_size": 1,
+  "sleep_seconds": 0.4,
+  "max_passes": 4,
+  "cooldown_seconds": 35,
+  "input_rows": 200,
+  "committed_prediction_rows": 197,
+  "failed_line_numbers": [
+    1,
+    130,
+    177
+  ],
+  "elapsed_seconds_approx": 722,
+  "input_gold_csv_sha256": "396b313fd4e8ca96005025cd870bb995fd3dbddf617863102c2b5edb5ce8fafc",
+  "prompt_yaml_sha256": "ed1834251e3f77754856034667f1c36795d0f1a6c56abd7b3d7643ea814f24f0",
+  "generator_py_sha256": "51553369b264ff7740fab2b2fefc2c9f8859acab03a1cad1e073c715dfcb9d73",
+  "prediction_jsonl_sha256": "babd937f816377c4fa04a6a9f84a1174ecde318630f958aa485b1bd9d1f9cbdb",
+  "run_log": "doc/reports/predictions-real-debate200-v2.run.log",
+  "limitations": [
+    "Manifest reconstructed after run; exact start timestamp and raw provider responses were not captured.",
+    "Gold target annotations require an independent second review.",
+    "Working tree had uncommitted changes; git_head alone does not reproduce the run."
+  ]
+}
