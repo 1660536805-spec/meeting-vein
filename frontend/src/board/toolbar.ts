@@ -1,5 +1,5 @@
 import type { Graph } from "@antv/x6";
-import { noteUserZoom } from "./view-scale";
+import { beginAutoAdjust, clearUserZoomFactor, endAutoAdjust, noteUserZoom } from "./view-scale";
 
 /** 底部液态玻璃控制条（缩放：−/比例/＋），看板页与历史页共用。
  * 用户手动缩放（按钮/滚轮）会上报为缩放系数，供 Agent 自动调整视口时
@@ -45,6 +45,12 @@ export function mountBoardToolbar(graph: Graph, onRelayout?: () => void): () => 
   };
   bind("tb-zoom-in", () => zoomBy(graph, ZOOM_STEP));
   bind("tb-zoom-out", () => zoomBy(graph, 1 / ZOOM_STEP));
+  bind("tb-fit", () => {
+    clearUserZoomFactor();
+    beginAutoAdjust();
+    try { graph.zoomToFit({ padding: 48, maxScale: 1 }); }
+    finally { endAutoAdjust(); }
+  });
   if (onRelayout) bind("tb-relayout", onRelayout);
 
   const onScale = (): void => {

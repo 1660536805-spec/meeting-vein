@@ -36,11 +36,15 @@ def _node_label(cell: dict) -> str:
 
 def _minutes_markdown(title: str, agenda: list[str], status: str,
                       cells: Iterable[dict], utterances: Iterable[dict],
-                      history: Iterable[dict] = ()) -> str:
+                      history: Iterable[dict] = (), confirmed_tasks: Iterable[dict] = ()) -> str:
     nodes = [c for c in cells if isinstance(c, dict) and c.get("shape") != "edge"]
     edges = [c for c in cells if isinstance(c, dict) and c.get("shape") == "edge"]
     by_id = {c.get("id"): c for c in nodes}
     utterance_by_id = {u.get("meta_id"): u for u in utterances if isinstance(u, dict)}
+    planned_by_node: dict[str, list[dict]] = {}
+    for task in confirmed_tasks:
+        if task.get("source_node_id"):
+            planned_by_node.setdefault(task["source_node_id"], []).append(task)
     structural_parent = {}
     for edge in edges:
         if (edge.get("data") or {}).get("relation") != "subordinate":
@@ -122,14 +126,17 @@ def _minutes_markdown(title: str, agenda: list[str], status: str,
             lines.append(f"- {_node_label(node)}（未确认）")
 
         lines.extend(["", "### 行动项"])
-        todos = [n for n in topic_nodes if (n.get("data") or {}).get("type") == "todo"]
+        todos = [n for n in topic_nodes if (n.get("data") or {}).get("type") in {"todo", "action"}]
         if not todos:
             lines.append("- 暂无行动项")
         for node in todos:
             data = node.get("data") or {}
-            owner = data.get("owner") or data.get("assignee")
-            due = data.get("deadline") or data.get("due_date")
-            status_text = data.get("status") or "待确认"
+            plans = planned_by_node.get(node.get("id"), [])
+            planned = plans[0] if len(plans) == 1 else {}
+            owner = planned.get("owner") or data.get("owner") or data.get("assignee")
+            due = planned.get("due_date") or data.get("deadline") or data.get("due_date")
+            status_text = ({"todo": "未开始", "in_progress": "进行中", "done": "已完成"}.get(planned.get("status"))
+                           or data.get("status") or "待确认")
             gaps = []
             if not owner:
                 gaps.append("待补充负责人")
@@ -178,8 +185,11 @@ def _markdown_to_safe_html(markdown: str) -> str:
 
 def render_minutes(title: str, agenda: list[str], status: str, cells: Iterable[dict],
                    utterances: Iterable[dict], *, format: str = "markdown",
-                   history: Iterable[dict] = ()) -> str:
-    markdown = _minutes_markdown(title, agenda, status, cells, utterances, history)
+                   history: Iterable[dict] = (), task_plan_markdown: str = "",
+                   confirmed_tasks: Iterable[dict] = ()) -> str:
+    markdown = _minutes_markdown(title, agenda, status, cells, utterances, history, confirmed_tasks)
+    if task_plan_markdown:
+        markdown += "\n" + task_plan_markdown
     if format == "markdown":
         return markdown
     if format == "html":
@@ -209,7 +219,7 @@ def review_before_close(cells: Iterable[dict]) -> dict:
     incomplete_actions = []
     for cell in nodes:
         data = cell.get("data") or {}
-        if data.get("type") != "todo":
+        if data.get("type") not in {"todo", "action"}:
             continue
         missing = []
         if not (data.get("owner") or data.get("assignee")):

@@ -78,7 +78,6 @@ html, body { background: var(--ui-bg); color: var(--ui-text); }
 #board-toolbar button:hover { color: #fff; background: #294361; }
 #board-toolbar button:focus-visible { outline-color: #a2beff; }
 #board-toolbar #undo-last-operation[hidden] { display: none; }
-#board-toolbar #board-fullscreen { display:none; }
 #board-zoom-value { min-width: 4.5ch; align-self: center; color: #e8eef8; font-size: 12px; }
 .tb-divider { background: #526881; }
 .x6-port-body { opacity: .48; }
@@ -178,12 +177,6 @@ html, body { background: var(--ui-bg); color: var(--ui-text); }
 @media (max-width: 455px) {
   .decision-workspace #main { display:flex; flex-direction:column; overflow-y:auto; }
   .decision-workspace #work-area { width:100%; min-width:0; }
-  .decision-workspace #board-shell:fullscreen,
-  .decision-workspace #board-shell[data-fullscreen-fallback] { position:fixed; inset:0; z-index:100; width:100vw; height:100dvh; min-height:100dvh; border:0; border-radius:0; }
-  .decision-workspace #board-shell:fullscreen #board-stage,
-  .decision-workspace #board-shell[data-fullscreen-fallback] #board-stage { flex:1; min-height:0; }
-  .decision-workspace #board-shell:fullscreen #board-toolbar #board-fullscreen { display:inline-flex; }
-  #board-toolbar #board-fullscreen { display:inline-flex; }
   #board-toolbar { max-width:calc(100% - 20px); flex-wrap:wrap; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }

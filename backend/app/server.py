@@ -45,6 +45,10 @@ from .tools.graph_tools import GraphTools
 from .tools.metadata_tools import MetadataTools
 from .minutes import parse_agenda, render_minutes, review_before_close
 from .errors import safe_error_code
+from .task_plans import (PlanTask, TaskPlanStore, PlanConflict, task_order, validate_sources,
+                         date_warnings, generate_plan, answer_question, plan_markdown)
+from datetime import date
+from typing import Literal
 
 
 logging.basicConfig(level=os.getenv("AMO_LOG_LEVEL", "INFO").upper(),
@@ -347,9 +351,12 @@ async def meeting_minutes(graph_id: str, format: str = Query(default="markdown",
     details = store_a.meeting_details(graph_id)
     if details is None:
         raise HTTPException(status_code=404, detail="meeting not found")
+    task_doc = _read_task_plan(graph_id)
     content = render_minutes(details["title"] or graph_id, details["agenda"], details["status"],
                              store_a.load(graph_id), store_b.list_utterances(graph_id),
-                             format=format, history=store_a.history(graph_id))
+                             format=format, history=store_a.history(graph_id),
+                             task_plan_markdown=plan_markdown(task_doc),
+                             confirmed_tasks=(task_doc.get("confirmed") or {}).get("tasks", []))
     filename = f"{graph_id}-minutes.{ 'html' if format == 'html' else 'md' }"
     headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
     if format == "html":
@@ -373,10 +380,171 @@ async def meeting_snapshot_file(graph_id: str):
         "cells": store_a.load(graph_id),
         "utterances": store_b.list_utterances(graph_id),
         "history": store_a.history(graph_id),
+        "task_plan": _read_task_plan(graph_id),
     }
     return JSONResponse(document, headers={
         "Content-Disposition": f'attachment; filename="{graph_id}-snapshot.json"',
     })
+
+
+class PlanGenerateRequest(BaseModel):
+    expected_version: int = Field(ge=0)
+    reference_date: date
+
+
+class PlanEditRequest(BaseModel):
+    expected_version: int = Field(ge=0)
+    tasks: list[PlanTask] = Field(max_length=100)
+
+
+class PlanStatusRequest(BaseModel):
+    expected_version: int = Field(ge=0)
+    status: Literal["todo", "in_progress", "done"]
+
+
+class PlanQuestionRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
+    scope: Literal["draft", "confirmed"] = "confirmed"
+    expected_version: int = Field(ge=0)
+
+
+def _plan_store(graph_id: str) -> TaskPlanStore:
+    graph_id = _valid_path_meeting_id(graph_id)
+    if store_a.meeting_details(graph_id) is None:
+        raise HTTPException(status_code=404, detail="meeting not found")
+    return TaskPlanStore(store_a.root, graph_id)
+
+
+def _read_task_plan(graph_id: str) -> dict:
+    try:
+        return _plan_store(graph_id).read()
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        log.warning("task plan read failed: %s", type(exc).__name__)
+        raise HTTPException(status_code=503, detail="任务计划文件不可读取，请恢复备份后重试") from exc
+
+
+def _plan_sources(graph_id: str) -> list[dict]:
+    return sorted(store_b.list_by_kind("utt", graph_id), key=lambda u: u.get("start_offset_ms") or 0)
+
+
+def _write_task_plan(graph_id: str, version: int, change) -> dict:
+    try:
+        return _plan_store(graph_id).write(version, change)
+    except PlanConflict as exc:
+        raise HTTPException(status_code=409, detail={"message": "计划已被其他操作更新。保留当前输入，刷新后对照修改。",
+                                                    "current": exc.current}) from exc
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        log.warning("task plan write failed: %s", type(exc).__name__)
+        raise HTTPException(status_code=503, detail="任务计划保存失败，原计划已保留，请重试") from exc
+
+
+def _validate_plan_edit(graph_id: str, tasks: list[PlanTask], confirm: bool = False):
+    try:
+        task_order(tasks)
+        validate_sources(tasks, store_a.load(graph_id), _plan_sources(graph_id))
+        warnings = date_warnings(tasks)
+        if confirm:
+            if not tasks:
+                raise ValueError("计划没有任务，无法确认")
+            if any(not t.owner or not t.start_date or not t.due_date for t in tasks):
+                raise ValueError("确认前请为每个任务填写负责人、开始和截止日期")
+            if warnings:
+                raise ValueError("；".join(warnings))
+        return warnings
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.get("/api/meetings/{graph_id}/task-plan")
+async def get_task_plan(graph_id: str):
+    doc = _read_task_plan(graph_id)
+    return {**doc, "sources": [{"meta_id": u["meta_id"], "text": u.get("text") or "",
+                               "speaker": u.get("speaker_ref") or "未知发言人"} for u in _plan_sources(graph_id)]}
+
+
+@app.post("/api/meetings/{graph_id}/task-plan/generate", dependencies=[Depends(require_token)])
+async def generate_task_plan(graph_id: str, req: PlanGenerateRequest):
+    doc = _read_task_plan(graph_id)
+    if doc["version"] != req.expected_version:
+        raise HTTPException(status_code=409, detail="计划版本已变化，请刷新计划后重新生成")
+    details = store_a.meeting_details(graph_id)
+    try:
+        draft = await asyncio.to_thread(generate_plan, store_a.load(graph_id), _plan_sources(graph_id),
+                                        details, req.reference_date,
+                                        agent.llm._chat if isinstance(agent.llm, OpenAIClient) else None)
+    except Exception as exc:
+        log.warning("task plan generation failed: %s", type(exc).__name__)
+        raise HTTPException(status_code=502, detail="计划生成失败或来源校验未通过，旧计划已保留，请重试") from exc
+    draft["source_board_version"] = details["version"]
+    return _write_task_plan(graph_id, req.expected_version, lambda doc: doc.update(draft=draft))
+
+
+@app.post("/api/meetings/{graph_id}/task-plan/draft", dependencies=[Depends(require_token)])
+async def save_task_plan_draft(graph_id: str, req: PlanEditRequest):
+    current = _read_task_plan(graph_id)
+    if not current.get("draft"):
+        raise HTTPException(status_code=409, detail="请先生成任务草稿")
+    warnings = _validate_plan_edit(graph_id, req.tasks)
+    def save(doc):
+        doc["draft"]["tasks"] = [t.model_dump(mode="json") for t in req.tasks]
+        doc["draft"]["warnings"] = warnings
+    return _write_task_plan(graph_id, req.expected_version, save)
+
+
+@app.post("/api/meetings/{graph_id}/task-plan/confirm", dependencies=[Depends(require_token)])
+async def confirm_task_plan(graph_id: str, req: PlanEditRequest):
+    current = _read_task_plan(graph_id)
+    if not current.get("draft"):
+        raise HTTPException(status_code=409, detail="请先生成任务草稿")
+    _validate_plan_edit(graph_id, req.tasks, confirm=True)
+    def confirm(doc):
+        previous = {t["id"]: t["status"] for t in (doc.get("confirmed") or {}).get("tasks", [])}
+        plan = dict(doc["draft"], tasks=[dict(t.model_dump(mode="json"), status=previous.get(t.id, "todo")) for t in req.tasks],
+                    warnings=[], confirmed_at=store_a._now_iso())
+        doc.update(confirmed=plan, draft=None)
+    return _write_task_plan(graph_id, req.expected_version, confirm)
+
+
+@app.post("/api/meetings/{graph_id}/task-plan/tasks/{task_id}/status", dependencies=[Depends(require_token)])
+async def update_task_progress(graph_id: str, task_id: str, req: PlanStatusRequest):
+    current = _read_task_plan(graph_id)
+    plan = current.get("confirmed")
+    if not plan:
+        raise HTTPException(status_code=409, detail="请先人工确认任务计划")
+    if not any(t["id"] == task_id for t in plan["tasks"]):
+        raise HTTPException(status_code=404, detail="当前计划中没有这个任务")
+    def update(doc):
+        task = next(t for t in doc["confirmed"]["tasks"] if t["id"] == task_id)
+        task["status"] = req.status
+    return _write_task_plan(graph_id, req.expected_version, update)
+
+
+@app.post("/api/meetings/{graph_id}/task-plan/ask", dependencies=[Depends(require_token)])
+async def ask_task_plan(graph_id: str, req: PlanQuestionRequest):
+    doc = _read_task_plan(graph_id)
+    if doc["version"] != req.expected_version:
+        raise HTTPException(status_code=409, detail="计划已更新，请刷新后重新提问")
+    plan = doc.get(req.scope)
+    if not plan:
+        raise HTTPException(status_code=409, detail="请先生成任务计划")
+    if not req.question.strip():
+        raise HTTPException(status_code=422, detail="问题不能为空")
+    try:
+        result = await asyncio.to_thread(answer_question, req.question.strip(), plan, _plan_sources(graph_id),
+                                         agent.llm._chat if isinstance(agent.llm, OpenAIClient) else None)
+    except Exception as exc:
+        log.warning("task plan question failed: %s", type(exc).__name__)
+        raise HTTPException(status_code=502, detail="问答失败或引用校验未通过，请重试") from exc
+    return {**result, "version": doc["version"], "scope": req.scope}
+
+
+@app.get("/api/meetings/{graph_id}/task-plan/export")
+async def export_task_plan(graph_id: str, scope: Literal["draft", "confirmed"] = "confirmed"):
+    doc = _read_task_plan(graph_id)
+    if scope == "draft":
+        doc = dict(doc, confirmed=None)
+    return PlainTextResponse(plan_markdown(doc), media_type="text/markdown; charset=utf-8",
+                             headers={"Content-Disposition": f'attachment; filename="{graph_id}-task-plan.md"'})
 
 
 @app.get("/api/board/{graph_id}")

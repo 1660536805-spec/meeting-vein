@@ -22,6 +22,7 @@ import { renderIssueStructure } from "./issues-view";
 import { projectBoard, projectLocalNeighborhood } from "./board/projection";
 import { mountFullscreenToggle } from "./board/fullscreen";
 import { cycleNodeId } from "./board/keyboard-nav";
+import { mountTaskPlan } from "./task-plan";
 
 // 普通入口每次开启独立的空白讨论；历史会议与深链带 meeting_id，继续加载指定会议。
 const requestedMeetingId = new URLSearchParams(location.search).get("meeting_id")?.trim();
@@ -119,6 +120,10 @@ const issueView = document.getElementById("issue-view");
 const viewGraphBtn = document.getElementById("view-graph");
 const viewIssuesBtn = document.getElementById("view-issues");
 let issueViewActive = false;
+const taskView = document.getElementById("task-plan-view");
+const viewTasksBtn = document.getElementById("view-tasks");
+const taskPlan = taskView ? mountTaskPlan(taskView, MEETING_ID) : null;
+window.addEventListener("pagehide", () => taskPlan?.dispose(), { once: true });
 
 function renderIssueView(): void {
   if (issueView) renderIssueStructure(issueView, lastCells, { onViewInGraph: (id) => {
@@ -130,6 +135,10 @@ function renderIssueView(): void {
 }
 
 function setIssueView(on: boolean): void {
+  taskView?.setAttribute("hidden", "");
+  document.body.classList.remove("task-plan-mode");
+  boardEl.removeAttribute("aria-hidden");
+  viewTasksBtn?.setAttribute("aria-selected", "false");
   issueViewActive = on;
   issueView?.toggleAttribute("hidden", !on);
   viewGraphBtn?.setAttribute("aria-selected", String(!on));
@@ -150,6 +159,15 @@ scopeFullBtn?.addEventListener("click", () => setGraphScope("full"));
 
 viewIssuesBtn?.addEventListener("click", () => setIssueView(true));
 viewGraphBtn?.addEventListener("click", () => setIssueView(false));
+viewTasksBtn?.addEventListener("click", () => {
+  setIssueView(false);
+  taskView?.removeAttribute("hidden");
+  document.body.classList.add("task-plan-mode");
+  boardEl.setAttribute("aria-hidden", "true");
+  viewGraphBtn?.setAttribute("aria-selected", "false");
+  viewTasksBtn.setAttribute("aria-selected", "true");
+  taskPlan?.activate();
+});
 
 function setSummary(text: string): void {
   if (changeSummary) changeSummary.textContent = text;
@@ -547,6 +565,7 @@ async function deleteSelected(): Promise<void> {
 
 // Delete / Backspace 快捷删除（输入控件内不拦截）
 window.addEventListener("keydown", (e) => {
+  if (document.body.classList.contains("task-plan-mode")) return;
   if (e.key !== "Delete" && e.key !== "Backspace") return;
   const t = e.target as HTMLElement | null;
   if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA"

@@ -6,6 +6,33 @@ afterEach(() => {
 });
 
 describe("mountFullscreenToggle", () => {
+  it("exits fallback fullscreen with Escape and restores page scrolling", () => {
+    const doc = document.implementation.createHTMLDocument();
+    const button = doc.createElement("button");
+    const target = doc.createElement("section");
+    doc.body.style.overflow = "auto";
+    const dispose = mountFullscreenToggle(button, target, doc);
+    button.click();
+    expect(doc.body.style.overflow).toBe("hidden");
+    doc.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(target.hasAttribute("data-fullscreen-fallback")).toBe(false);
+    expect(doc.body.style.overflow).toBe("auto");
+    expect(button.getAttribute("aria-pressed")).toBe("false");
+    dispose();
+  });
+
+  it("does not enter fallback after disposal of a pending native request", async () => {
+    const button = document.createElement("button");
+    const target = document.createElement("section");
+    let reject!: (reason: Error) => void;
+    target.requestFullscreen = () => new Promise((_, fail) => { reject = fail; });
+    const dispose = mountFullscreenToggle(button, target, document);
+    button.click();
+    dispose();
+    reject(new Error("Not allowed"));
+    await Promise.resolve();
+    expect(target.hasAttribute("data-fullscreen-fallback")).toBe(false);
+  });
   it("enters and exits fullscreen while reflecting browser state", async () => {
     const button = document.createElement("button");
     const target = document.createElement("section");
@@ -20,7 +47,7 @@ describe("mountFullscreenToggle", () => {
     Object.defineProperty(document, "fullscreenElement", { configurable: true, value: target });
     document.dispatchEvent(new Event("fullscreenchange"));
     expect(button.getAttribute("aria-pressed")).toBe("true");
-    expect(button.textContent).toBe("返回看板");
+    expect(button.textContent).toBe("退出全屏");
     button.click();
     expect(exit).toHaveBeenCalledTimes(1);
     dispose();
@@ -35,7 +62,7 @@ describe("mountFullscreenToggle", () => {
     button.click();
     expect(target.hasAttribute("data-fullscreen-fallback")).toBe(true);
     expect(button.getAttribute("aria-pressed")).toBe("true");
-    expect(button.textContent).toBe("返回看板");
+    expect(button.textContent).toBe("退出全屏");
 
     button.click();
     expect(target.hasAttribute("data-fullscreen-fallback")).toBe(false);
