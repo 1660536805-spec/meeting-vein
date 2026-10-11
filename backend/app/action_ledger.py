@@ -47,6 +47,20 @@ class ActionLedger:
                 )
             """)
             conn.execute("CREATE INDEX IF NOT EXISTS action_events_action ON action_events(meeting_id, action_id)")
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS action_external_sync (
+                    meeting_id TEXT NOT NULL,
+                    action_id TEXT NOT NULL,
+                    synced_version INTEGER,
+                    payload_fingerprint TEXT,
+                    attempted_at TEXT NOT NULL,
+                    error_code TEXT,
+                    PRIMARY KEY(meeting_id, action_id)
+                )
+            """)
+            sync_columns = {row["name"] for row in conn.execute("PRAGMA table_info(action_external_sync)")}
+            if "payload_fingerprint" not in sync_columns:
+                conn.execute("ALTER TABLE action_external_sync ADD COLUMN payload_fingerprint TEXT")
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.path, timeout=10)
@@ -124,7 +138,51 @@ class ActionLedger:
     def list_for_meeting(self, meeting_id: str) -> list[dict]:
         with self._connect() as conn:
             return [self._record(row) for row in conn.execute(
-                "SELECT * FROM actions WHERE meeting_id=? ORDER BY created_at,id", (meeting_id,))]
+                "SELECT a.*, s.synced_version AS external_sync_version, "
+                "s.payload_fingerprint AS external_sync_fingerprint, "
+                "s.attempted_at AS external_sync_attempted_at, s.error_code AS external_sync_error "
+                "FROM actions a LEFT JOIN action_external_sync s "
+                "ON s.meeting_id=a.meeting_id AND s.action_id=a.id "
+                "WHERE a.meeting_id=? ORDER BY a.created_at,a.id", (meeting_id,))]
+
+    def record_external_sync(self, meeting_id: str, action_versions: dict[str, int],
+                             error_code: str | None = None, *,
+                             payload_fingerprints: dict[str, str] | None = None) -> None:
+        if not meeting_id or not isinstance(action_versions, dict):
+            raise ValueError("meeting_id and action_versions are required")
+        if payload_fingerprints is not None and (
+                not isinstance(payload_fingerprints, dict)
+                or any(action_id not in action_versions or not isinstance(value, str) or not value
+                       for action_id, value in payload_fingerprints.items())):
+            raise ValueError("payload_fingerprints must map synced action ids to non-empty strings")
+        now = self._now()
+        with self._connect() as conn:
+            for action_id, raw_version in action_versions.items():
+                version = int(raw_version)
+                exists = conn.execute(
+                    "SELECT 1 FROM actions WHERE meeting_id=? AND id=?", (meeting_id, action_id),
+                ).fetchone()
+                if not exists:
+                    raise KeyError("action not found")
+                current = conn.execute(
+                    "SELECT synced_version,payload_fingerprint FROM action_external_sync "
+                    "WHERE meeting_id=? AND action_id=?",
+                    (meeting_id, action_id),
+                ).fetchone()
+                succeeded = error_code is None
+                synced_version = version if succeeded else (current["synced_version"] if current else None)
+                fingerprint = ((payload_fingerprints or {}).get(action_id)
+                               if succeeded else None)
+                if fingerprint is None and current:
+                    fingerprint = current["payload_fingerprint"]
+                conn.execute(
+                    "INSERT INTO action_external_sync "
+                    "(meeting_id,action_id,synced_version,payload_fingerprint,attempted_at,error_code) "
+                    "VALUES (?,?,?,?,?,?) ON CONFLICT(meeting_id,action_id) DO UPDATE SET "
+                    "synced_version=excluded.synced_version, attempted_at=excluded.attempted_at, "
+                    "payload_fingerprint=excluded.payload_fingerprint, error_code=excluded.error_code",
+                    (meeting_id, action_id, synced_version, fingerprint, now, error_code),
+                )
 
     def update(self, meeting_id: str, action_id: str, expected_version: int,
                changes: dict) -> dict:

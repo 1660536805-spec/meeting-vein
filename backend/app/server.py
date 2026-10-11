@@ -30,7 +30,7 @@ from collections import OrderedDict
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Annotated, Optional
@@ -48,8 +48,12 @@ from .tools.metadata_tools import MetadataTools
 from .minutes import human_confirmed, parse_agenda, render_minutes, review_before_close
 from .errors import safe_error_code
 from .action_ledger import ActionLedger, ActionConflict
+from .action_calendar import render_action_calendar
+from .task_sync import (TaskSyncError, actions_needing_sync, build_action_snapshot,
+                        deliver_action_snapshot)
 from .preparation import PreparationStore, PreparationConflict
-from .meeting_links import MeetingLinks, MeetingLinkConflict, topic_projection
+from .meeting_links import (MeetingLinks, MeetingLinkConflict, topic_projection,
+                            topic_link_suggestions)
 
 
 logging.basicConfig(level=os.getenv("AMO_LOG_LEVEL", "INFO").upper(),
@@ -391,6 +395,45 @@ async def create_meeting_link(graph_id: str, req: MeetingLinkRequest):
     return {"ok": True, "link": link}
 
 
+@app.post("/api/meetings/{graph_id}/link-dismissals", dependencies=[Depends(require_token)])
+async def dismiss_meeting_link_suggestion(graph_id: str, req: MeetingLinkRequest):
+    graph_id = _valid_path_meeting_id(graph_id)
+    source_id = _valid_path_meeting_id(req.source_meeting_id)
+    if not store_a.exists(graph_id) or not store_a.exists(source_id):
+        raise HTTPException(status_code=404, detail="meeting not found")
+    try:
+        topic_projection(store_a.load(source_id), req.source_topic_node_id)
+        topic_projection(store_a.load(graph_id), req.target_topic_node_id)
+        dismissal = meeting_links.dismiss_suggestion(source_id, graph_id,
+            req.source_topic_node_id, req.target_topic_node_id, req.event_id, req.actor, req.reason)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except MeetingLinkConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"ok": True, "dismissal": dismissal}
+
+
+@app.get("/api/meetings/{graph_id}/link-suggestions")
+async def meeting_link_suggestions(graph_id: str, limit: int = Query(default=12, ge=1, le=100),
+                                   q: str = Query(default="", max_length=100)):
+    graph_id = _valid_path_meeting_id(graph_id)
+    if not store_a.exists(graph_id):
+        raise HTTPException(status_code=404, detail="meeting not found")
+    suggestions = topic_link_suggestions(graph_id, store_a.load(graph_id),
+                                         store_a.list_meetings(), store_a.load, limit=limit,
+                                         load_metadata=store_b.get_many, query=q)
+    existing = {(item["source_meeting_id"], item["source_topic_node_id"],
+                 item["target_topic_node_id"])
+                for item in meeting_links.list_for_target(graph_id)}
+    dismissed = meeting_links.dismissed_for_target(graph_id)
+    suggestions = [item for item in suggestions
+                   if (item["source_meeting_id"], item["source_topic_node_id"],
+                       item["target_topic_node_id"]) not in existing
+                   and (item["source_meeting_id"], item["source_topic_node_id"],
+                        item["target_topic_node_id"]) not in dismissed]
+    return {"ok": True, "suggestions": suggestions}
+
+
 @app.get("/api/meetings/{graph_id}/timeline")
 async def meeting_timeline(graph_id: str):
     graph_id = _valid_path_meeting_id(graph_id)
@@ -481,7 +524,110 @@ async def list_meeting_actions(graph_id: str):
     graph_id = _valid_path_meeting_id(graph_id)
     if not store_a.exists(graph_id):
         raise HTTPException(status_code=404, detail="meeting not found")
-    return {"ok": True, "actions": action_ledger.list_for_meeting(graph_id)}
+    actions = action_ledger.list_for_meeting(graph_id)
+    return {"ok": True, "actions": _actions_with_external_sync_state(graph_id, actions),
+            "external_task_sync_configured": bool(str(config.CONFIG.task_webhook_url or "").strip())}
+
+
+def _action_sync_inputs(graph_id: str, actions: list[dict]):
+    cells = store_a.load(graph_id)
+    labels = {str(cell.get("id")): str((cell.get("data") or {}).get("label") or "未命名待办")
+              for cell in cells if cell.get("shape") != "edge"
+              and (cell.get("data") or {}).get("type") == "action"}
+    details = store_a.meeting_details(graph_id) or {}
+    meeting_title = str(details.get("title") or graph_id)
+    pending, fingerprints = actions_needing_sync(graph_id, meeting_title, actions, labels)
+    return meeting_title, labels, pending, fingerprints
+
+
+def _actions_with_external_sync_state(graph_id: str, actions: list[dict]) -> list[dict]:
+    _, _, pending, _ = _action_sync_inputs(graph_id, actions)
+    configured = bool(str(config.CONFIG.task_webhook_url or "").strip())
+    pending_ids = {str(action.get("id") or "") for action in pending}
+    return [{**{key: value for key, value in action.items() if key != "external_sync_fingerprint"},
+             "external_sync_pending": configured and str(action.get("id") or "") in pending_ids}
+            for action in actions]
+
+
+@app.post("/api/meetings/{graph_id}/actions/sync", dependencies=[Depends(require_token)])
+async def sync_meeting_actions(graph_id: str):
+    graph_id = _valid_path_meeting_id(graph_id)
+    if not store_a.exists(graph_id):
+        raise HTTPException(status_code=404, detail="meeting not found")
+    webhook_url = str(config.CONFIG.task_webhook_url or "").strip()
+    if not webhook_url:
+        raise HTTPException(status_code=409, detail="task_sync_not_configured")
+
+    actions = action_ledger.list_for_meeting(graph_id)
+    meeting_title, labels, pending, fingerprints = _action_sync_inputs(graph_id, actions)
+    if not pending:
+        return {"ok": True, "sync_state": "up_to_date", "synced_count": 0,
+                "actions": _actions_with_external_sync_state(graph_id, actions)}
+
+    payload = build_action_snapshot(graph_id, meeting_title, pending, labels)
+    versions = {str(action["id"]): int(action["version"]) for action in pending}
+    pending_fingerprints = {action_id: fingerprints[action_id] for action_id in versions}
+    try:
+        status = await asyncio.to_thread(
+            deliver_action_snapshot,
+            webhook_url,
+            str(config.CONFIG.task_webhook_token or ""),
+            payload,
+            timeout=float(config.CONFIG.task_webhook_timeout_s),
+        )
+    except TaskSyncError as exc:
+        action_ledger.record_external_sync(graph_id, versions, error_code=exc.code,
+                                           payload_fingerprints=pending_fingerprints)
+        log.warning("external task sync failed (%s)", exc.code)
+        raise HTTPException(status_code=502, detail={"code": "task_sync_failed", "error_code": exc.code}) from None
+
+    action_ledger.record_external_sync(graph_id, versions,
+                                       payload_fingerprints=pending_fingerprints)
+    return {"ok": True, "sync_state": "sent", "remote_status": status,
+            "synced_count": len(pending),
+            "actions": _actions_with_external_sync_state(
+                graph_id, action_ledger.list_for_meeting(graph_id))}
+
+
+@app.get("/api/actions.ics")
+async def all_action_calendar():
+    actions = []
+    for meeting in store_a.list_meetings():
+        graph_id = str(meeting.get("meeting_id") or "")
+        if not graph_id:
+            continue
+        cells = store_a.load(graph_id)
+        labels = {str(cell.get("id")): str((cell.get("data") or {}).get("label") or "待办事项")
+                  for cell in cells if cell.get("shape") != "edge"
+                  and (cell.get("data") or {}).get("type") == "action"}
+        meeting_title = str(meeting.get("title") or graph_id)
+        for action in action_ledger.list_for_meeting(graph_id):
+            action_id = str(action.get("id") or "action")
+            actions.append({**action,
+                "calendar_uid": f"{graph_id}-{action_id}",
+                "calendar_label": labels.get(str(action.get("action_node_id") or ""), "待办事项"),
+                "calendar_meeting_title": meeting_title,
+            })
+    content = render_action_calendar("会脉全部会议", actions, {}, repeat_overdue=True)
+    return Response(content, media_type="text/calendar; charset=utf-8",
+                    headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/api/meetings/{graph_id}/actions.ics")
+async def meeting_action_calendar(graph_id: str, snapshot: bool = Query(default=False)):
+    graph_id = _valid_path_meeting_id(graph_id)
+    details = store_a.meeting_details(graph_id)
+    if details is None:
+        raise HTTPException(status_code=404, detail="meeting not found")
+    cells = store_a.load(graph_id)
+    labels = {str(cell.get("id")): str((cell.get("data") or {}).get("label") or "待办事项")
+              for cell in cells if cell.get("shape") != "edge"
+              and (cell.get("data") or {}).get("type") == "action"}
+    content = render_action_calendar(details.get("title") or graph_id,
+                                     action_ledger.list_for_meeting(graph_id), labels,
+                                     repeat_overdue=not snapshot)
+    return Response(content, media_type="text/calendar; charset=utf-8",
+                    headers={"Cache-Control": "no-cache"})
 
 
 @app.post("/api/meetings/{graph_id}/actions", dependencies=[Depends(require_token)])

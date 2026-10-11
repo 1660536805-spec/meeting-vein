@@ -31,7 +31,11 @@
 
 MockLLM 是规则化演示输出，不是真实模型推理，也不能用于宣称抽取质量。真实 LLM 仅在实际实例成功初始化后才可作为真实链路；模型 key 或端点配置本身不构成真实链路验收。当前真实模型样本测量及数据局限见 [`doc/reports/candidate-quality-report-2026-10-10-v2.md`](doc/reports/candidate-quality-report-2026-10-10-v2.md)，待双人复核的标注流程见 [`backend/tests/annotations/labeling-protocol.md`](backend/tests/annotations/labeling-protocol.md)。
 
-本机快速演示见 [`output/本机演示包-启动与验收.md`](output/本机演示包-启动与验收.md)：首次可运行 `bash scripts/install_local.sh` 安装文字演示依赖，再用 `AMO_SKIP_ASR=1 bash scripts/start_local.sh` 启动，无需安装大型语音模型。发布源码包可运行 `bash scripts/package_local_demo.sh`。新功能包括会前材料与待决问题、人工审核决策卡、行动台账和关会前检查。
+本机快速演示见 [`output/本机演示包-启动与验收.md`](output/本机演示包-启动与验收.md)：首次可运行 `bash scripts/install_local.sh` 安装文字演示依赖，再用 `AMO_SKIP_ASR=1 bash scripts/start_local.sh` 启动，无需安装大型语音模型。干净提交的发布源码包可运行 `bash scripts/package_local_demo.sh`；要把当前未提交的工作区也交付，运行 `bash scripts/package_local_demo.sh --working-tree`，包内会附工作区说明和 SHA-256 校验文件。当前功能包括会前材料与待决问题、可回看原话的人工审核决策卡、行动台账、日历订阅和可配置的任务 Webhook 推送、全历史议题候选检索、跨会议复盘及关会前检查。反对、重复和议题归属仍是需要人工确认的提示，不是已验证的自动判定。
+
+### 外部任务同步
+
+工作台的“同步到任务工具”按钮默认关闭。要启用时，把 `backend/.env.example` 复制为 `backend/.env`，设置 `AMO_TASK_WEBHOOK_URL`；如接收端需要鉴权，再设置 `AMO_TASK_WEBHOOK_TOKEN`，然后重启本地服务。远程 Webhook 必须为 HTTPS；本机开发地址可用 HTTP loopback。每次同步由用户点击触发；系统按完整外发内容（会议名、任务标题、负责人、期限、状态等）记录指纹，内容未变时不重复推送，只改看板标题也会重新同步。失败会保留上次成功状态并可重试。接收端应按 `external_id` 更新同一任务，并按 `idempotency_key` 去重。此接口发送任务标题、负责人、期限、状态、版本和来源节点 ID，不发送会议原话；它是通用 Webhook 契约，不代表已连接某个特定厂商或已在真实任务系统中验收。
 
 ## 目录
 
@@ -79,7 +83,7 @@ bash scripts/start_local.sh
 
 首次加载 Live2D 需要浏览器可访问 Live2D 官方 Cubism Core CDN；Core 是专有运行时，本项目不随仓库分发。模型加载成功后会显示动态看板娘；Core、WebGL 或模型加载失败时会显示项目自制静态图，状态提示、录音和看板功能仍可用。若一直看到静态图，先检查网络是否拦截 `cubism.live2d.com`、浏览器 WebGL 是否可用，并查看浏览器控制台及页面是否通过本地开发服务器打开。
 
-录音过程中，本机流式 Paraformer 每约 480 毫秒接收一个音频块，持续显示临时文字和音频块到显示的响应时间。静音切分后的最终分段提交到看板，连续讲话最长约 8 秒切段；没有成功分段时，停止录音后可用 SenseVoiceSmall 对完整录音识别兜底。有实时分段时，停止录音后生成的完整转写仅供核对，不自动重复入板。前端会查询服务端的 accepted、processing、committed、failed 状态，并将未确认分段保存在浏览器本地队列；`committed` 还会区分原话已关联看板与处理完成但未入板。失败时可重试发送，当前会议的积压批次也可从语音面板手动恢复。首次启动需等待两个模型加载；流式模型不可用时仍可录音并在停止后识别。响应时间是浏览器端估算，不等同于从某个字说出口到显示的精确时延；是否达到 1 秒目标需在实际麦克风和电脑上测试。状态定义见 [`doc/contracts/utterance-state.md`](doc/contracts/utterance-state.md)。
+录音过程中，本机流式 Paraformer 每约 480 毫秒接收一个音频块，持续显示临时文字和音频块到显示的响应时间。静音切分后的最终分段提交到看板，连续讲话最长约 8 秒切段；没有成功分段时，停止录音后可用 SenseVoiceSmall 对完整录音识别兜底。有实时分段时，停止录音后生成的完整转写仅供核对，不自动重复入板。默认开启“人工核对后入板”时，每个实时分段保留为独立发言，用户逐段修改、手动填写发言人并确认后按原顺序送入看板；完整转写仅作遗漏核对参考，未确认草稿可在本机浏览器中恢复。系统目前不做自动说话人识别，未填写的片段仍显示“本地发言人”。前端会查询服务端的 accepted、processing、committed、failed 状态，并将未确认分段保存在浏览器本地队列；`committed` 还会区分原话已关联看板与处理完成但未入板。失败时可重试发送，当前会议的积压批次也可从语音面板手动恢复。首次启动需等待两个模型加载；流式模型不可用时仍可录音并在停止后识别。响应时间是浏览器端估算，不等同于从某个字说出口到显示的精确时延；是否达到 1 秒目标需在实际麦克风和电脑上测试。状态定义见 [`doc/contracts/utterance-state.md`](doc/contracts/utterance-state.md)。
 流式模型权重缓存于已忽略的 `local_asr/model_cache/`，首次下载约 881 MB。
 下载完成后可运行 `local_asr/.venv/bin/python local_asr/scripts/benchmark_streaming.py` 测量示例音频每块的推理耗时；真实麦克风延迟以页面显示和实际观察为准。
 
@@ -101,7 +105,7 @@ cd frontend && npm run dev -- --host 127.0.0.1 --strictPort
 
 ### 模型与隐私
 
-ASR 默认使用 `iic/SenseVoiceSmall` 与 `fsmn-vad`，首次运行会通过 ModelScope 下载权重。录音上传至本机 loopback ASR 进程进行解码；音频不落盘，转写原文与会议看板保存在 `backend/.amo_data/`，请按敏感会议资料处理；该目录已被 Git 忽略。工作台在建会、文本输入和录音入口提示这些边界。若运行状态显示真实外部 LLM，会议文本会离开本机并发送至所配置的服务；阅读其数据处理政策并在有权发送会议内容时才启用。环境变量示例见 [`.env.example`](.env.example)。
+ASR 默认使用 `iic/SenseVoiceSmall` 与 `fsmn-vad`，首次运行会通过 ModelScope 下载权重。录音上传至本机 loopback ASR 进程进行解码；音频不落盘，转写原文与会议看板保存在 `backend/.amo_data/`，请按敏感会议资料处理；该目录已被 Git 忽略。工作台在建会、文本输入和录音入口提示这些边界。若运行状态显示真实外部 LLM，会议文本会离开本机并发送至所配置的服务；阅读其数据处理政策并在有权发送会议内容时才启用。外部任务同步只传任务字段，详见上文；配置示例见 [`backend/.env.example`](backend/.env.example)。
 
 ### 验证
 

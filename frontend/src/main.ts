@@ -93,6 +93,7 @@ let lastCells: any[] = [];
 let boardVersion = 0;
 let undoableOperationVersion: number | null = null;
 let selectedId = "";
+let suggestedTopicParentId: string | null = null;
 let graphScope: "local" | "full" = "local";
 const focusBaseStyles = new Map<string, { fill: string; stroke: string; label: string; typeLabel: string }>();
 function scopedCells(cells: any[]): any[] {
@@ -118,7 +119,77 @@ const decisionPanel = mountDecisionPanel((id) => {
   setLink({ focus: id, reach: id, route: undefined });
   renderScopedBoard();
   document.getElementById("edit-cell")?.click();
-});
+}, async (duplicateId, survivorId) => {
+  try {
+    const preview = await rest.previewMerge(MEETING_ID, duplicateId, survivorId, boardVersion);
+    if (preview.protected_node_ids.length) {
+      setSummary(`无法合并：节点 ${preview.protected_node_ids.join("、")} 含锁定或人工修改字段，请先处理保护状态。`);
+      return;
+    }
+    const impact = `将保留“${preview.survivor.label}”，合并“${preview.duplicate.label}”；` +
+      `重挂 ${preview.reparented_children.length} 个子节点，改写 ${preview.rewritten_relations.length} 条关系，` +
+      `转移 ${preview.transferred_metadata_refs.length} 条原话引用。`;
+    if (!window.confirm(`疑似重复项合并预览\n\n${impact}\n\n确认后可从历史版本撤销。`)) return;
+    const result = await rest.mergeNodes(MEETING_ID, duplicateId, survivorId, boardVersion,
+      "经用户复核的疑似重复项合并");
+    boardVersion = result.version;
+    lastCells = result.cells;
+    applyBoardUpdate(graph, scopedCells(lastCells));
+    refreshDecisionAndActions(lastCells);
+    selectCell("");
+    undoableOperationVersion = boardVersion;
+    if (undoOperationButton) undoOperationButton.hidden = false;
+    setSummary(`已合并重复节点，可撤销（看板 v${boardVersion}）。`);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 409) {
+      boardVersion = Number(error.payload?.current_version ?? boardVersion);
+      if (Array.isArray(error.payload?.cells)) {
+        lastCells = error.payload.cells;
+        applyBoardUpdate(graph, scopedCells(lastCells));
+        refreshDecisionAndActions(lastCells);
+      }
+      setSummary("看板已被更新，疑似重复结果和影响预览已刷新；请再次核对后操作。");
+    } else setSummary(error instanceof Error ? `合并失败：${error.message}` : "合并失败，请检查节点状态。");
+  }
+}, async (leftId, rightId) => {
+  const labelFor = (id: string) => String(lastCells.find((cell) => cell.id === id)?.data?.label ?? id);
+  const leftLabel = labelFor(leftId);
+  const rightLabel = labelFor(rightId);
+  if (!window.confirm(`矛盾候选需人工核对原话。确认这两个观点确实相互反对吗？\n\n“${leftLabel}” ↔ “${rightLabel}”\n\n确认后会建立反对关系，可撤销。`)) return;
+  const edgeId = `e_manual_oppose_${crypto.randomUUID().replace(/-/g, "")}`;
+  try {
+    const result = await rest.emitUserOp({ node_id: edgeId, graph_id: MEETING_ID, op: "link",
+      payload: { source: leftId, target: rightId, relation: "oppose",
+        reason: "经人工核对的矛盾候选" }, expected_version: boardVersion });
+    boardVersion = result.version;
+    lastCells = result.cells;
+    applyBoardUpdate(graph, scopedCells(lastCells));
+    refreshDecisionAndActions(lastCells);
+    undoableOperationVersion = boardVersion;
+    if (undoOperationButton) undoOperationButton.hidden = false;
+    setSummary(`已记录“${leftLabel}”与“${rightLabel}”的反对关系，可撤销（看板 v${boardVersion}）。`);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 409) {
+      boardVersion = Number(error.payload?.current_version ?? boardVersion);
+      if (Array.isArray(error.payload?.cells)) {
+        lastCells = error.payload.cells;
+        applyBoardUpdate(graph, scopedCells(lastCells));
+        refreshDecisionAndActions(lastCells);
+      }
+      setSummary("看板已更新，矛盾候选已刷新；请重新核对后确认关系。");
+    } else setSummary(error instanceof Error ? `记录反对关系失败：${error.message}` : "记录反对关系失败。");
+  }
+}, (decisionId, topicId) => {
+  setLink({ focus: decisionId, reach: decisionId, route: undefined });
+  selectCell(decisionId);
+  renderScopedBoard();
+  suggestedTopicParentId = topicId;
+  const editButton = document.getElementById("edit-cell") as HTMLButtonElement | null;
+  if (editButton) {
+    editButton.disabled = false;
+    editButton.click();
+  }
+}, MEETING_ID);
 const actionTracker = mountActionTracker(document.getElementById("action-tracker")!, MEETING_ID);
 const preparationPanel = mountPreparationPanel(document.getElementById("preparation-panel")!, MEETING_ID);
 let preparationLoaded = false;
@@ -267,6 +338,8 @@ document.getElementById("edit-cell")?.addEventListener("click", async () => {
   const structuralParent = lastCells.find((item) => item.shape === "edge"
     && item.data?.relation === "subordinate" && (item.target?.cell ?? item.target) === selectedId);
   const currentParent = data.parent_id ?? (structuralParent?.source?.cell ?? structuralParent?.source) ?? null;
+  const suggestedParent = suggestedTopicParentId;
+  suggestedTopicParentId = null;
   editorInitial = {
     label: data.label ?? "", type: data.type ?? "point", parent_id: currentParent,
     importance: data.importance?.level ?? "normal", status: data.status ?? "open",
@@ -278,7 +351,8 @@ document.getElementById("edit-cell")?.addEventListener("click", async () => {
   for (const parent of lastCells.filter((item) => item.shape !== "edge" && item.id !== selectedId)) {
     parentSelect.add(new Option(parent.data?.label ?? parent.id, parent.id));
   }
-  parentSelect.value = currentParent ?? "";
+  const suggestedIssue = lastCells.find((item) => item.id === suggestedParent && item.shape !== "edge" && item.data?.type === "issue");
+  parentSelect.value = suggestedIssue ? suggestedIssue.id : currentParent ?? "";
   const mergeTarget = editorForm.elements.namedItem("merge_target") as HTMLSelectElement;
   mergeTarget.replaceChildren(new Option("选择保留节点…", ""));
   for (const candidate of lastCells.filter((item) => item.shape !== "edge" && item.id !== selectedId)) {

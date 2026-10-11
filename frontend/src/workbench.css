@@ -110,8 +110,20 @@ html, body { background: var(--ui-bg); color: var(--ui-text); }
 .asr-upload { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
 #asr-file { position: absolute; width: 1px; height: 1px; padding: 0; opacity: 0; overflow: hidden; }
 .asr-upload:focus-within { outline: 2px solid #a2beff; outline-offset: 2px; }
+.asr-review-toggle { display:inline-flex; align-items:center; gap:6px; color:#c8d5e6; font-size:12px; cursor:pointer; }
+.asr-review-toggle input { accent-color:#83a5e8; }
 #asr-transcript { grid-column: 1 / -1; margin: 0; padding: 9px 11px; border-left: 2px solid #789de5; border-radius: 3px 7px 7px 3px; background: #192b43; color: #cfdded; font-size: 12px; line-height: 1.5; }
 #asr-transcript:empty { display: none; }
+#asr-review-progress { grid-column:1 / -1; color:#a9bedb; font-size:11px; }
+#asr-review-progress:empty { display:none; }
+.asr-speaker-review { grid-column:1 / -1; display:flex; align-items:center; gap:9px; color:#a9bedb; font-size:11px; }
+.asr-speaker-review[hidden] { display:none; }
+#asr-speaker-edit { min-width:0; width:min(280px, 100%); padding:7px 9px; border:1px solid #415a78; border-radius:7px; background:#192b43; color:#e6edf7; font:inherit; font-size:12px; }
+#asr-speaker-edit:focus-visible { outline:2px solid #a2beff; outline-offset:2px; }
+#asr-transcript-edit { grid-column:1 / -1; width:100%; min-height:90px; resize:vertical; box-sizing:border-box; padding:9px 11px; border:1px solid #415a78; border-left:2px solid #789de5; border-radius:7px; background:#192b43; color:#e6edf7; font:inherit; font-size:12px; line-height:1.55; }
+#asr-transcript-edit:focus-visible { outline:2px solid #a2beff; outline-offset:2px; }
+#asr-confirm-transcript { grid-column:1 / -1; justify-self:start; min-height:34px; padding:6px 13px; border:1px solid #5b7db5; border-radius:8px; background:#254a76; color:#fff; font:inherit; font-size:12px; cursor:pointer; }
+#asr-confirm-transcript:disabled { opacity:.5; cursor:wait; }
 #asr-message-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; }
 #asr-message { margin: 0; color: #b8c8dc; }
 #asr-message:empty { display: none; }

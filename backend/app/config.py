@@ -82,6 +82,12 @@ class Config:
     # —— 写接口鉴权（可选）：置 AMO_API_TOKEN 后写接口需带 Authorization: Bearer <token> ——
     api_token: str = field(default_factory=lambda: os.getenv("AMO_API_TOKEN", ""))
 
+    # —— 外部任务工具 Webhook（可选）：调用由用户在行动台账中显式触发 ——
+    task_webhook_url: str = field(default_factory=lambda: os.getenv("AMO_TASK_WEBHOOK_URL", ""))
+    task_webhook_token: str = field(default_factory=lambda: os.getenv("AMO_TASK_WEBHOOK_TOKEN", ""))
+    task_webhook_timeout_s: float = field(
+        default_factory=lambda: float(os.getenv("AMO_TASK_WEBHOOK_TIMEOUT_S", "10")))
+
 
 CONFIG = Config()
 

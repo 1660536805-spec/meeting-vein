@@ -31,7 +31,7 @@
         <div id="history-content" hidden>
           <div id="history-heading">
             <div><h1 id="history-title"></h1><p id="history-meta"></p></div>
-            <div class="history-heading-actions"><button id="history-rename" type="button">重命名</button><a id="history-open" href="/workspace.html">打开看板</a></div>
+            <div class="history-heading-actions"><button id="history-rename" type="button">重命名</button><a id="history-all-actions-calendar" href="/api/actions.ics">订阅全部行动项</a><a id="history-open" href="/workspace.html">打开看板</a></div>
           </div>
           <form id="rename-form" hidden>
             <label for="rename-input">会议名称</label><input id="rename-input" maxlength="60" required />
@@ -47,6 +47,10 @@
             </div>
             <aside id="history-records">
               <h2>跨会复盘</h2>
+              <div class="history-link-suggestions-head"><h3>延续议题建议</h3><button id="history-refresh-suggestions" type="button">重新查找</button></div>
+              <label class="history-link-search">搜索全部历史会议<input id="history-link-search" type="search" maxlength="100" placeholder="会议名、议题名或证据关键词" /></label>
+              <small class="history-link-search-hint">先显示最相关候选；输入关键词可检索未显示的旧会议。关联始终需要人工确认。</small>
+              <div id="history-link-suggestions" role="list" aria-label="跨会关联候选"></div>
               <form id="history-link-form">
                 <label>延续自会议<select id="history-source-meeting" required></select></label>
                 <label>旧议题<select id="history-source-topic" required></select></label>

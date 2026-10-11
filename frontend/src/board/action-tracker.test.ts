@@ -3,7 +3,8 @@ import { mountActionTracker } from "./action-tracker";
 import { meetingsApi } from "../api/meetings";
 
 vi.mock("../api/meetings", () => ({ meetingsApi: {
-  actions: vi.fn(), registerAction: vi.fn(), updateAction: vi.fn(), actionHistory: vi.fn(),
+  actions: vi.fn(), registerAction: vi.fn(), updateAction: vi.fn(), actionHistory: vi.fn(), actionCalendar: vi.fn(),
+  syncActions: vi.fn(),
 } }));
 
 describe("mountActionTracker", () => {
@@ -86,5 +87,68 @@ describe("mountActionTracker", () => {
     document.querySelector<HTMLButtonElement>(".action-history-toggle")!.click();
     await vi.waitFor(() => expect(document.querySelector(".action-history")?.textContent).toContain("小李"));
     expect(meetingsApi.actionHistory).toHaveBeenCalledWith("mtg_one", "act_4");
+  });
+
+  it("offers a subscribable calendar feed and downloads a refreshed calendar file", async () => {
+    document.body.innerHTML = '<div id="action-tracker"></div>';
+    vi.mocked(meetingsApi.actions).mockResolvedValue({ ok: true, actions: [{
+      id: "act_5", meeting_id: "mtg_one", action_node_id: "n_action", decision_node_id: null,
+      event_id: "track:n_action", owner: "小李", due_date: "2026-10-20", status: "open", version: 1,
+      created_at: "", updated_at: "",
+    }] });
+    vi.mocked(meetingsApi.actionCalendar).mockResolvedValue("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n");
+    const tracker = mountActionTracker(document.getElementById("action-tracker")!, "mtg_one");
+    await tracker.update([{ id: "n_action", data: { type: "action", label: "整理名单" } }]);
+
+    const host = document.getElementById("action-tracker")!;
+    expect(host.querySelector(".action-calendar-download")).not.toBeNull();
+    const subscribe = host.querySelector<HTMLAnchorElement>(".action-calendar-subscribe")!;
+    expect(subscribe.href).toContain("webcal:");
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    host.querySelector<HTMLButtonElement>(".action-calendar-download")!.click();
+    await vi.waitFor(() => expect(meetingsApi.actionCalendar).toHaveBeenCalledWith("mtg_one"));
+    await vi.waitFor(() => expect(host.textContent).toContain("日历文件已生成"));
+    expect(click).toHaveBeenCalled();
+    click.mockRestore();
+  });
+
+  it("sends changed actions to a configured task webhook and shows accepted state", async () => {
+    document.body.innerHTML = '<div id="action-tracker"></div>';
+    const action = {
+      id: "act_sync", meeting_id: "mtg_one", action_node_id: "n_action", decision_node_id: null,
+      event_id: "track:n_action", owner: "小李", due_date: "2026-10-20", status: "open" as const,
+      version: 2, created_at: "", updated_at: "",
+    };
+    vi.mocked(meetingsApi.actions).mockResolvedValue({ ok: true, actions: [action], external_task_sync_configured: true });
+    vi.mocked(meetingsApi.syncActions).mockResolvedValue({ ok: true, sync_state: "sent", remote_status: 202,
+      synced_count: 1, actions: [{ ...action, external_sync_version: 2,
+        external_sync_attempted_at: "2026-10-11T00:00:00Z", external_sync_error: null }] });
+    const tracker = mountActionTracker(document.getElementById("action-tracker")!, "mtg_one");
+    await tracker.update([{ id: "n_action", data: { type: "action", label: "整理名单" } }]);
+
+    const host = document.getElementById("action-tracker")!;
+    const sync = host.querySelector<HTMLButtonElement>(".action-sync")!;
+    expect(sync.disabled).toBe(false);
+    sync.click();
+    await vi.waitFor(() => expect(meetingsApi.syncActions).toHaveBeenCalledWith("mtg_one"));
+    await vi.waitFor(() => expect(host.textContent).toContain("已发送 1 项，任务工具已受理"));
+    expect(host.textContent).toContain("任务工具已接收此版本");
+  });
+
+  it("shows pending sync when board-owned task text changed at the same ledger version", async () => {
+    document.body.innerHTML = '<div id="action-tracker"></div>';
+    vi.mocked(meetingsApi.actions).mockResolvedValue({ ok: true, external_task_sync_configured: true,
+      actions: [{
+        id: "act_sync", meeting_id: "mtg_one", action_node_id: "n_action", decision_node_id: null,
+        event_id: "track:n_action", owner: "小李", due_date: "2026-10-20", status: "open", version: 2,
+        created_at: "", updated_at: "", external_sync_version: 2, external_sync_pending: true,
+      }] });
+    const tracker = mountActionTracker(document.getElementById("action-tracker")!, "mtg_one");
+
+    await tracker.update([{ id: "n_action", data: { type: "action", label: "修订后的任务标题" } }]);
+
+    const host = document.getElementById("action-tracker")!;
+    expect(host.textContent).toContain("行动项已有更新，待同步到任务工具");
+    expect(host.textContent).not.toContain("任务工具已接收此版本");
   });
 });

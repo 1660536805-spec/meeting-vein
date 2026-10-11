@@ -48,11 +48,16 @@ function fixture(): HTMLElement {
     <button id="asr-resume" disabled>继续</button><button id="asr-stop" disabled>停止</button>
     <output id="asr-timer">00:00</output><input id="asr-file" type="file" accept="audio/*">
     <output id="asr-model-status"></output><output id="llm-mode"></output><output id="product-status"></output>
-    <p id="asr-transcript"></p><p id="asr-message"></p>
+    <label><input id="asr-review-before-submit" type="checkbox">人工核对后入板</label>
+    <p id="asr-transcript"></p><output id="asr-review-progress"></output>
+    <label id="asr-speaker-review" hidden>发言人<input id="asr-speaker-edit"></label>
+    <textarea id="asr-transcript-edit" hidden></textarea>
+    <button id="asr-confirm-transcript" hidden>确认并整理进看板</button><p id="asr-message"></p>
     <button id="asr-retry" hidden>重试发送</button><button id="asr-export" hidden>导出未送达文本</button></section>`;
   return document.getElementById("asr-panel")!;
 }
 function button(root: HTMLElement, id: string): HTMLButtonElement { return root.querySelector<HTMLButtonElement>(id)!; }
+function rootEditor(root: HTMLElement): HTMLTextAreaElement { return root.querySelector<HTMLTextAreaElement>("#asr-transcript-edit")!; }
 function text(root: HTMLElement, id: string): string { return root.querySelector<HTMLElement>(id)!.textContent || ""; }
 async function upload(root: HTMLElement): Promise<void> {
   fireEvent.change(root.querySelector("#asr-file")!, { target: { files: [new File(["audio"], "clip.wav", { type: "audio/wav" })] } });
@@ -76,6 +81,137 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe("ASR panel", () => {
+  it("lets a person correct a transcript before it enters the board", async () => {
+    const root = fixture();
+    root.querySelector<HTMLInputElement>("#asr-review-before-submit")!.checked = true;
+    mountAsrPanel(root, "mtg_demo");
+    await upload(root);
+
+    expect(submitUtteranceMock).not.toHaveBeenCalled();
+    const editor = root.querySelector<HTMLTextAreaElement>("#asr-transcript-edit")!;
+    expect(editor.hidden).toBe(false);
+    expect(editor.value).toBe(event.text);
+    editor.value = "人工修订后的会议发言";
+    fireEvent.click(button(root, "#asr-confirm-transcript"));
+
+    await waitFor(() => expect(submitUtteranceMock).toHaveBeenCalledWith(
+      expect.objectContaining({ utterance_id: event.utterance_id, text: "人工修订后的会议发言" })));
+  });
+
+  it("lets a person review real-time segments separately and submits them in order", async () => {
+    const review = { ...event, text: "原始整段转写" };
+    transcribeAudioMock.mockResolvedValueOnce({ ok: true, event: review, transcription: { text: review.text } });
+    const root = fixture();
+    root.querySelector<HTMLInputElement>("#asr-review-before-submit")!.checked = true;
+    mountAsrPanel(root, "mtg_demo");
+    fireEvent.click(button(root, "#asr-record"));
+    liveState.callbacks?.onSegment?.({ segmentId: "live-1", text: "实时分段", language: "zh", startOffsetMs: 0, endOffsetMs: 1200 });
+    liveState.callbacks?.onSegment?.({ segmentId: "live-2", text: "第二个实时分段", language: "zh", startOffsetMs: 1200, endOffsetMs: 2400 });
+    expect(submitUtteranceMock).not.toHaveBeenCalled();
+
+    fireEvent.click(button(root, "#asr-stop"));
+    await waitFor(() => expect(root.querySelector<HTMLTextAreaElement>("#asr-transcript-edit")!.value).toBe("实时分段"));
+    expect(text(root, "#asr-review-progress")).toContain("1/2");
+    expect(text(root, "#asr-transcript")).toContain(review.text);
+    const editor = root.querySelector<HTMLTextAreaElement>("#asr-transcript-edit")!;
+    const speaker = root.querySelector<HTMLInputElement>("#asr-speaker-edit")!;
+    speaker.value = "甲";
+    fireEvent.input(speaker);
+    editor.value = "修订后的第一段";
+    fireEvent.click(button(root, "#asr-confirm-transcript"));
+    expect(submitUtteranceMock).not.toHaveBeenCalled();
+    expect(editor.value).toBe("第二个实时分段");
+    expect(text(root, "#asr-review-progress")).toContain("2/2");
+    speaker.value = "乙";
+    fireEvent.input(speaker);
+    editor.value = "修订后的第二段";
+    fireEvent.click(button(root, "#asr-confirm-transcript"));
+    await waitFor(() => expect(submitUtteranceMock).toHaveBeenCalledTimes(1));
+    expect(submitUtteranceMock).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      utterance_id: "live-1", text: "修订后的第一段", source: "local_streaming",
+      speaker: expect.objectContaining({ display_name: "甲", is_resolved: true }),
+    }));
+    await waitFor(() => expect(submitUtteranceMock).toHaveBeenCalledTimes(2));
+    expect(submitUtteranceMock).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      utterance_id: "live-2", text: "修订后的第二段", source: "local_streaming",
+      speaker: expect.objectContaining({ display_name: "乙", is_resolved: true }),
+    }));
+    expect(submitUtteranceMock).not.toHaveBeenCalledWith(expect.objectContaining({ text: review.text }));
+  });
+
+  it("restores a multi-segment review at its saved position after reopening", async () => {
+    const review = { ...event, text: "完整录音参考" };
+    transcribeAudioMock.mockResolvedValueOnce({ ok: true, event: review, transcription: { text: review.text } });
+    const firstRoot = fixture();
+    firstRoot.querySelector<HTMLInputElement>("#asr-review-before-submit")!.checked = true;
+    const first = mountAsrPanel(firstRoot, "mtg_demo");
+    fireEvent.click(button(firstRoot, "#asr-record"));
+    liveState.callbacks?.onSegment?.({ segmentId: "live-a", text: "第一段", language: "zh", startOffsetMs: 0, endOffsetMs: 800 });
+    liveState.callbacks?.onSegment?.({ segmentId: "live-b", text: "第二段", language: "zh", startOffsetMs: 800, endOffsetMs: 1600 });
+    fireEvent.click(button(firstRoot, "#asr-stop"));
+    await waitFor(() => expect(rootEditor(firstRoot).value).toBe("第一段"));
+    const firstSpeaker = firstRoot.querySelector<HTMLInputElement>("#asr-speaker-edit")!;
+    firstSpeaker.value = "甲";
+    fireEvent.input(firstSpeaker);
+    rootEditor(firstRoot).value = "已修订第一段";
+    fireEvent.click(button(firstRoot, "#asr-confirm-transcript"));
+    rootEditor(firstRoot).value = "正在修订第二段";
+    fireEvent.input(rootEditor(firstRoot));
+    const secondSpeaker = firstRoot.querySelector<HTMLInputElement>("#asr-speaker-edit")!;
+    secondSpeaker.value = "乙";
+    fireEvent.input(secondSpeaker);
+    first.dispose();
+
+    const secondRoot = fixture();
+    const second = mountAsrPanel(secondRoot, "mtg_demo");
+    expect(rootEditor(secondRoot).value).toBe("正在修订第二段");
+    expect(text(secondRoot, "#asr-review-progress")).toContain("2/2");
+    expect(secondRoot.querySelector<HTMLInputElement>("#asr-speaker-edit")!.value).toBe("乙");
+    fireEvent.click(button(secondRoot, "#asr-confirm-transcript"));
+    await waitFor(() => expect(submitUtteranceMock).toHaveBeenCalledTimes(1));
+    expect(submitUtteranceMock).toHaveBeenCalledWith(expect.objectContaining({
+      utterance_id: "live-a", text: "已修订第一段", source: "local_streaming",
+      speaker: expect.objectContaining({ display_name: "甲", is_resolved: true }),
+    }));
+    await waitFor(() => expect(submitUtteranceMock).toHaveBeenCalledTimes(2));
+    expect(submitUtteranceMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      utterance_id: "live-b", text: "正在修订第二段", source: "local_streaming",
+      speaker: expect.objectContaining({ display_name: "乙", is_resolved: true }),
+    }));
+    second.dispose();
+  });
+
+  it("restores an edited review draft after the panel is reopened", async () => {
+    const firstRoot = fixture();
+    firstRoot.querySelector<HTMLInputElement>("#asr-review-before-submit")!.checked = true;
+    const first = mountAsrPanel(firstRoot, "mtg_demo");
+    await upload(firstRoot);
+    const firstEditor = firstRoot.querySelector<HTMLTextAreaElement>("#asr-transcript-edit")!;
+    firstEditor.value = "稍后继续修订的原话";
+    fireEvent.input(firstEditor);
+    first.dispose();
+
+    const secondRoot = fixture();
+    const second = mountAsrPanel(secondRoot, "mtg_demo");
+    const restored = secondRoot.querySelector<HTMLTextAreaElement>("#asr-transcript-edit")!;
+    expect(restored.hidden).toBe(false);
+    expect(restored.value).toBe("稍后继续修订的原话");
+    fireEvent.click(button(secondRoot, "#asr-confirm-transcript"));
+    await waitFor(() => expect(submitUtteranceMock).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "稍后继续修订的原话" })));
+    second.dispose();
+  });
+
+  it("upgrades a previously saved single-event review draft", async () => {
+    localStorage.setItem("amo:asr-review:mtg_demo", JSON.stringify(event));
+    const root = fixture();
+    const panel = mountAsrPanel(root, "mtg_demo");
+    expect(rootEditor(root).value).toBe(event.text);
+    fireEvent.click(button(root, "#asr-confirm-transcript"));
+    await waitFor(() => expect(submitUtteranceMock).toHaveBeenCalledWith(event));
+    panel.dispose();
+  });
+
   it("shows live text during recording, freezes on pause and replaces it with final text", async () => {
     const root = fixture(); const panel = mountAsrPanel(root, "mtg_demo");
     fireEvent.click(button(root, "#asr-record"));

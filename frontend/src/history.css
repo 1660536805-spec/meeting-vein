@@ -33,6 +33,25 @@
 #history-link-form button { padding:7px; border:1px solid #4e6e97; border-radius:6px; background:#1b304b; color:#e5edf9; cursor:pointer; }
 #history-link-message { margin:0; color:#aabbd0; font-size:11px; }
 #history-timeline { padding:10px; color:#aabbd0; font-size:11px; }
+.history-link-suggestions-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 10px 0; }
+.history-link-suggestions-head h3 { margin:0; color:#dce8f7; font-size:12px; font-weight:600; }
+.history-link-suggestions-head button { border:1px solid #3b536f; border-radius:6px; padding:4px 7px; background:#1b3048; color:#b9cbe0; font:inherit; font-size:10px; cursor:pointer; }
+.history-link-search { display:grid; gap:5px; margin:8px 10px 3px; color:#aabbd0; font-size:11px; }
+.history-link-search input { min-width:0; border:1px solid #344c66; border-radius:6px; padding:7px 9px; background:#101c2b; color:#e5edf7; font:inherit; }
+.history-link-search-hint { display:block; margin:0 10px; color:#8294aa; font-size:10px; line-height:1.45; }
+#history-link-suggestions { padding:6px 10px; }
+.history-link-suggestion { display:grid; gap:4px; margin:0 0 7px; padding:8px; border:1px solid #3b536f; border-radius:8px; background:#14243a; color:#dbe6f3; font-size:11px; }
+.history-link-suggestion strong { font-size:11px; line-height:1.4; }
+.history-link-suggestion p { margin:0; color:#b9cbe0; }
+.history-link-suggestion small,.history-link-suggestion-empty { color:#8fa5c0; font-size:10px; line-height:1.5; }
+.history-link-suggestion-evidence { display:grid; gap:3px; padding:5px 7px; border-left:2px solid #6587ac; background:rgba(9,16,25,.38); }
+.history-link-suggestion .history-link-suggestion-evidence p { color:#c7d3e1; font-size:10px; line-height:1.5; overflow-wrap:anywhere; }
+.history-link-suggestion button { width:max-content; border:1px solid #4d709c; border-radius:6px; padding:4px 8px; background:#203b5c; color:#b8d1fa; font:inherit; font-size:10px; cursor:pointer; }
+.history-link-suggestion button:hover,.history-link-suggestion button:focus-visible { border-color:#8cafdf; outline-offset:2px; }
+.history-link-suggestion-actions { display:flex; flex-wrap:wrap; gap:6px; }
+.history-link-suggestion .history-link-dismiss { border-color:#596a7e; background:transparent; color:#b7c3d2; }
+.history-link-suggestion .history-link-dismiss:disabled { opacity:.55; cursor:wait; }
+.history-link-suggestion-empty { margin:0; padding:6px 0; }
 .history-timeline-card { margin-bottom:8px; padding:10px; border:1px solid #3b536f; border-radius:8px; background:#182b43; }
 .history-timeline-card strong { color:#e5edf9; font-size:12px; }
 .history-timeline-card p { margin:6px 0 0; line-height:1.45; overflow-wrap:anywhere; }

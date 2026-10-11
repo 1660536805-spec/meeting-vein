@@ -222,6 +222,27 @@ class NodeEditApiTests(unittest.TestCase):
             self.store.merge_nodes("meeting", "n_point_b", "n_point_a",
                 expected_version=self.store.version("meeting"), actor="leo")
 
+    def test_human_confirmed_opposition_link_is_audited_and_undoable(self):
+        cells = self.store.load("meeting")
+        cells.append({"id": "n_point_b", "shape": "amo-node", "data": {
+            "type": "point", "label": "反方观点", "parent_id": "n_issue_root",
+            "metadata_refs": [], "importance": {"level": "normal"}}})
+        self.store.save("meeting", cells)
+        version = self.store.version("meeting")
+
+        linked = self.store.apply_user_operation("meeting", "e_manual_oppose", "link", {
+            "source": "n_point_a", "target": "n_point_b", "relation": "oppose",
+            "reason": "经人工核对的矛盾候选",
+        }, actor="web:user", expected_version=version)
+
+        edge = next(cell for cell in linked if cell.get("id") == "e_manual_oppose")
+        self.assertEqual(edge["data"]["relation"], "oppose")
+        operation_version = self.store.version("meeting")
+        self.assertEqual(self.store.history("meeting")[-1]["change"]["operation"], "link")
+        restored = self.store.undo_operation("meeting", operation_version,
+            expected_version=operation_version, actor="web:user")
+        self.assertNotIn("e_manual_oppose", {cell.get("id") for cell in restored})
+
     def test_v1_parent_edit_rewrites_structural_edge_without_mixing_schemas(self):
         legacy = StoreA(self.tmp.name + "/legacy")
         legacy._schemas["legacy"] = "amo.board/v1"

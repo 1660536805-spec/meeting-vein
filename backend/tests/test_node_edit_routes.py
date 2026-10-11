@@ -71,6 +71,22 @@ class NodeEditRouteTests(unittest.TestCase):
                 self.assertEqual(undone.status_code, 200, undone.text)
                 self.assertIn("merge_duplicate", {cell["id"] for cell in undone.json()["cells"]})
 
+                current = undone.json()["version"]
+                linked = client.post("/api/node/manual_oppose_edge/op", json={
+                    "graph_id": "route_meeting", "op": "link", "expected_version": current,
+                    "payload": {"source": "keep", "target": "duplicate", "relation": "oppose",
+                                "reason": "经人工核对"},
+                })
+                self.assertEqual(linked.status_code, 200, linked.text)
+                edge = next(cell for cell in linked.json()["cells"] if cell["id"] == "manual_oppose_edge")
+                self.assertEqual(edge["data"]["relation"], "oppose")
+                unlinked = client.post("/api/board/route_meeting/undo", json={
+                    "operation_version": linked.json()["version"],
+                    "expected_version": linked.json()["version"],
+                })
+                self.assertEqual(unlinked.status_code, 200, unlinked.text)
+                self.assertNotIn("manual_oppose_edge", {cell["id"] for cell in unlinked.json()["cells"]})
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -55,6 +55,10 @@ export interface ActionRecord {
   version: number;
   created_at: string;
   updated_at: string;
+  external_sync_version?: number | null;
+  external_sync_pending?: boolean;
+  external_sync_attempted_at?: string | null;
+  external_sync_error?: string | null;
 }
 
 export interface ActionEvent {
@@ -105,6 +109,31 @@ export interface MeetingTimelineEntry {
   unfinished_actions: Array<ActionRecord & { label: string }>;
 }
 
+export interface MeetingTopicEvidence {
+  meta_id: string;
+  node_label: string;
+  speaker: string;
+  text: string;
+}
+
+export interface MeetingTopicSuggestion {
+  source_meeting_id: string;
+  source_meeting_title: string;
+  source_topic_node_id: string;
+  source_topic_label: string;
+  target_topic_node_id: string;
+  target_topic_label: string;
+  source_meeting_updated_at?: string;
+  score: number;
+  matching_terms: string[];
+  matching_context_terms: string[];
+  source_evidence: MeetingTopicEvidence[];
+  target_evidence: MeetingTopicEvidence[];
+  matched_search_terms?: string[];
+  search_only?: boolean;
+  requires_confirmation: true;
+}
+
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
   if (!response.ok) {
@@ -143,8 +172,17 @@ export const meetingsApi = {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ expected_version: expectedVersion, status }),
     }),
-  actions: (id: string) => request<{ ok: boolean; actions: ActionRecord[] }>(
+  actions: (id: string) => request<{ ok: boolean; actions: ActionRecord[];
+    external_task_sync_configured?: boolean }>(
     `/api/meetings/${encodeURIComponent(id)}/actions`),
+  syncActions: (id: string) => post<{ ok: boolean; sync_state: "sent" | "up_to_date";
+    remote_status?: number; synced_count: number; actions: ActionRecord[] }>(
+    `/api/meetings/${encodeURIComponent(id)}/actions/sync`),
+  actionCalendar: async (id: string): Promise<string> => {
+    const response = await fetch(`/api/meetings/${encodeURIComponent(id)}/actions.ics?snapshot=1`);
+    if (!response.ok) throw new Error((await response.text().catch(() => "")) || "日历导出失败");
+    return response.text();
+  },
   actionHistory: (id: string, actionId: string) => request<{ ok: boolean; events: ActionEvent[] }>(
     `/api/meetings/${encodeURIComponent(id)}/actions/${encodeURIComponent(actionId)}/history`),
   registerAction: (id: string, actionNodeId: string, eventId: string,
@@ -190,7 +228,17 @@ export const meetingsApi = {
     `/api/meetings/${encodeURIComponent(id)}/material-source?source_ref=${encodeURIComponent(sourceRef)}`),
   timeline: (id: string) => request<{ ok: boolean; entries: MeetingTimelineEntry[] }>(
     `/api/meetings/${encodeURIComponent(id)}/timeline`),
+  linkSuggestions: (id: string, query = "") => {
+    const params = new URLSearchParams();
+    if (query.trim()) params.set("q", query.trim());
+    const suffix = params.size ? `?${params.toString()}` : "";
+    return request<{ ok: boolean; suggestions: MeetingTopicSuggestion[] }>(
+      `/api/meetings/${encodeURIComponent(id)}/link-suggestions${suffix}`);
+  },
   linkMeeting: (targetId: string, body: { source_meeting_id: string; source_topic_node_id: string;
     target_topic_node_id: string; event_id: string; actor: string; reason: string }) =>
     post<{ ok: boolean }>(`/api/meetings/${encodeURIComponent(targetId)}/links`, body),
+  dismissLinkSuggestion: (targetId: string, body: { source_meeting_id: string; source_topic_node_id: string;
+    target_topic_node_id: string; event_id: string; actor: string; reason: string }) =>
+    post<{ ok: boolean }>(`/api/meetings/${encodeURIComponent(targetId)}/link-dismissals`, body),
 };

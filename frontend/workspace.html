@@ -137,7 +137,7 @@
               <span class="tb-divider" aria-hidden="true"></span>
               <button id="edit-cell" type="button" title="编辑选中的节点" disabled>编辑节点</button>
               <button id="delete-cell" type="button" title="删除选中的节点或连线">删除选中</button>
-              <button id="undo-last-operation" type="button" hidden>撤销删除或合并</button>
+              <button id="undo-last-operation" type="button" hidden>撤销上一步人工更改</button>
             </div>
             <aside id="node-editor" class="node-editor" aria-label="编辑节点" hidden>
               <div class="node-editor-head"><strong>编辑节点</strong><button id="node-editor-close" type="button" aria-label="关闭编辑面板">关闭</button></div>
@@ -207,6 +207,7 @@
             <button id="asr-stop" type="button" disabled>停止</button>
             <output id="asr-timer" aria-label="录音时长">00:00</output>
             <label class="asr-upload">上传音频 <input id="asr-file" type="file" accept="audio/*" /></label>
+            <label class="asr-review-toggle"><input id="asr-review-before-submit" type="checkbox" checked />人工核对后入板</label>
           </div>
           <div class="asr-meta">
             <output id="asr-model-status" aria-live="polite">正在检查本地 ASR…</output>
@@ -215,6 +216,12 @@
             <button id="asr-retry-batches" type="button" hidden>重试整理积压批次</button>
           </div>
           <p id="asr-transcript" aria-label="最新转写文本"></p>
+          <output id="asr-review-progress" aria-live="polite"></output>
+          <label id="asr-speaker-review" class="asr-speaker-review" hidden>发言人
+            <input id="asr-speaker-edit" type="text" placeholder="可填写参与者名称" autocomplete="off" />
+          </label>
+          <textarea id="asr-transcript-edit" rows="4" aria-label="修订语音转写" hidden></textarea>
+          <button id="asr-confirm-transcript" type="button" hidden>确认并整理进看板</button>
           <div id="asr-message-row">
             <p id="asr-message" role="status" aria-live="polite"></p>
             <button id="asr-retry" type="button" hidden>重试发送</button>

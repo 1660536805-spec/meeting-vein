@@ -2,6 +2,7 @@ import "@antv/x6/dist/index.css";
 import type { Graph } from "@antv/x6";
 import { createGraph, renderBoard } from "./board/render";
 import { mountBoardToolbar } from "./board/toolbar";
+import { bindLinkSuggestionSearch, renderLinkSuggestions } from "./history-link-suggestions";
 import { meetingsApi, type MeetingSummary, type MeetingHistoryRecord, type UtteranceRecord,
   type MeetingTimelineEntry } from "./api/meetings";
 
@@ -12,6 +13,7 @@ const content = document.getElementById("history-content")!;
 const title = document.getElementById("history-title")!;
 const meta = document.getElementById("history-meta")!;
 const open = document.getElementById("history-open") as HTMLAnchorElement;
+const allActionsCalendar = document.getElementById("history-all-actions-calendar") as HTMLAnchorElement;
 const utteranceList = document.getElementById("history-utterance-list")!;
 const records = document.getElementById("history-record-list")!;
 const error = document.getElementById("history-error")!;
@@ -25,9 +27,19 @@ const linkActor = document.getElementById("history-link-actor") as HTMLInputElem
 const linkReason = document.getElementById("history-link-reason") as HTMLInputElement;
 const linkMessage = document.getElementById("history-link-message")!;
 const timelineHost = document.getElementById("history-timeline")!;
+const linkSuggestionsHost = document.getElementById("history-link-suggestions")!;
+const linkSuggestionSearch = document.getElementById("history-link-search") as HTMLInputElement;
 let meetings: MeetingSummary[] = [];
 let activeId = new URLSearchParams(location.search).get("meeting_id") || "";
 let graph: Graph | null = null;
+let linkSuggestionQuery = "";
+let linkSuggestionTimer: number | undefined;
+let linkSuggestionRequest = 0;
+
+const localHost = location.hostname === "127.0.0.1" || location.hostname === "localhost";
+const calendarBase = localHost ? `${location.protocol}//${location.hostname}:8000` : location.origin;
+allActionsCalendar.href = new URL("/api/actions.ics", calendarBase).href.replace(/^https?:/, "webcal:");
+allActionsCalendar.title = "订阅所有会议中有截止日期的未完成待办；到期前一天和到期日提醒，逾期后每日提醒。客户端按自身策略刷新，本机服务需保持运行。";
 
 function setTopicOptions(select: HTMLSelectElement, cells: any[]): void {
   select.replaceChildren();
@@ -48,6 +60,55 @@ async function updateSourceTopics(): Promise<void> {
     const board = await meetingsApi.board(requestedId);
     if (sourceMeeting.value === requestedId) setTopicOptions(sourceTopic, board.cells);
   } catch { linkMessage.textContent = "旧会议议题加载失败，请刷新后重试。"; }
+}
+
+async function updateLinkSuggestions(id: string, query = linkSuggestionQuery): Promise<void> {
+  linkSuggestionQuery = query;
+  const requestId = ++linkSuggestionRequest;
+  if (!linkSuggestionsHost.querySelector("section")) {
+    linkSuggestionsHost.textContent = "正在比对历史议题、关联发言及其决议、观点和行动项…";
+  }
+  try {
+    const result = await meetingsApi.linkSuggestions(id, query);
+    if (activeId !== id || requestId !== linkSuggestionRequest) return;
+    renderLinkSuggestions(linkSuggestionsHost, result.suggestions, async (suggestion) => {
+      sourceMeeting.value = suggestion.source_meeting_id;
+      if (!suggestion.search_only) targetTopic.value = suggestion.target_topic_node_id;
+      await updateSourceTopics();
+      if (sourceMeeting.value !== suggestion.source_meeting_id) return;
+      sourceTopic.value = suggestion.source_topic_node_id;
+      if (suggestion.search_only) {
+        linkReason.value = `历史搜索命中：${suggestion.source_topic_label}；本会议议题待选择`;
+        linkMessage.textContent = "已填入旧议题。请选本会议议题、核对两边原话并填写关联人，再确认关联。";
+      } else {
+        linkReason.value = `延续议题：${suggestion.source_topic_label} → ${suggestion.target_topic_label}`;
+        linkMessage.textContent = "候选已填入。请核对议题、填写关联人，再确认关联。";
+      }
+    }, async (suggestion, dismissButton) => {
+      if (!window.confirm(`不再提示这组跨会议候选吗？\n\n“${suggestion.source_topic_label}” ↔ “${suggestion.target_topic_label}”\n\n只会隐藏这组候选，不会建立关联；之后仍可手动选择。`)) return;
+      dismissButton.disabled = true;
+      try {
+        await meetingsApi.dismissLinkSuggestion(id, {
+          source_meeting_id: suggestion.source_meeting_id,
+          source_topic_node_id: suggestion.source_topic_node_id,
+          target_topic_node_id: suggestion.target_topic_node_id,
+          event_id: `dismiss_${crypto.randomUUID().replace(/-/g, "")}`,
+          actor: linkActor.value.trim() || "web:user",
+          reason: "人工判断该候选不是延续议题",
+        });
+        linkMessage.textContent = "已记录该候选，不会再重复提示；仍可在下方手动关联。";
+        await updateLinkSuggestions(id, linkSuggestionQuery);
+      } catch (dismissError) {
+        linkMessage.textContent = dismissError instanceof Error
+          ? `隐藏候选失败：${dismissError.message}` : "隐藏候选失败，请检查本机服务。";
+        dismissButton.disabled = false;
+      }
+    }, query);
+  } catch {
+    if (activeId === id && requestId === linkSuggestionRequest) {
+      linkSuggestionsHost.textContent = "候选查找失败；仍可手动选择历史议题。";
+    }
+  }
 }
 
 function renderTimeline(entries: MeetingTimelineEntry[]): void {
@@ -172,6 +233,11 @@ function renderUtterances(items: UtteranceRecord[]): void {
 
 async function selectMeeting(id: string): Promise<void> {
   activeId = id;
+  if (linkSuggestionTimer !== undefined) window.clearTimeout(linkSuggestionTimer);
+  linkSuggestionTimer = undefined;
+  linkSuggestionRequest += 1;
+  linkSuggestionQuery = "";
+  linkSuggestionSearch.value = "";
   error.hidden = true;
   renderList();
   try {
@@ -202,7 +268,7 @@ async function selectMeeting(id: string): Promise<void> {
       sourceMeeting.append(option);
     }
     linkForm.hidden = sourceMeeting.options.length === 0 || targetTopic.options.length === 0;
-    await Promise.all([updateSourceTopics(), updateTimeline(id)]);
+    await Promise.all([updateSourceTopics(), updateTimeline(id), updateLinkSuggestions(id)]);
   } catch (reason) {
     showError(reason);
   }
@@ -223,6 +289,17 @@ async function loadMeetings(): Promise<void> {
 }
 
 document.getElementById("history-refresh")!.addEventListener("click", () => void loadMeetings());
+document.getElementById("history-refresh-suggestions")!.addEventListener("click", () => {
+  if (activeId) void updateLinkSuggestions(activeId, linkSuggestionQuery);
+});
+bindLinkSuggestionSearch(linkSuggestionSearch, (query) => {
+  linkSuggestionQuery = query;
+  linkSuggestionRequest += 1;
+  if (linkSuggestionTimer !== undefined) window.clearTimeout(linkSuggestionTimer);
+  linkSuggestionTimer = window.setTimeout(() => {
+    if (activeId) void updateLinkSuggestions(activeId, query);
+  }, 300);
+});
 sourceMeeting.addEventListener("change", () => void updateSourceTopics());
 linkForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -236,7 +313,7 @@ linkForm.addEventListener("submit", async (event) => {
       source_topic_node_id: sourceTopic.value, target_topic_node_id: targetTopic.value,
       event_id: crypto.randomUUID(), actor: linkActor.value.trim(), reason: linkReason.value.trim() });
     linkMessage.textContent = "跨会关联已保存";
-    await updateTimeline(targetId);
+    await Promise.all([updateTimeline(targetId), updateLinkSuggestions(targetId, linkSuggestionQuery)]);
   } catch { linkMessage.textContent = "关联失败；请核对议题或刷新后重试。"; }
   finally { button.disabled = false; }
 });

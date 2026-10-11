@@ -18,6 +18,11 @@ export function mountAsrPanel(root: HTMLElement, meetingId: string): { dispose()
   const stop = required<HTMLButtonElement>(root, "#asr-stop");
   const retry = required<HTMLButtonElement>(root, "#asr-retry");
   const exportPending = required<HTMLButtonElement>(root, "#asr-export");
+  const reviewBeforeSubmit = required<HTMLInputElement>(root, "#asr-review-before-submit");
+  const transcriptEdit = required<HTMLTextAreaElement>(root, "#asr-transcript-edit");
+  const speakerReview = required<HTMLLabelElement>(root, "#asr-speaker-review");
+  const speakerEdit = required<HTMLInputElement>(root, "#asr-speaker-edit");
+  const confirmTranscript = required<HTMLButtonElement>(root, "#asr-confirm-transcript");
   const file = required<HTMLInputElement>(root, "#asr-file");
   const timer = required<HTMLOutputElement>(root, "#asr-timer");
   const modelStatus = required<HTMLOutputElement>(root, "#asr-model-status");
@@ -25,6 +30,7 @@ export function mountAsrPanel(root: HTMLElement, meetingId: string): { dispose()
   const productStatus = root.querySelector<HTMLOutputElement>("#product-status");
   const retryBatches = root.querySelector<HTMLButtonElement>("#asr-retry-batches");
   const transcript = required<HTMLElement>(root, "#asr-transcript");
+  const reviewProgress = required<HTMLOutputElement>(root, "#asr-review-progress");
   const message = required<HTMLElement>(root, "#asr-message");
 
   let disposed = false;
@@ -33,11 +39,29 @@ export function mountAsrPanel(root: HTMLElement, meetingId: string): { dispose()
   let batchRetrying = false;
   let pendingBatchCount = 0;
   const outboxKey = `amo:asr-outbox:${meetingId}`;
+  const reviewKey = `amo:asr-review:${meetingId}`;
   let pendingEvents: NormUtterance[] = [];
+  let reviewDrafts: NormUtterance[] = [];
+  let reviewIndex = 0;
+  let reviewReference = "";
   try {
     const saved = JSON.parse(localStorage.getItem(outboxKey) ?? "[]");
     if (Array.isArray(saved)) pendingEvents = saved.filter((item) => item?.meeting_id === meetingId && typeof item?.utterance_id === "string");
   } catch { /* Invalid or unavailable browser storage leaves an empty queue. */ }
+  try {
+    const saved = JSON.parse(localStorage.getItem(reviewKey) ?? "null");
+    if (saved?.meeting_id === meetingId) {
+      const validEvent = (item: any): item is NormUtterance => item?.meeting_id === meetingId
+        && typeof item?.utterance_id === "string" && typeof item?.text === "string";
+      if (Array.isArray(saved.events)) reviewDrafts = saved.events.filter(validEvent);
+      else if (validEvent(saved)) reviewDrafts = [saved]; // Upgrade a saved single-event draft.
+      if (reviewDrafts.length) {
+        reviewIndex = Math.max(0, Math.min(reviewDrafts.length - 1,
+          Number.isInteger(saved.index) ? saved.index : 0));
+        reviewReference = typeof saved.reference_text === "string" ? saved.reference_text : "";
+      }
+    }
+  } catch { /* Invalid or unavailable browser storage leaves no review draft. */ }
   let sequence = 0;
   let elapsedSeconds = 0;
   let clock: number | null = null;
@@ -79,6 +103,47 @@ export function mountAsrPanel(root: HTMLElement, meetingId: string): { dispose()
   function persistOutbox(): void {
     try { localStorage.setItem(outboxKey, JSON.stringify(pendingEvents)); } catch { /* Keep the current session usable if storage is full. */ }
   }
+  function showReviewDraft(event: NormUtterance, status = "识别完成，请修订转写后再送入看板。") {
+    showReviewDrafts([event], event.text, status);
+  }
+  function withReviewedSpeaker(event: NormUtterance): NormUtterance {
+    const displayName = speakerEdit.value.trim();
+    if (!displayName || displayName === event.speaker.display_name) return event;
+    return { ...event, speaker: {
+      speaker_ref: `local:${meetingId}:speaker:${encodeURIComponent(displayName)}`,
+      display_name: displayName,
+      is_resolved: true,
+    } };
+  }
+  function persistReviewDrafts(): void {
+    try {
+      localStorage.setItem(reviewKey, JSON.stringify({ meeting_id: meetingId, events: reviewDrafts,
+        index: reviewIndex, reference_text: reviewReference }));
+    } catch { /* Editing remains available if local storage is unavailable. */ }
+  }
+  function showReviewDrafts(events: NormUtterance[], referenceText: string,
+                            status = "识别完成，请逐段修订转写后再送入看板。") {
+    reviewDrafts = events.filter((event) => event.meeting_id === meetingId && event.text.trim());
+    reviewIndex = Math.max(0, Math.min(reviewIndex, reviewDrafts.length - 1));
+    reviewReference = referenceText;
+    if (!reviewDrafts.length) return;
+    const current = reviewDrafts[reviewIndex];
+    transcript.textContent = referenceText ? `完整录音核对参考：${referenceText}` : current.text;
+    transcript.hidden = !referenceText || referenceText === current.text;
+    reviewProgress.textContent = reviewDrafts.length > 1
+      ? `核对第 ${reviewIndex + 1}/${reviewDrafts.length} 段`
+      : current.source === "local_streaming" ? "核对实时分段 1/1" : "核对完整转写";
+    speakerEdit.value = current.speaker.display_name;
+    speakerReview.hidden = false;
+    transcriptEdit.value = current.text;
+    transcriptEdit.hidden = false;
+    confirmTranscript.hidden = false;
+    confirmTranscript.textContent = reviewIndex + 1 < reviewDrafts.length
+      ? "保存本段并继续" : "确认并整理进看板";
+    persistReviewDrafts();
+    setMessage(status);
+    syncControls();
+  }
   function enqueue(event: NormUtterance): void {
     if (pendingEvents.some((item) => item.utterance_id === event.utterance_id)) return;
     pendingEvents.push(event);
@@ -100,12 +165,16 @@ export function mountAsrPanel(root: HTMLElement, meetingId: string): { dispose()
   }
   function syncControls(): void {
     const processing = busy || batchRetrying;
-    record.disabled = !recorder.supported || recorderState !== "idle" || processing || pendingEvents.length > 0;
+    record.disabled = !recorder.supported || recorderState !== "idle" || processing
+      || pendingEvents.length > 0 || reviewDrafts.length > 0;
     pause.disabled = recorderState !== "recording" || processing;
     resume.disabled = recorderState !== "paused" || processing;
     stop.disabled = !["recording", "paused"].includes(recorderState) || processing;
-    file.disabled = processing || recorderState !== "idle" || pendingEvents.length > 0;
+    file.disabled = processing || recorderState !== "idle" || pendingEvents.length > 0 || reviewDrafts.length > 0;
+    reviewBeforeSubmit.disabled = processing || recorderState !== "idle" || pendingEvents.length > 0 || reviewDrafts.length > 0;
     retry.disabled = processing;
+    confirmTranscript.disabled = processing || reviewDrafts.length === 0;
+    speakerEdit.disabled = processing || reviewDrafts.length === 0;
     if (retryBatches) retryBatches.disabled = busy || batchRetrying;
   }
 
@@ -191,8 +260,11 @@ export function mountAsrPanel(root: HTMLElement, meetingId: string): { dispose()
       const result = await transcribeAudio(blob, meetingId, ++sequence);
       if (disposed) return;
       transcript.textContent = result.event.text;
-      enqueue(result.event);
-      await submitPendingEvent();
+      if (reviewBeforeSubmit.checked) showReviewDraft(result.event);
+      else {
+        enqueue(result.event);
+        await submitPendingEvent();
+      }
     } catch (error) {
       if (!disposed) showError(error);
     } finally {
@@ -201,10 +273,8 @@ export function mountAsrPanel(root: HTMLElement, meetingId: string): { dispose()
     }
   }
 
-  /** 实时分段：静音切出的一段直接提交看板，不阻塞录音。 */
-  async function submitLiveSegment(segment: LiveSegment): Promise<void> {
-    if (disposed || !segment.text.trim()) return;
-    const event: NormUtterance = {
+  function liveSegmentEvent(segment: LiveSegment): NormUtterance {
+    return {
       utterance_id: segment.segmentId,
       meeting_id: meetingId,
       session_id: null,
@@ -219,6 +289,22 @@ export function mountAsrPanel(root: HTMLElement, meetingId: string): { dispose()
       is_partial: false,
       source: "local_streaming",
     };
+  }
+
+  /** Keep each streamed utterance separate for either review or direct ingestion. */
+  async function submitLiveSegment(segment: LiveSegment): Promise<void> {
+    if (disposed || !segment.text.trim()) return;
+    const event = liveSegmentEvent(segment);
+    if (reviewBeforeSubmit.checked) {
+      reviewDrafts.push(event);
+      reviewIndex = 0;
+      persistReviewDrafts();
+      transcript.textContent = liveSegmentTexts.join("\n");
+      transcript.hidden = false;
+      reviewProgress.textContent = `已识别 ${reviewDrafts.length} 段，停止后逐段核对`;
+      setMessage(`已识别 ${reviewDrafts.length} 个实时分段；停止后可逐段修订，确认后按原顺序入板。`);
+      return;
+    }
     enqueue(event);
     if (!busy) void submitPendingEvent();
   }
@@ -237,6 +323,16 @@ export function mountAsrPanel(root: HTMLElement, meetingId: string): { dispose()
       const result = await transcribeAudio(blob, meetingId, ++sequence);
       if (disposed) return;
       transcript.textContent = result.event.text;
+      if (reviewBeforeSubmit.checked) {
+        const gaps = uncoveredTranscriptSegments(result.event.text, liveSegmentTexts);
+        const status = gaps === null
+          ? `完整转写已生成；${liveSegments} 个实时分段保留为独立发言。请对照完整参考逐段修订，并检查是否有遗漏。`
+          : gaps.length
+            ? `完整转写发现 ${gaps.length} 处内容未匹配到实时分段；请对照下方参考，在逐段核对时补全遗漏。`
+            : "完整转写未发现明显遗漏；请逐段核对后按原顺序入板。";
+        showReviewDrafts(reviewDrafts.length ? reviewDrafts : [result.event], result.event.text, status);
+        return;
+      }
       const uncovered = uncoveredTranscriptSegments(result.event.text, liveSegmentTexts);
       if (uncovered === null) {
         setMessage("完整录音仅供核对；无法与实时分段可靠对齐，请核对全文后补录遗漏。");
@@ -246,7 +342,14 @@ export function mountAsrPanel(root: HTMLElement, meetingId: string): { dispose()
         setMessage(`完整录音发现实时分段可能遗漏，建议补录：${uncovered.join("；")}`);
       }
     } catch (error) {
-      if (!disposed) setMessage(`已保留 ${liveSegments} 个实时分段；完整录音核对失败：${error instanceof Error ? error.message : "识别失败"}`);
+      if (!disposed) {
+        const reason = error instanceof Error ? error.message : "识别失败";
+        if (reviewBeforeSubmit.checked && reviewDrafts.length) {
+          showReviewDrafts(reviewDrafts, "", `已保留 ${liveSegments} 个实时分段；完整录音核对失败（${reason}），仍可逐段修订并确认入板。`);
+        } else {
+          setMessage(`已保留 ${liveSegments} 个实时分段；完整录音核对失败：${reason}`);
+        }
+      }
     }
   }
 
@@ -348,6 +451,8 @@ export function mountAsrPanel(root: HTMLElement, meetingId: string): { dispose()
     setMessage("发现尚未确认的分段，正在检查处理状态…");
     void checkPendingStatus(pendingEvents[0]);
   }
+  if (reviewDrafts.length) showReviewDrafts(reviewDrafts, reviewReference,
+    "已恢复未确认的转写草稿；可以继续逐段修订并确认入板。");
   void getProductStatus().then((status) => {
     if (disposed) return;
     productAsrStatusReceived = true;
@@ -372,6 +477,9 @@ export function mountAsrPanel(root: HTMLElement, meetingId: string): { dispose()
 
   listen(record, "click", () => {
     if (busy) return;
+    reviewDrafts = [];
+    reviewIndex = 0;
+    reviewReference = "";
     elapsedSeconds = 0; renderTimer();
     void recorder.start();
   });
@@ -379,6 +487,52 @@ export function mountAsrPanel(root: HTMLElement, meetingId: string): { dispose()
   listen(resume, "click", () => recorder.resume());
   listen(stop, "click", () => recorder.stop());
   listen(retry, "click", () => { void submitPendingEvent(true); });
+  listen(transcriptEdit, "input", () => {
+    if (!reviewDrafts.length) return;
+    reviewDrafts[reviewIndex] = { ...reviewDrafts[reviewIndex], text: transcriptEdit.value };
+    persistReviewDrafts();
+  });
+  listen(speakerEdit, "input", () => {
+    if (!reviewDrafts.length) return;
+    reviewDrafts[reviewIndex] = withReviewedSpeaker(reviewDrafts[reviewIndex]);
+    persistReviewDrafts();
+  });
+  listen(confirmTranscript, "click", () => {
+    if (!reviewDrafts.length) return;
+    const corrected = transcriptEdit.value.trim();
+    if (!corrected) {
+      setMessage("转写内容不能为空；修订后再确认入板。");
+      return;
+    }
+    reviewDrafts[reviewIndex] = { ...withReviewedSpeaker(reviewDrafts[reviewIndex]), text: corrected };
+    if (reviewIndex + 1 < reviewDrafts.length) {
+      reviewIndex += 1;
+      const next = reviewDrafts[reviewIndex];
+      persistReviewDrafts();
+      transcriptEdit.value = next.text;
+      speakerEdit.value = next.speaker.display_name;
+      reviewProgress.textContent = `核对第 ${reviewIndex + 1}/${reviewDrafts.length} 段`;
+      confirmTranscript.textContent = reviewIndex + 1 < reviewDrafts.length
+        ? "保存本段并继续" : "确认并整理进看板";
+      setMessage("本段已保存，请核对下一段；全部确认后会按原顺序入板。");
+      syncControls();
+      return;
+    }
+    const confirmedEvents = reviewDrafts;
+    reviewDrafts = [];
+    reviewIndex = 0;
+    reviewReference = "";
+    try { localStorage.removeItem(reviewKey); } catch { /* The outbox still preserves the confirmed event. */ }
+    transcriptEdit.hidden = true;
+    speakerReview.hidden = true;
+    confirmTranscript.hidden = true;
+    reviewProgress.textContent = "";
+    transcript.hidden = false;
+    transcript.textContent = confirmedEvents.map((item) => item.text).join("\n");
+    for (const event of confirmedEvents) enqueue(event);
+    syncControls();
+    void submitPendingEvent();
+  });
   if (retryBatches) listen(retryBatches, "click", () => {
     if (batchRetrying || pendingBatchCount === 0) return;
     batchRetrying = true;
