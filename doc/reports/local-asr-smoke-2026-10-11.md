@@ -7,7 +7,8 @@
 - `local_asr/scripts/verify_model.py` 读取仓库中 Paraformer 的 `example/asr_example.wav`，使用真实 SenseVoiceSmall + FSMN-VAD，返回 `state=ready`、`device=mps`、`language=zh`、`transcript_characters=20`、`audio_duration_ms=5547`。
 - 三服务通过 `scripts/start_local.sh` 启动；`GET /models/status` 返回离线模型和流式模型均为 `ready`。
 - `local_asr/scripts/smoke_stream.py` 将同一音频按约 480 毫秒一块，经 `127.0.0.1:5173/asr/v1/audio/stream` 前端代理发送到真实流式 Paraformer。返回 10 个非空 partial、累计 19 个转写字符；样本内片段 `capture_to_response_ms` 为 `[979.2, 989.6, 945.2, 1005.7, 958.3, 1025.6, 1051.8, 1112.0, 1142.7, 1086.9]`，P95 为 **1142.7 ms**。脚本退出码为 0。
+- 用同一音频经真实 SenseVoiceSmall 生成 `local_sensevoice` 规范事件，转写为“欢迎大家来体验达摩院推出的语音识别模型。”；随后在 `/tmp` 隔离存储、显式 `AMO_LLM_ENABLED=0` 的 FastAPI TestClient 中建会并提交到 `/api/utterances`。返回 `state=committed`、`board_effect=linked`；图版本 1→2、节点数 2→3，节点 `metadata_refs` 含此次 `meta_id`，Store B 原文与来源仍可回查。此步骤使用真实 ASR 结果与 **MockLLM**，并非真实 LLM 质量测试。
 
 ## 解释与边界
 
-该结果证明本机缓存权重能够真实加载、样例音频能经前端代理完成流式识别。P95 是该脚本按块发送后到收到响应的浏览器外估算，不能直接当成发言到上板的端到端时延；这一样本的 P95 也高于内部 1 秒流式目标。未验证真实麦克风权限、不同设备、ASR 自动提交到图、真实 LLM 同时运行、长时间会议、故障恢复。完整 M1 验收仍未完成。
+该结果证明本机缓存权重能够真实加载、样例音频能经前端代理完成流式识别，真实 ASR 的规范事件也能进入图并保留来源。P95 是该脚本按块发送后到收到响应的浏览器外估算，不能直接当成发言到上板的端到端时延；这一样本的 P95 也高于内部 1 秒流式目标。未验证真实麦克风权限、不同设备、浏览器自动提交真实音频分段、真实 LLM 同时运行、长时间会议、故障恢复。完整 M1 验收仍未完成。
