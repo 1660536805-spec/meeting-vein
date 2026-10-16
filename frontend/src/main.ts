@@ -11,7 +11,8 @@ import { mountActionTracker } from "./board/action-tracker";
 import { mountPreparationPanel } from "./board/preparation-panel";
 import { CursorEventAdapter } from "./board/cursor";
 import { MascotController, SUPPORTED_MASCOT_MOTIONS } from "./mascot/MascotController";
-import { Live2DMascotView } from "./mascot/Live2DMascotView";
+import { MascotPortraitView } from "./mascot/MascotPortraitView";
+import "./mascot/portrait.css";
 import { BoardWS } from "./api/ws";
 import { mountAsrPanel } from "./asr/panel";
 import { meetingsApi } from "./api/meetings";
@@ -23,6 +24,7 @@ import { buildAdjacency, buildHash, lens, parseHash, reach, route, type DeepLink
 import { renderIssueStructure } from "./issues-view";
 import { projectBoard, projectLocalNeighborhood } from "./board/projection";
 import { mountFullscreenToggle } from "./board/fullscreen";
+import { clearUserZoomFactor, composeAutoFit } from "./board/view-scale";
 import { cycleNodeId } from "./board/keyboard-nav";
 
 // 普通入口每次开启独立的空白讨论；历史会议与深链带 meeting_id，继续加载指定会议。
@@ -233,6 +235,10 @@ function setGraphScope(scope: "local" | "full"): void {
   scopeLocalBtn?.setAttribute("aria-pressed", String(scope === "local"));
   scopeFullBtn?.setAttribute("aria-pressed", String(scope === "full"));
   renderScopedBoard(true);
+  if (scope === "full") {
+    clearUserZoomFactor();
+    composeAutoFit(graph, { padding: 48, maxScale: 1 });
+  }
 }
 scopeLocalBtn?.addEventListener("click", () => setGraphScope("local"));
 scopeFullBtn?.addEventListener("click", () => setGraphScope("full"));
@@ -674,9 +680,9 @@ async function relayoutBoard(): Promise<void> {
   }
 }
 const disposeToolbar = mountBoardToolbar(graph, () => void relayoutBoard());   // 底部液态玻璃控制条：缩放/重排
-const mascotView = new Live2DMascotView();
+const mascotView = new MascotPortraitView();
 const mascot = new MascotController(mascotModelHost, mascotBubble, (name) => mascotView.setMotion(name), SUPPORTED_MASCOT_MOTIONS);
-void mascotView.mount(mascotModelHost);
+mascotView.mount(mascotModelHost);
 window.addEventListener("pagehide", () => { disposeToolbar(); disposeFullscreen(); mascotView.dispose(); }, { once: true });
 
 /** 后端 change_set（cell id 数组）→ 前端 GraphChangeSet（CellDiff 数组），兼容两代词表。 */

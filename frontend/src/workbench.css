@@ -87,9 +87,6 @@ html, body { background: var(--ui-bg); color: var(--ui-text); }
 .assistant-label { align-self: stretch; display: flex; align-items: center; gap: 8px; color: #d7e5f4; font-size: 13px; font-weight: 600; }
 .assistant-dot { width: 8px; height: 8px; border-radius: 50%; background: #75d4b2; box-shadow: 0 0 0 4px rgba(117,212,178,.12); }
 #mascot-model { position: relative; flex: 0 1 auto; width: 100%; height: min(47vh,400px); min-height: 155px; margin-top: 18px; overflow: hidden; }
-#mascot-model canvas, #mascot-model .mascot-fallback { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; }
-#mascot-model canvas { pointer-events: none; }
-#mascot-model .mascot-fallback[hidden] { display: none; }
 #mascot .name { margin-top: 13px; color: #f0f4fa; font-size: 14px; font-weight: 600; text-align: center; }
 #mascot .bubble { max-width: 100%; margin-top: 11px; padding: 8px 12px; border: 1px solid #405977; border-radius: 8px; background: #1c314d; color: #c5d4e9; font-size: 12px; }
 /* 会议发言输入框内嵌助手卡底部（原 assistant-help 文案位）：高占卡片内容区约 1/3 */

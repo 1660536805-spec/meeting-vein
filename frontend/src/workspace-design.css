@@ -29,8 +29,6 @@
 .assistant-label small { display:inline-block; font-size:10px; letter-spacing:.04em; color:#7087a6; margin-left:7px; }
 .decision-workspace #mascot .bubble { padding:0; margin:7px 0 0; border:0; background:transparent; color:#63e2ff; font-size:15px; font-weight:550; line-height:1.3; }
 .decision-workspace #mascot-model { flex:0 0 149.6px; width:149.6px; height:129.2px; min-height:0; margin:0 -4px 0 0; }
-.decision-workspace #mascot-model:has(.mascot-fallback:not([hidden])) { height:115.6px; }
-.decision-workspace #mascot-model img.mascot-fallback { width:704.8%; height:670.6%; max-width:none; left:-604.8%; top:0; object-fit:fill; }
 #assistant-insights { display:flex; flex:1; min-height:0; flex-direction:column; overflow-y:auto; overflow-x:hidden; padding-bottom:8px; scrollbar-width:thin; scrollbar-color:#2d4865 transparent; }
 .insight-section { padding:9px 0; border-top:1px solid #243850; --accent:#ffbc3b; }
 .summary-section { --accent:#83b9f7; }
@@ -254,7 +252,6 @@
 }
 .decision-workspace .assistant-head { min-height:70px; }
 .decision-workspace #mascot-model { flex-basis:118px; width:118px; height:104px; }
-.decision-workspace #mascot-model:has(.mascot-fallback:not([hidden])) { height:100px; }
 .decision-workspace #assistant-insights { padding-bottom:2px; }
 .decision-workspace #assistant-insights .insight-section { padding-top:8px; padding-bottom:8px; }
 .decision-workspace #input-dock {

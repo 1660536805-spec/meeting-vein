@@ -10,34 +10,6 @@
 }
 @keyframes cover-settle { from { transform: scale(1.035); } to { transform: scale(1); } }
 
-.cover-tail {
-  position: absolute;
-  left: 443px;
-  top: 593px;
-  width: 168px;
-  height: 166px;
-  transform-origin: 85% 79%;
-  animation: tail-wag 2.7s ease-in-out infinite;
-}
-.cover-tail-cutout {
-  position: absolute;
-  inset: 0;
-  background: url('/huimai-home-hero-dark.png') -443px -593px / 1600px 900px no-repeat;
-  clip-path: polygon(12% 27%, 30% 43%, 46% 8%, 62% 17%, 68% 42%, 81% 54%, 100% 73%, 100% 97%, 75% 89%, 58% 72%, 34% 75%, 5% 64%, 0 48%);
-  filter: brightness(1.06) drop-shadow(0 5px 9px rgba(29, 117, 214, .36));
-}
-.tail-glint {
-  position: absolute;
-  left: 34px;
-  top: 54px;
-  width: 67px;
-  height: 46px;
-  border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(79, 181, 255, .25), transparent 72%);
-  filter: blur(9px);
-  animation: tail-glow 2.7s ease-in-out infinite;
-}
-
 .cover-blue-ribbon {
   position: absolute;
   left: 1007px;
@@ -81,10 +53,10 @@
 
 .cover-character {
   position: absolute;
-  left: 450px;
-  top: 510px;
-  width: 355px;
-  height: 248px;
+  left: 550px;
+  top: 420px;
+  width: 360px;
+  height: 360px;
   isolation: isolate;
 }
 .cover-character::before {
@@ -95,16 +67,14 @@
   width: 225px;
   height: 165px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(61, 172, 255, .26), rgba(40, 116, 216, .08) 47%, transparent 72%);
+  background: radial-gradient(circle, rgba(218, 169, 98, .18), rgba(162, 111, 70, .05) 47%, transparent 72%);
   filter: blur(24px);
   animation: character-aura 3.8s ease-in-out infinite;
 }
 .cover-character-cutout {
   position: absolute;
   inset: 0;
-  background: url('/huimai-home-hero-dark.png') -450px -510px / 1600px 900px no-repeat;
-  -webkit-mask-image: radial-gradient(ellipse 59% 75% at 55% 59%, #000 42%, rgba(0,0,0,.80) 54%, transparent 74%);
-  mask-image: radial-gradient(ellipse 59% 75% at 55% 59%, #000 42%, rgba(0,0,0,.80) 54%, transparent 74%);
+  background: url('/mascot/assistant.png') center / contain no-repeat;
   transform-origin: 55% 80%;
   animation: character-breathe 3.8s ease-in-out infinite;
 }
@@ -179,11 +149,6 @@
   100% { transform: scaleY(1.32); opacity: .90; }
 }
 @keyframes voice-scan { to { left: 300px; } }
-@keyframes tail-wag {
-  0%, 100% { transform: rotate(-2deg) translateY(1px); }
-  50% { transform: rotate(5deg) translateY(-4px); }
-}
-@keyframes tail-glow { 50% { opacity: .35; transform: scale(1.2); } }
 @keyframes ribbon-run { from { stroke-dashoffset: 384; } to { stroke-dashoffset: 0; } }
 @keyframes symbol-drift { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -270; } }
 @keyframes symbol-spark { 0%, 100% { opacity: .15; transform: scale(.65); } 45% { opacity: .95; transform: scale(1.35); } }
@@ -194,7 +159,6 @@
   .cover-motion,
   .cover-motion * { animation: none !important; }
   .cover-character-cutout { transform: none; filter: none; }
-  .cover-tail { transform: none; }
   .ribbon-flow { display: none; }
   .symbol-line { stroke-dasharray: 13 32; }
   .cover-wave-bars i { transform: scaleY(.7); }
@@ -203,14 +167,18 @@
 }
 
 /* Match the same cover animation to the original light illustration. */
-.reference-motion-light .cover-tail-cutout,
-.reference-motion-light .cover-character-cutout { background-image: url('/huimai-home-hero-v2.png'); }
-.reference-motion-light .cover-tail { top: 625px; }
-.reference-motion-light .cover-tail-cutout { background-position: -443px -625px; }
-.reference-motion-light .cover-character { top: 525px; }
-.reference-motion-light .cover-character-cutout { background-position: -450px -525px; }
 .reference-motion-light .ribbon-base { opacity: .38; }
 .reference-motion-light .ribbon-base { stroke: url(#ribbonGradientLight); }
 .reference-motion-light .ribbon-flow { opacity: .72; }
 .reference-motion-light .cover-voiceprint { opacity: .68; mix-blend-mode: multiply; }
 .reference-motion-light .cover-wave-bars { mix-blend-mode: multiply; }
+
+/* The embedded UI and foreground use the same current assistant asset. */
+.cover-screen-assistant {
+  position: absolute;
+  left: 1138px;
+  top: 303px;
+  width: 66px;
+  height: 64px;
+  background: url('/mascot/assistant.png') center / contain no-repeat;
+}

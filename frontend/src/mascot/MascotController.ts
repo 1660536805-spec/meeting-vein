@@ -20,10 +20,7 @@ const FALLBACK_LABEL = "处理中…";
 /** error 警示停留时长：超过后自动回落待命中（失败批次由后端 pending 轮询静默重试，
  * 恢复成功时会广播 success 再点亮「已更新看板 ✓」，error 不应永久挂住）。 */
 export const ERROR_FALLBACK_MS = 6000;
-// Kept in sync with c_0120.model3.json; MascotController.test.ts verifies this list.
-export const SUPPORTED_MASCOT_MOTIONS = [
-  "Idle", "Hammer", "BubbleGum", "SprayWater", "OpenCase", "Selfie", "SelfieQuick", "Ketchup",
-] as const;
+export const SUPPORTED_MASCOT_MOTIONS = ["Idle", "Celebrate", "Concern"] as const;
 
 const MOTION_BY_STATE: Partial<Record<MascotState, string>> = {
   idle: "Idle",
@@ -33,8 +30,8 @@ const MOTION_BY_STATE: Partial<Record<MascotState, string>> = {
   assembling: "Idle",
   analyzing: "Idle",
   syncing: "Idle",
-  success: "BubbleGum",
-  error: "SprayWater",
+  success: "Celebrate",
+  error: "Concern",
 };
 
 export function resolveMascotMotion(state: string, supportedGroups: readonly string[]): string | undefined {
@@ -62,7 +59,7 @@ export class MascotController {
     }
     const known = Object.prototype.hasOwnProperty.call(LABELS, state);
     this.bubble.textContent = known ? LABELS[state as MascotState] : FALLBACK_LABEL;
-    // 表情：MVP 用气泡文案表达；Live2D 路线通过 expressionManager 切换（Design_Mascot §3）
+    // 保留状态气泡，并通过轻量立绘动画反馈成功与异常。
     this.visual.style.opacity = state === "error" ? "0.6" : "1";
     const motion = resolveMascotMotion(state, this.supportedGroups);
     if (motion) this.onMotion(motion);

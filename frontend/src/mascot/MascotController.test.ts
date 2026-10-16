@@ -1,23 +1,17 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { MascotController, ERROR_FALLBACK_MS, resolveMascotMotion, SUPPORTED_MASCOT_MOTIONS } from "./MascotController";
 
-const model3 = JSON.parse(readFileSync("public/mascot/live2d/c_0120.model3.json", "utf8"));
-const supported = Object.keys(model3.FileReferences.Motions) as string[];
+const supported = SUPPORTED_MASCOT_MOTIONS;
 
 describe("MascotController", () => {
-  it("keeps its supported motion list synchronized with the bundled model", () => {
-    expect(SUPPORTED_MASCOT_MOTIONS).toEqual(supported);
-  });
-
-  it("maps meeting states only to motion groups declared by the bundled model", () => {
+  it("maps meeting states only to supported portrait animations", () => {
     for (const state of ["idle", "listening", "filtering", "loading_board", "assembling", "analyzing", "syncing", "success", "error"]) {
       const motion = resolveMascotMotion(state, supported);
       expect(motion === undefined || supported.includes(motion)).toBe(true);
     }
     expect(resolveMascotMotion("listening", supported)).toBe("Idle");
-    expect(resolveMascotMotion("success", supported)).toBe("BubbleGum");
-    expect(resolveMascotMotion("error", supported)).toBe("SprayWater");
+    expect(resolveMascotMotion("success", supported)).toBe("Celebrate");
+    expect(resolveMascotMotion("error", supported)).toBe("Concern");
   });
 
   it("uses idle and generic Chinese text for unknown backend states", () => {

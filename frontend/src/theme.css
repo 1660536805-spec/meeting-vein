@@ -81,10 +81,10 @@
 [data-theme="dark"] body:has(.home-hero) { background:#0b1424; color:#f2efe4; }
 [data-theme="dark"] body:has(.home-hero) .theme-toggle-floating {
   position:absolute;
-  top:calc(min(100vw, 100svh * 16 / 9) * .106);
+  top:calc(min(100vw, 100svh * 16 / 9) * .095);
   right:calc((100vw - min(100vw, 100svh * 16 / 9)) / 2);
-  width:calc(min(100vw, 100svh * 16 / 9) * .12);
-  height:calc(min(100vw, 100svh * 16 / 9) * .046);
+  width:calc(min(100vw, 100svh * 16 / 9) * .076);
+  height:calc(min(100vw, 100svh * 16 / 9) * .040);
   min-height:24px;
   padding:0;
   display:grid;
@@ -340,3 +340,17 @@ body:has(.home-hero)::after { display:none; }
 [data-theme="dark"] #meeting-form { background:#181a1d; border-color:#45474b; }
 [data-theme="dark"] #mascot .bubble { background:#23262a; border-color:#45474b; }
 [data-theme="dark"] #asr-transcript { background:#23262a; }
+
+@media (max-width: 650px) {
+  [data-theme="dark"] body:has(.home-hero) .theme-toggle-floating {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    padding: 6px 10px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+}
